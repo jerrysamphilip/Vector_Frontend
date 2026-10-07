@@ -6,15 +6,18 @@ import {
     clearAuthSession,
 } from '../lib/authStorage';
 
-const API_BASE = '/api';
-const API_V1_BASE = '/api/api';
+// BASE_URL is Vite's `base` ('/' by default, e.g. '/vector/' when served under a path prefix)
+const APP_BASE = import.meta.env.BASE_URL;
+const API_BASE = `${APP_BASE}api`;
+const API_V1_BASE = `${APP_BASE}api/api`;
+const LOGIN_PATH = `${APP_BASE}login`;
 
 let refreshPromise = null;
 
 function redirectToLogin() {
     if (typeof window === 'undefined') return;
-    if (window.location.pathname !== '/login') {
-        window.location.assign('/login');
+    if (window.location.pathname !== LOGIN_PATH) {
+        window.location.assign(LOGIN_PATH);
     }
 }
 

@@ -32,7 +32,7 @@ export default function Loading({ text = "Loading...", size = "md", fullScreen =
                 className={`${sizeClasses[size]} rounded-full overflow-hidden flex items-center justify-center`}
             >
                 <img
-                    src="/loading.gif"
+                    src={`${import.meta.env.BASE_URL}loading.gif`}
                     alt="Loading"
                     className="w-full h-full object-cover scale-[1.7]"
                 />
