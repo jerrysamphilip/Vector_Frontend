@@ -281,7 +281,7 @@ function DetailsCard({ contact, fields, onSaved }) {
                     {rows.map(([Icon, label, value]) => (
                         <div key={label} className="flex items-start gap-3 text-sm">
                             <Icon className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                            <dt className="w-20 text-slate-500 flex-shrink-0">{label}</dt>
+                            <dt className="w-28 text-slate-500 flex-shrink-0">{label}</dt>
                             <dd className="text-slate-800 min-w-0">{value || <span className="text-slate-300">—</span>}</dd>
                         </div>
                     ))}
@@ -291,10 +291,11 @@ function DetailsCard({ contact, fields, onSaved }) {
                         return (
                             <div key={f.field_id} className="flex items-start gap-3 text-sm">
                                 <span className="w-4 flex-shrink-0" />
-                                <dt className="w-20 text-slate-500 flex-shrink-0 truncate" title={f.label}>{f.label}</dt>
+                                <dt className="w-28 text-slate-500 flex-shrink-0 truncate" title={f.label}>{f.label}</dt>
                                 <dd className="text-slate-800 min-w-0 break-words">
                                     {value === undefined || value === '' ? <span className="text-slate-300">—</span>
                                         : f.field_type === 'URL' ? <a href={value} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">{value}</a>
+                                        : f.field_type === 'NUMBER' && typeof value === 'number' ? value.toLocaleString()
                                         : String(value)}
                                 </dd>
                             </div>
