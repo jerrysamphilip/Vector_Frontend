@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import Header from './Header';
+import GlobalSearch from './GlobalSearch';
 
 export default function Layout() {
     return (
@@ -12,6 +12,7 @@ export default function Layout() {
             {/* ml-64 to offset the fixed 16rem (64) sidebar */}
             <main className="flex-1 ml-64 min-h-screen min-w-0 overflow-hidden">
                 <div className="max-w-[1600px] mx-auto p-8">
+                    <div className="flex justify-end mb-6"><GlobalSearch /></div>
                     {/* 3. Page Content */}
                     <div className="animate-in fade-in duration-300 slide-in-from-bottom-2">
                         <Outlet />

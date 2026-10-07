@@ -359,6 +359,12 @@ export default function Contacts() {
         if ((params.get('q') || '') !== debouncedSearch) update({ q: debouncedSearch });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedSearch]);
+    // The header search links here with ?q=; pick it up when we're already on this page
+    const urlQ = params.get('q') || '';
+    useEffect(() => {
+        if (urlQ !== debouncedSearch) setSearch(urlQ);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [urlQ]);
 
     const query = { q: debouncedSearch, owner, list_id: listId, account_id: accountId, filters, sort_by: sortBy, sort_order: sortOrder, page, page_size: PAGE_SIZE };
     const { data, isLoading, isFetching } = useQuery({

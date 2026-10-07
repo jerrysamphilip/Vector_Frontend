@@ -21,6 +21,8 @@ import {
   ArrowLeft,
   Contact,
   Building2,
+  ListChecks,
+  CheckSquare,
 } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import { authApi } from '../../api/auth';
@@ -31,7 +33,9 @@ const baseNavigation = [
   { name: 'Dashboard',      href: '/app/dashboard',     icon: LayoutDashboard, permission: null },
   { name: 'Campaigns',      href: '/app/campaigns',      icon: Mail,            permission: 'manage_campaigns' },
   { name: 'Contacts',       href: '/app/contacts',       icon: Contact,         permission: null },
-  { name: 'Accounts',       href: '/app/accounts',       icon: Building2,       permission: null },
+  { name: 'Companies',      href: '/app/accounts',       icon: Building2,       permission: null },
+  { name: 'Lists',          href: '/app/lists',          icon: ListChecks,      permission: null },
+  { name: 'Tasks',          href: '/app/tasks',          icon: CheckSquare,     permission: null },
   { name: 'Prospect Lists', href: '/app/prospects',      icon: Users,           permission: 'manage_prospects' },
   { name: 'Domain Health',  href: '/app/domain-health',  icon: Activity,        permission: null },
   { name: 'Inbox',          href: '/app/inbox',          icon: MessageSquare,   permission: null },
