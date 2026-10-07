@@ -52,11 +52,11 @@ export default function AccountDetail() {
             </button>
 
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                <div className="h-1.5" style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }} />
+                <div className="h-1.5" style={{ background: '#4f46e5' }} />
                 <div className="p-6 flex flex-col lg:flex-row gap-5">
                     <Avatar first={account.name} last={account.name.split(/\s+/)[1]} seed={account.name} size="lg" square />
                     <div className="flex-1 min-w-0">
-                        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3 flex-wrap">{account.name}{account.lifecycle_stage && <StageBadge value={account.lifecycle_stage} label={stageLabel[account.lifecycle_stage]} />}</h1>
+                        <h1 className="text-xl font-semibold tracking-tight text-slate-900 flex items-center gap-3 flex-wrap">{account.name}{account.lifecycle_stage && <StageBadge value={account.lifecycle_stage} label={stageLabel[account.lifecycle_stage]} />}</h1>
                         <p className="text-sm text-slate-500 mt-0.5">{[account.industry, account.emp_band && `${account.emp_band} employees`].filter(Boolean).join(' · ') || 'No industry set'}</p>
                         <div className="flex items-center gap-4 mt-3 text-sm text-slate-600 flex-wrap">
                             {website && <a href={website} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-indigo-600"><Globe className="w-4 h-4" />{account.domain || account.website}</a>}

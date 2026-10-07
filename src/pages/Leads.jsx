@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Search, Loader2, Target, LayoutGrid, List, AlertCircle, MessageSquareReply, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Search, Loader2, Target, LayoutGrid, List, AlertCircle, MessageSquareReply, ChevronDown, ChevronUp, PanelLeft } from 'lucide-react';
+import { LeadPanel } from './LeadDetail';
 import { contactsApi, errorMessage } from '../api/contacts';
 import { leadsApi } from '../api/sales';
 import { Avatar, ErrorNote, Field, Modal, PrimaryButton, SecondaryButton, inputClass, relativeDate, BRAND_GRADIENT } from '../components/contacts/shared';
@@ -74,7 +75,7 @@ function LeadCard({ lead }) {
 function ReplySuggestions() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
-    const [open, setOpen] = useState(true);
+    const [open, setOpen] = useState(false);
     const [error, setError] = useState(null);
     const { data } = useQuery({ queryKey: ['reply-suggestions'], queryFn: leadsApi.replySuggestions });
     const create = useMutation({
@@ -119,12 +120,71 @@ function ReplySuggestions() {
     );
 }
 
+/** List on the left, the selected lead on the right; j / k move through the list (redesign C). */
+function SplitView({ filters, stage, onStage, meta }) {
+    const [params, setParams] = useSearchParams();
+    const selected = params.get('lead');
+    const listRef = useRef(null);
+    const { data, isLoading } = useQuery({ queryKey: ['leads', 'split', filters, stage], placeholderData: keepPreviousData,
+        queryFn: () => leadsApi.list({ ...filters, stage: stage || undefined, open_only: !stage, page_size: 200, sort_by: 'stage_changed_at', sort_order: 'desc' }) });
+    const items = data?.items || [];
+    const select = (id) => setParams(p => { const n = new URLSearchParams(p); if (id) n.set('lead', id); else n.delete('lead'); return n; }, { replace: true });
+    useEffect(() => { if (!selected && items.length) select(items[0].lead_id); }, [items.length]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        const onKey = (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.metaKey || e.ctrlKey) return;
+            if (e.key !== 'j' && e.key !== 'k') return;
+            const i = items.findIndex(l => l.lead_id === selected);
+            const next = items[Math.min(items.length - 1, Math.max(0, i + (e.key === 'j' ? 1 : -1)))];
+            if (next) { select(next.lead_id); listRef.current?.querySelector(`[data-id="${next.lead_id}"]`)?.scrollIntoView({ block: 'nearest' }); }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }); // re-bind with the latest list and selection
+    const short = { SQL: 'SQL', CONVERTED: 'Converted', ENGAGED: 'Engaged' };
+    const chips = [['', 'All open'], ...(meta?.stages || []).map(s => [s.value, short[s.value] || s.label])];
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5 items-start">
+            <div className={`${card} overflow-hidden lg:sticky lg:top-20`}>
+                <div className="px-3 py-2.5 border-b border-slate-100 flex gap-1.5 flex-wrap">
+                    {chips.map(([v, l]) => (
+                        <button key={v || 'open'} onClick={() => onStage(v)}
+                            className={`px-2.5 h-7 rounded-md text-xs font-semibold ${stage === v ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{l}</button>
+                    ))}
+                </div>
+                <div ref={listRef} className="max-h-[calc(100vh-260px)] overflow-y-auto divide-y divide-slate-100">
+                    {isLoading && <div className="py-10 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-indigo-500" /></div>}
+                    {!isLoading && !items.length && <Empty icon={Target} title="No leads here" />}
+                    {items.map(l => (
+                        <button key={l.lead_id} data-id={l.lead_id} onClick={() => select(l.lead_id)}
+                            className={`w-full text-left px-4 py-3 ${selected === l.lead_id ? 'bg-indigo-50 shadow-[inset_3px_0_0_#4f46e5]' : 'hover:bg-slate-50'}`}>
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-semibold text-slate-800 truncate">{l.contact_name}</span>
+                                <LeadStageBadge stage={l.stage} label={l.stage_label} />
+                            </div>
+                            <p className="text-xs text-slate-500 truncate mt-0.5">{l.company_name || l.contact_email}</p>
+                            <p className={`text-xs mt-0.5 truncate ${l.next_step_overdue ? 'text-red-600' : 'text-slate-400'}`}>
+                                {l.next_step ? `${l.next_step_overdue ? 'Overdue: ' : 'Next: '}${l.next_step}` : `${l.days_in_stage}d in stage`} · {l.owner_name}
+                            </p>
+                        </button>
+                    ))}
+                </div>
+                <div className="px-4 py-2 border-t border-slate-100 text-xs text-slate-400 flex justify-between"><span>{data?.total ?? 0} leads</span><span>j / k to move</span></div>
+            </div>
+            <div className="min-w-0">
+                {selected ? <LeadPanel key={selected} id={selected} embedded onRemoved={() => select(null)} />
+                    : <div className={`${card} py-24`}><Empty icon={Target} title="Pick a lead" text="Its details open here." /></div>}
+            </div>
+        </div>
+    );
+}
+
 export default function Leads() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const meta = useLeadsMeta();
     const [params, setParams] = useSearchParams();
-    const mode = params.get('mode') || 'board';
+    const mode = params.get('mode') || 'split';
     const stage = params.get('stage') || '';
     const owner = params.get('owner') || '';
     const source = params.get('source') || '';
@@ -141,16 +201,15 @@ export default function Leads() {
     const board = useQuery({ queryKey: ['leads', 'board', filters], enabled: mode === 'board', queryFn: () => leadsApi.board(filters) });
 
     return (
-        <div className="w-full space-y-6">
+        <div className="w-full space-y-5">
             <PageHeader title="Leads" subtitle="Contacts you are qualifying towards a sale">
-                <Link to="/app/sql-queue" className="h-10 px-4 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 flex items-center">SQL queue</Link>
-                <button onClick={() => setCreating(true)} style={{ background: BRAND_GRADIENT }}
-                    className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm hover:shadow-md"><Plus className="w-4 h-4" /> New lead</button>
+                <Link to="/app/sql-queue" className="h-9 px-3.5 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 flex items-center">SQL queue</Link>
+                <PrimaryButton onClick={() => setCreating(true)}><Plus className="w-4 h-4" /> New lead</PrimaryButton>
             </PageHeader>
             <ReplySuggestions />
 
             <div className={`${card} px-5 py-4 flex items-center gap-3 flex-wrap`} style={cardShadow}>
-                <Seg options={[['board', <span key="b" className="flex items-center gap-1.5"><LayoutGrid className="w-3.5 h-3.5" />Board</span>], ['list', <span key="l" className="flex items-center gap-1.5"><List className="w-3.5 h-3.5" />List</span>]]}
+                <Seg options={[['split', <span key="s" className="flex items-center gap-1.5"><PanelLeft className="w-3.5 h-3.5" />Split</span>], ['board', <span key="b" className="flex items-center gap-1.5"><LayoutGrid className="w-3.5 h-3.5" />Board</span>], ['list', <span key="l" className="flex items-center gap-1.5"><List className="w-3.5 h-3.5" />Table</span>]]}
                     value={mode} onChange={v => update({ mode: v })} />
                 <div className="relative flex-1 min-w-[200px] max-w-sm">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -172,7 +231,9 @@ export default function Leads() {
                 )}
             </div>
 
-            {mode === 'board' ? (
+            {mode === 'split' ? (
+                <SplitView filters={filters} stage={stage} onStage={v => update({ stage: v, lead: '' })} meta={meta} />
+            ) : mode === 'board' ? (
                 board.isLoading ? <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div> : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                         {(board.data?.columns || []).map(col => (

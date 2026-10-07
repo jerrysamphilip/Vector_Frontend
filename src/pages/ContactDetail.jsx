@@ -523,12 +523,12 @@ export default function ContactDetail() {
 
             {/* Header */}
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden" style={cardShadow}>
-                <div className="h-1.5" style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }} />
+                <div className="h-1.5" style={{ background: '#4f46e5' }} />
                 <div className="p-6 flex flex-col lg:flex-row lg:items-start gap-5">
                     <Avatar first={contact.first_name} last={contact.last_name} seed={contact.email} size="lg" />
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <h1 className="text-2xl font-bold text-gray-900">{contact.full_name}</h1>
+                            <h1 className="text-xl font-semibold tracking-tight text-slate-900">{contact.full_name}</h1>
                             <StageBadge value={contact.lifecycle_stage} label={stageLabel[contact.lifecycle_stage]} />
                             <StatusBadge value={contact.lead_status} label={statusLabel[contact.lead_status]} />
                             {contact.consent_status === 'UNSUBSCRIBED' && <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Unsubscribed</span>}

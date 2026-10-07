@@ -28,25 +28,29 @@ function Proposals({ deal, onChanged }) {
             <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-3"><FileText className="w-4 h-4 text-indigo-500" /> Proposals</h2>
             <ul className="space-y-2">
                 {deal.proposals.map(p => (
-                    <li key={p.proposal_id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100">
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-slate-800 truncate">{p.title}</p>
-                            <p className="text-xs text-slate-500">{canSee ? money(p.amount) : 'Amount hidden'}{p.line_count ? ` · ${p.line_count} line${p.line_count === 1 ? '' : 's'}` : ''}{p.sent_at ? ` · sent ${relativeDate(p.sent_at)}` : ''}{p.decided_at ? ` · decided ${relativeDate(p.decided_at)}` : ''}</p>
+                    <li key={p.proposal_id} className="p-3 rounded-lg border border-slate-200">
+                        <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-medium text-slate-800 min-w-0 truncate">{p.title}</p>
+                            <button onClick={() => window.confirm('Delete this proposal?') && remove.mutate(p.proposal_id)} className="p-0.5 text-slate-300 hover:text-red-500 shrink-0" aria-label="Delete proposal"><Trash2 className="w-4 h-4" /></button>
                         </div>
-                        <select value={p.status} onChange={e => update.mutate({ id: p.proposal_id, payload: { status: e.target.value } })}
-                            className={`h-8 px-2 rounded-lg text-xs font-semibold border-0 ${PROPOSAL_TONE[p.status]}`} aria-label="Proposal status">
-                            {(meta?.proposal_statuses || []).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                        {canSee && <button onClick={() => setQuoting(p)} className="h-8 px-2.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1" title="Quote lines and PDF"><ListOrdered className="w-3.5 h-3.5" /> Quote</button>}
-                        <button onClick={() => window.confirm('Delete this proposal?') && remove.mutate(p.proposal_id)} className="p-1.5 text-slate-300 hover:text-red-500" aria-label="Delete proposal"><Trash2 className="w-4 h-4" /></button>
+                        <p className="text-xs text-slate-500 mt-0.5">{canSee ? money(p.amount) : 'Amount hidden'}{p.line_count ? ` · ${p.line_count} line${p.line_count === 1 ? '' : 's'}` : ''}{p.sent_at ? ` · sent ${relativeDate(p.sent_at)}` : ''}{p.decided_at ? ` · decided ${relativeDate(p.decided_at)}` : ''}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                            <select value={p.status} onChange={e => update.mutate({ id: p.proposal_id, payload: { status: e.target.value } })}
+                                className={`h-7 px-2 rounded-md text-xs font-semibold border-0 ${PROPOSAL_TONE[p.status]}`} aria-label="Proposal status">
+                                {(meta?.proposal_statuses || []).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                            </select>
+                            {canSee && <button onClick={() => setQuoting(p)} className="ml-auto h-7 px-2.5 rounded-md text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1" title="Quote lines and PDF"><ListOrdered className="w-3.5 h-3.5" /> Quote &amp; PDF</button>}
+                        </div>
                     </li>
                 ))}
                 {!deal.proposals.length && <p className="text-sm text-slate-400">No proposals yet.</p>}
             </ul>
-            <div className="flex items-end gap-2 mt-3">
-                <Field label="Title" className="flex-1"><input className={inputClass} value={title} onChange={e => setTitle(e.target.value)} placeholder={`Proposal - ${deal.name}`} /></Field>
-                {canSee && <Field label="Amount" className="w-32"><input className={inputClass} inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder={deal.amount ?? ''} /></Field>}
-                <PrimaryButton onClick={() => create.mutate()} loading={create.isPending}><Plus className="w-4 h-4" /> Add</PrimaryButton>
+            <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                <input className={inputClass} value={title} onChange={e => setTitle(e.target.value)} placeholder={`New proposal title (default: Proposal - ${deal.name})`} aria-label="Proposal title" />
+                <div className="flex gap-2">
+                    {canSee && <input className={`${inputClass} flex-1`} inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder={`Amount (${deal.amount ?? 'deal amount'})`} aria-label="Proposal amount" />}
+                    <PrimaryButton onClick={() => create.mutate()} loading={create.isPending} className={canSee ? '' : 'flex-1'}><Plus className="w-4 h-4" /> Add proposal</PrimaryButton>
+                </div>
             </div>
             <div className="mt-2"><ErrorNote message={error} /></div>
             {quoting && <QuoteModal proposal={quoting} onClose={() => setQuoting(null)} onSaved={onChanged} />}
@@ -87,57 +91,73 @@ export default function DealDetail() {
         if ((value ?? '') !== (deal[k] ?? '')) save.mutate({ [k]: value === '' ? null : value });
     };
 
+    const wonStage = stages.find(x => x.is_won);
+    const lostStage = stages.find(x => x.is_lost);
+    const openStages = stages.filter(x => x.status === 'OPEN');
+    const currentIndex = openStages.findIndex(x => x.stage_id === deal.stage_id);
+    const initials = ((deal.company_name || deal.name).replace(/\[[^\]]*\]/g, '').match(/[A-Za-z0-9]+/g) || ['?']).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
     return (
         <div className="w-full space-y-5">
-            <button onClick={() => navigate(-1)} className="text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1.5"><ArrowLeft className="w-4 h-4" /> Back</button>
-            <div className={`${card} p-6`} style={cardShadow}>
-                <div className="flex flex-col lg:flex-row gap-5">
-                    <div className="flex-1 min-w-0">
-                        <input className="text-2xl font-bold text-gray-900 w-full bg-transparent focus:outline-none focus:bg-slate-50 rounded-lg px-1 -mx-1" value={form.name} onChange={set('name')} onBlur={blurSave('name')} aria-label="Opportunity name" />
-                        <p className="text-sm text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-                            <DealStatusBadge status={deal.status} stageName={deal.stage_name} /> <ClientTypeBadge value={deal.client_type} />
-                            {deal.account_id && <Link to={`/app/accounts/${deal.account_id}`} className="font-semibold text-indigo-600 hover:text-indigo-800">{deal.company_name}</Link>}
-                            {deal.prospect_id && <Link to={`/app/contacts/${deal.prospect_id}`} className="text-indigo-600 hover:text-indigo-800">{deal.contact_name}</Link>}
-                            {deal.lead && <Link to={`/app/leads/${deal.lead.lead_id}`} className="text-slate-500 hover:text-slate-700">from lead</Link>}
-                            {deal.campaign_id && <Link to={`/app/campaigns/${deal.campaign_id}`} className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-700"><Megaphone className="w-3.5 h-3.5" /> {deal.campaign_name || 'campaign'}</Link>}
-                            {deal.stale && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-50 text-orange-700" title="No activity for a while, or the close date has passed"><AlertTriangle className="w-3 h-3" /> Stale · {deal.days_idle} days idle</span>}
-                        </p>
+            <nav className="flex items-center gap-1.5 text-sm text-slate-500">
+                <button onClick={() => navigate(-1)} className="p-1 -ml-1 rounded hover:bg-slate-100" aria-label="Back"><ArrowLeft className="w-4 h-4" /></button>
+                <Link to="/app/deals" className="hover:text-slate-800">Deals</Link><span>/</span><span className="text-slate-800 font-medium truncate">{deal.name}</span>
+            </nav>
+            <div className={`${card} p-5`} style={cardShadow}>
+                <div className="flex flex-col lg:flex-row lg:items-center gap-5">
+                    <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                        <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white font-bold flex items-center justify-center shrink-0">{initials}</div>
+                        <div className="min-w-0 flex-1">
+                            <input className="text-xl font-semibold tracking-tight text-slate-900 w-full bg-transparent focus:outline-none focus:bg-slate-50 rounded-md px-1 -mx-1" value={form.name} onChange={set('name')} onBlur={blurSave('name')} aria-label="Opportunity name" />
+                            <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                                {deal.account_id && <Link to={`/app/accounts/${deal.account_id}`} className="hover:text-indigo-700">{deal.company_name}</Link>}
+                                {deal.prospect_id && <>{deal.account_id && <span className="text-slate-300">·</span>}<Link to={`/app/contacts/${deal.prospect_id}`} className="hover:text-indigo-700">{deal.contact_name}</Link></>}
+                                <DealStatusBadge status={deal.status} stageName={deal.stage_name} /> <ClientTypeBadge value={deal.client_type} />
+                                {deal.stale && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-50 text-orange-700" title="No activity for a while, or the close date has passed"><AlertTriangle className="w-3 h-3" /> Stale · {deal.days_idle} days idle</span>}
+                            </p>
+                        </div>
                     </div>
-                    {canSee && <div className="grid grid-cols-2 gap-4 lg:w-80 text-right">
-                        <div><p className="text-[11px] font-semibold text-slate-400 uppercase">Amount</p><p className="text-xl font-bold text-slate-900">{money(deal.amount)}</p></div>
-                        <div><p className="text-[11px] font-semibold text-slate-400 uppercase">Weighted ({deal.probability}%)</p><p className="text-xl font-bold text-slate-600">{deal.status === 'OPEN' ? money(deal.weighted_amount) : '—'}</p></div>
-                    </div>}
+                    <div className="flex items-center gap-6">
+                        {canSee && <div className="text-right"><p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Amount</p><p className="text-xl font-bold tabular-nums">{money(deal.amount)}</p></div>}
+                        <div className="text-right"><p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Close</p><p className="text-xl font-bold">{deal.close_date ? new Date(`${deal.close_date}T00:00`).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : '—'}</p></div>
+                        {deal.status === 'OPEN' && (
+                            <div className="flex gap-2">
+                                {wonStage && <button onClick={() => setClosing(wonStage)} className="h-9 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold">Mark won</button>}
+                                {lostStage && <button onClick={() => setClosing(lostStage)} className="h-9 px-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold">Mark lost</button>}
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <div className="mt-6 flex gap-1 overflow-x-auto">
-                    {stages.map(s => {
+                <div className="mt-5 flex gap-1 overflow-x-auto">
+                    {openStages.map((s, i) => {
                         const current = s.stage_id === deal.stage_id;
-                        const passed = s.status === 'OPEN' && stages.findIndex(x => x.stage_id === deal.stage_id) > stages.findIndex(x => x.stage_id === s.stage_id) && deal.status === 'OPEN';
-                        const tone = current ? (s.is_won ? 'bg-emerald-600 text-white' : s.is_lost ? 'bg-slate-500 text-white' : 'bg-indigo-600 text-white')
-                            : passed ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200';
+                        const passed = deal.status !== 'OPEN' || (currentIndex >= 0 && i < currentIndex);
+                        const tone = current ? 'bg-indigo-600 text-white' : passed ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200';
                         return (
-                            <button key={s.stage_id} disabled={save.isPending || current} onClick={() => ((s.is_won || s.is_lost) ? setClosing(s) : save.mutate({ stage_id: s.stage_id }))}
-                                className={`flex-1 min-w-[110px] h-10 px-2 text-xs font-semibold first:rounded-l-xl last:rounded-r-xl ${tone}`} title={`${s.probability}%`}>
-                                {s.name}
+                            <button key={s.stage_id} disabled={save.isPending || current} onClick={() => save.mutate({ stage_id: s.stage_id })}
+                                className={`flex-1 min-w-[110px] h-9 px-2 text-xs font-semibold first:rounded-l-lg last:rounded-r-lg ${tone}`} title={`${s.probability}%`}>
+                                {s.name}{current ? ` · ${s.probability}%` : ''}
                             </button>
                         );
                     })}
+                    {deal.status !== 'OPEN' && <span className={`flex-1 min-w-[110px] h-9 px-2 text-xs font-semibold rounded-r-lg flex items-center justify-center ${deal.status === 'WON' ? 'bg-emerald-600 text-white' : 'bg-slate-500 text-white'}`}>{deal.stage_name}</span>}
                 </div>
                 <div className="mt-3"><ErrorNote message={error} /></div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_330px] gap-5 items-start">
                 <div className="space-y-5">
-                <div className={`${card} p-5 space-y-3`} style={cardShadow}>
-                    <h2 className="text-sm font-bold text-slate-800">Details</h2>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className={`${card} p-5 space-y-3`} style={cardShadow}>
+                        <h2 className="text-sm font-semibold text-slate-900">About this deal</h2>
                         {canSee && <Field label="Amount"><input className={inputClass} inputMode="decimal" value={form.amount} onChange={set('amount')} onBlur={blurSave('amount', v => (v === '' ? '' : Number(v)))} /></Field>}
+                        {canSee && deal.status === 'OPEN' && <p className="text-xs text-slate-500 -mt-1">Weighted at {deal.probability}%: <span className="font-semibold text-slate-700">{money(deal.weighted_amount)}</span></p>}
                         <Field label="Expected close"><input type="date" className={inputClass} value={form.close_date} onChange={set('close_date')} onBlur={blurSave('close_date')} /></Field>
+                        <Field label="Owner"><OwnerSelect owners={owners} value={deal.owner_id} allowUnassigned={false} onChange={owner_id => save.mutate({ owner_id })} /></Field>
                         <Field label="Client type">
                             <select className={inputClass} value={form.client_type} onChange={e => { set('client_type')(e); save.mutate({ client_type: e.target.value }); }}>
                                 <option value="NEW">New client</option><option value="EXISTING">Existing client</option>
                             </select>
                         </Field>
-                        <Field label="Owner"><OwnerSelect owners={owners} value={deal.owner_id} allowUnassigned={false} onChange={owner_id => save.mutate({ owner_id })} /></Field>
                         {deal.status === 'OPEN' && (
                             <Field label="Forecast category" hint={deal.forecast_category_manual ? 'Set by hand; stays when the stage changes' : 'Follows the stage probability'}>
                                 <select className={inputClass} value={deal.forecast_category_manual ? deal.forecast_category : ''}
@@ -147,37 +167,32 @@ export default function DealDetail() {
                                 </select>
                             </Field>
                         )}
+                        <Field label="Next step"><input className={inputClass} value={form.next_step} onChange={set('next_step')} onBlur={blurSave('next_step')} /></Field>
+                        {deal.status !== 'OPEN' && (
+                            <Field label={deal.status === 'WON' ? 'Why we won' : 'Why we lost'}><input className={inputClass} value={form.closed_reason} onChange={set('closed_reason')} onBlur={blurSave('closed_reason')} /></Field>
+                        )}
+                        <Field label="Description">
+                            <textarea rows={3} className={`${inputClass} h-auto py-2`} value={form.description} onChange={set('description')} onBlur={blurSave('description')} />
+                        </Field>
+                        {(deal.campaign_id || deal.lead) && (
+                            <div className="pt-2 border-t border-slate-100 space-y-1.5 text-sm">
+                                {deal.campaign_id && <p className="flex items-center gap-1.5 text-slate-600"><Megaphone className="w-3.5 h-3.5 text-slate-400" /> Source: <Link to={`/app/campaigns/${deal.campaign_id}`} className="text-indigo-600 hover:text-indigo-800 truncate">{deal.campaign_name || 'campaign'}</Link></p>}
+                                {deal.lead && <p className="text-slate-600">Converted from <Link to={`/app/leads/${deal.lead.lead_id}`} className="text-indigo-600 hover:text-indigo-800">this lead</Link></p>}
+                            </div>
+                        )}
                     </div>
-                    <Field label="Next step"><input className={inputClass} value={form.next_step} onChange={set('next_step')} onBlur={blurSave('next_step')} /></Field>
-                    {deal.status !== 'OPEN' && (
-                        <Field label={deal.status === 'WON' ? 'Why we won' : 'Why we lost'}><input className={inputClass} value={form.closed_reason} onChange={set('closed_reason')} onBlur={blurSave('closed_reason')} /></Field>
-                    )}
-                    <Field label="Description">
-                        <textarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400" value={form.description} onChange={set('description')} onBlur={blurSave('description')} />
-                    </Field>
-                    <div className="pt-1" />
+                    <StageHistory rows={deal.stage_history} />
+                </div>
+                <div className="min-w-0 space-y-5">
+                    <DealTimeline deal={deal} />
+                    <div className="xl:hidden"><Proposals deal={deal} onChanged={refresh} /></div>
+                </div>
+                <div className="hidden xl:block space-y-5">
+                    <Proposals deal={deal} onChanged={refresh} />
                     <button onClick={() => window.confirm('Delete this opportunity and its proposals?') && remove.mutate()} className="text-sm font-semibold text-red-600 hover:text-red-800 flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Delete opportunity</button>
                 </div>
-                <DealTimeline deal={deal} />
-                </div>
-                <div className="space-y-5">
-                    <Proposals deal={deal} onChanged={refresh} />
-                    <StageHistory rows={deal.stage_history} />
-                    <div className={`${card} p-5`} style={cardShadow}>
-                        <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2"><History className="w-4 h-4 text-indigo-500" /> History</h2>
-                        <ul className="space-y-1.5 max-h-72 overflow-y-auto">
-                            {deal.history.map((h, i) => (
-                                <li key={i} className="text-xs text-slate-600">
-                                    <span className="font-semibold text-slate-700">{h.field === 'created' ? 'Created' : h.field === 'stage_id' ? 'Stage' : h.field.replace('_', ' ')}</span>
-                                    {h.field !== 'created' && <>: {h.old_value || 'empty'} → {h.new_value || 'empty'}</>}
-                                    {h.field === 'created' && h.new_value && <>: {h.new_value}</>}
-                                    <span className="text-slate-400" title={formatDateTime(h.changed_at)}> · {h.changed_by_name || 'system'} · {relativeDate(h.changed_at)}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
             </div>
+            <button onClick={() => window.confirm('Delete this opportunity and its proposals?') && remove.mutate()} className="xl:hidden text-sm font-semibold text-red-600 hover:text-red-800 flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Delete opportunity</button>
             {closing && <CloseReasonModal stage={closing} dealName={deal.name} initial={deal.closed_reason || ''} busy={save.isPending}
                 onClose={() => setClosing(null)} onConfirm={reason => save.mutate({ stage_id: closing.stage_id, closed_reason: reason })} />}
         </div>

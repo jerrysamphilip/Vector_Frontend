@@ -46,7 +46,7 @@ export default function GlobalSearch() {
             <input ref={inputRef} value={text} placeholder="Search contacts and companies…" aria-label="Search contacts and companies"
                 onChange={e => { setText(e.target.value); setOpen(true); setActive(0); }}
                 onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} onKeyDown={onKeyDown}
-                className="w-full h-10 pl-9 pr-14 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+                className="w-full h-9 pl-9 pr-14 bg-slate-100 border border-transparent rounded-lg text-sm placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium">
                 {isFetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Ctrl K'}
             </span>

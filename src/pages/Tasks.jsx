@@ -11,7 +11,7 @@ import {
 const TYPE_ICON = { TODO: ListTodo, CALL: Phone, EMAIL: Mail, MEETING: CalendarDays };
 const PRIORITY_STYLE = { HIGH: 'bg-red-50 text-red-700', MEDIUM: 'bg-amber-50 text-amber-700', LOW: 'bg-slate-100 text-slate-500' };
 
-function NewTaskModal({ owners, canAssign, onClose, onSaved }) {
+export function NewTaskModal({ owners, canAssign, onClose, onSaved }) {
     const me = getStoredUser();
     const [form, setForm] = useState({ title: '', notes: '', task_type: 'TODO', priority: 'MEDIUM', due_at: '', reminder_at: '', owner_id: me?.user_id || '' });
     const [error, setError] = useState(null);
@@ -87,11 +87,11 @@ export default function Tasks() {
         <div className="w-full space-y-6">
             <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900">Tasks</h1>
                     <p className="text-sm text-gray-400 mt-1">Follow-ups, calls and to-dos across your contacts</p>
                 </div>
                 <button onClick={() => setCreating(true)} style={{ background: BRAND_GRADIENT }}
-                    className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm hover:shadow-md whitespace-nowrap">
+                    className="flex items-center gap-2 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90 whitespace-nowrap">
                     <Plus className="w-4 h-4" /> New task
                 </button>
             </div>

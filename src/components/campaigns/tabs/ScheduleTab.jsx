@@ -5,70 +5,11 @@ import { Calendar, Mail, Clock, Users, CheckCircle, Edit2, X, Save, Loader2, Ale
 import { motion } from 'framer-motion';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import Loading from '../../common/Loading';
-
-// ── Sparklines (same as Dashboard/Prospects) ─────────────────────────────────
-function BarSparkline({ color = '#fff', animKey = 0 }) {
-    const bars = [40, 65, 50, 80, 60, 90, 70, 85, 55, 75];
-    return (
-        <svg width="80" height="32" viewBox="0 0 80 32">
-            {bars.map((h, i) => (
-                <rect key={`${animKey}-${i}`} x={i * 8 + 1} y={32 - h * 0.3}
-                    width="5" height={h * 0.3} rx="2"
-                    fill={color} opacity="0.55"
-                    className="spark-bar"
-                    style={{ animationDelay: `${i * 55}ms` }} />
-            ))}
-        </svg>
-    );
-}
-
-function WaveSparkline({ color = '#fff', animKey = 0 }) {
-    return (
-        <svg width="80" height="32" viewBox="0 0 80 32">
-            <path key={animKey}
-                d="M0,24 C10,20 15,8 25,12 C35,16 40,6 50,10 C60,14 65,4 80,8"
-                fill="none" stroke={color} strokeWidth="2.5"
-                strokeLinecap="round" opacity="0.7"
-                className="spark-wave" />
-        </svg>
-    );
-}
+import KpiTile from '../../ui/KpiTile';
 
 // ── Stat Card with sparkline ──────────────────────────────────────────────────
-function StatCard({ label, value, sub, from, to, dark = false, chart = 'bar', variants }) {
-    const [animKey, setAnimKey] = useState(0);
-    const mountedRef = useRef(false);
-    useEffect(() => {
-        if (!mountedRef.current) {
-            mountedRef.current = true;
-            const t = setTimeout(() => setAnimKey(k => k + 1), 100);
-            return () => clearTimeout(t);
-        }
-    }, []);
-    const textColor = dark ? '#1a1a1a' : '#ffffff';
-    const subColor  = dark ? 'rgba(26,26,26,0.6)' : 'rgba(255,255,255,0.7)';
-    return (
-        <motion.div
-            variants={variants}
-            className="relative rounded-2xl p-5 overflow-hidden flex flex-row items-center justify-between"
-            style={{ background: `linear-gradient(135deg, ${from}, ${to})`, minHeight: 120 }}
-            onMouseEnter={() => setAnimKey(k => k + 1)}
-        >
-            <div className="absolute inset-0 opacity-10" style={{ background: 'radial-gradient(circle at 80% 20%, #fff 0%, transparent 60%)' }} />
-            {/* Left: text */}
-            <div className="relative z-10 flex flex-col justify-center">
-                <p className="text-[11px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: subColor }}>{label}</p>
-                <p className="text-3xl font-bold leading-none" style={{ color: textColor }}>{(value ?? 0).toLocaleString()}</p>
-                <p className="text-xs mt-1.5 font-medium" style={{ color: subColor }}>{sub}</p>
-            </div>
-            {/* Right: sparkline */}
-            <div className="relative z-10 flex items-end opacity-80">
-                {chart === 'bar'
-                    ? <BarSparkline color={textColor} animKey={animKey} />
-                    : <WaveSparkline color={textColor} animKey={animKey} />}
-            </div>
-        </motion.div>
-    );
+function StatCard(props) {
+    return <KpiTile {...props} />;
 }
 
 /**

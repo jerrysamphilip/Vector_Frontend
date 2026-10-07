@@ -1466,7 +1466,7 @@ function CreateCampaignContent() {
                     style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
                 >
                     {/* Gradient top strip */}
-                    <div className="h-0.5 w-full" style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }} />
+                    <div className="h-0.5 w-full" style={{ background: '#4f46e5' }} />
 
                     <div className="max-w-7xl mx-auto px-8 h-14 flex justify-between items-center">
                         {/* Left: back + title */}
@@ -1498,7 +1498,7 @@ function CreateCampaignContent() {
                                             <div
                                                 className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all"
                                                 style={active
-                                                    ? { background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)', color: '#fff' }
+                                                    ? { background: '#4f46e5', color: '#fff' }
                                                     : done
                                                     ? { background: '#10b981', color: '#fff' }
                                                     : { background: '#e5e7eb', color: '#9ca3af' }
@@ -1549,7 +1549,7 @@ function CreateCampaignContent() {
                                         style={{ background: 'linear-gradient(135deg, rgba(45,107,191,0.05), rgba(115,200,210,0.05))' }}>
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                                style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                                                style={{ background: '#4f46e5' }}>
                                                 <Rocket className="w-5 h-5 text-white" />
                                             </div>
                                             <div>
@@ -1639,7 +1639,7 @@ function CreateCampaignContent() {
                                                         onClick={() => setIsContextOpen(false)}>
                                                         <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden"
                                                             onClick={e => e.stopPropagation()}>
-                                                            <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }} />
+                                                            <div className="h-1 w-full" style={{ background: '#4f46e5' }} />
                                                             <div className="p-6">
                                                                 <div className="flex items-center justify-between mb-4">
                                                                     <div className="flex items-center gap-2">
@@ -1670,7 +1670,7 @@ function CreateCampaignContent() {
                                                                     <button
                                                                         onClick={() => { setFormData({ ...formData, campaign_description: tempContext }); setIsContextOpen(false); }}
                                                                         className="px-5 py-2 rounded-xl text-white text-sm font-semibold transition-all hover:scale-[1.02]"
-                                                                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                                                                        style={{ background: '#4f46e5' }}>
                                                                         Save Context
                                                                     </button>
                                                                 </div>
@@ -1684,7 +1684,7 @@ function CreateCampaignContent() {
                                                     <div
                                                         onClick={() => setFormData({ ...formData, include_first_name_in_subject: !formData.include_first_name_in_subject })}
                                                         className="relative w-9 h-5 rounded-full transition-all shrink-0"
-                                                        style={{ background: formData.include_first_name_in_subject ? 'linear-gradient(135deg, #2d6bbf, #73C8D2)' : '#d1d5db' }}>
+                                                        style={{ background: formData.include_first_name_in_subject ? '#4f46e5' : '#d1d5db' }}>
                                                         <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
                                                             style={{ transform: formData.include_first_name_in_subject ? 'translateX(16px)' : 'translateX(0)' }} />
                                                     </div>
@@ -1699,7 +1699,7 @@ function CreateCampaignContent() {
                                                     <div
                                                         onClick={() => setFormData({ ...formData, unsubscribe_mode: formData.unsubscribe_mode === 'html' ? 'plain' : 'html' })}
                                                         className="relative w-9 h-5 rounded-full transition-all shrink-0"
-                                                        style={{ background: formData.unsubscribe_mode === 'html' ? 'linear-gradient(135deg, #2d6bbf, #73C8D2)' : '#d1d5db' }}>
+                                                        style={{ background: formData.unsubscribe_mode === 'html' ? '#4f46e5' : '#d1d5db' }}>
                                                         <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
                                                             style={{ transform: formData.unsubscribe_mode === 'html' ? 'translateX(16px)' : 'translateX(0)' }} />
                                                     </div>
@@ -1761,7 +1761,7 @@ function CreateCampaignContent() {
                                                                 {/* Custom checkbox */}
                                                                 <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all border"
                                                                     style={isSelected
-                                                                        ? { background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)', borderColor: 'transparent' }
+                                                                        ? { background: '#4f46e5', borderColor: 'transparent' }
                                                                         : { background: '#fff', borderColor: '#d1d5db' }}>
                                                                     {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                                                                 </div>
@@ -2076,7 +2076,7 @@ function CreateCampaignContent() {
                                             type="submit"
                                             disabled={createMutation.isPending}
                                             className="flex items-center gap-2 text-white font-semibold h-11 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
-                                            style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                                            style={{ background: '#4f46e5' }}
                                         >
                                             {createMutation.isPending
                                                 ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
@@ -2143,7 +2143,7 @@ function CreateCampaignContent() {
                                                     <div
                                                         className="absolute -left-[44px] top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold z-10 border-2 transition-all"
                                                         style={index === 0
-                                                            ? { background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)', borderColor: 'transparent', color: '#fff' }
+                                                            ? { background: '#4f46e5', borderColor: 'transparent', color: '#fff' }
                                                             : { background: '#fff', borderColor: '#e5e7eb', color: '#6b7280' }
                                                         }
                                                     >
@@ -2204,7 +2204,7 @@ function CreateCampaignContent() {
                                     <Button
                                         onClick={() => sequenceMutation.mutate(campaignId)}
                                         isLoading={sequenceMutation.isPending}
-                                        className="text-white font-bold h-11 px-10 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                                        className="text-white font-bold h-11 px-10 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: '#4f46e5' }}
                                     >
                                         Save Sequence
                                         <ArrowRight className="w-4 h-4 ml-2" />
@@ -2234,7 +2234,7 @@ function CreateCampaignContent() {
                                             onClick={() => setUploadMode('select')}
                                             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
                                             style={uploadMode === 'select'
-                                                ? { background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)', color: '#fff' }
+                                                ? { background: '#4f46e5', color: '#fff' }
                                                 : { background: '#f1f5f9', color: '#475569' }}
                                         >
                                             <Users className="w-4 h-4" />
@@ -2244,7 +2244,7 @@ function CreateCampaignContent() {
                                             onClick={() => setUploadMode('upload')}
                                             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
                                             style={uploadMode === 'upload'
-                                                ? { background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)', color: '#fff' }
+                                                ? { background: '#4f46e5', color: '#fff' }
                                                 : { background: '#f1f5f9', color: '#475569' }}
                                         >
                                             <Upload className="w-4 h-4" />
@@ -3080,7 +3080,7 @@ function CreateCampaignContent() {
                                                                 onClick={handleConfirmUpload}
                                                                 disabled={uploadLoading || editableUploadRecords.filter(r => r.status === 'ACCEPTED').length === 0 || !uploadTitle.trim()}
                                                                 className="flex-1 flex items-center justify-center gap-2 text-white font-semibold h-10 px-4 rounded-lg transition-all hover:scale-[1.02] disabled:opacity-60"
-                                                                style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                                                                style={{ background: '#4f46e5' }}
                                                             >
                                                                 {uploadLoading ? (
                                                                     <><Loader2 className="w-4 h-4 animate-spin" />Creating List...</>
@@ -3138,7 +3138,7 @@ function CreateCampaignContent() {
                                             onClick={() => processMutation.mutate()}
                                             disabled={processMutation.isPending || selectedLists.length === 0 || (uploadMode === 'upload' && !uploadConfirmed)}
                                             className="flex items-center gap-2 text-white font-semibold h-11 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
-                                            style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                                            style={{ background: '#4f46e5' }}
                                         >
                                             {processMutation.isPending
                                                 ? <><Loader2 className="w-4 h-4 animate-spin" />Processing AI…</>
@@ -3208,7 +3208,7 @@ function CreateCampaignContent() {
                                                                 >
                                                                     <div className="flex items-center gap-2 mb-2">
                                                                         <div className="w-8 h-8 rounded-full flex items-center justify-center" style={selectedPersona === p.persona_type
-                                                                            ? { background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)', color: '#fff' }
+                                                                            ? { background: '#4f46e5', color: '#fff' }
                                                                             : { background: '#f1f5f9', color: '#6b7280' }}>
                                                                             <User className="w-4 h-4" />
                                                                         </div>
@@ -3258,7 +3258,7 @@ function CreateCampaignContent() {
                                                                         onClick={() => setSelectedEmailStep(stepNum)}
                                                                         className="px-4 py-1.5 text-xs font-black rounded-full transition-all whitespace-nowrap uppercase tracking-tighter"
                                                                         style={selectedEmailStep === stepNum
-                                                                            ? { background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)', color: '#fff' }
+                                                                            ? { background: '#4f46e5', color: '#fff' }
                                                                             : { background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0' }}
                                                                     >
                                                                         {schedule}
@@ -3408,7 +3408,7 @@ function CreateCampaignContent() {
                                             <Button
                                                 onClick={() => setCurrentStep(5)}
                                                 disabled={!processingResult}
-                                                className="text-white font-bold h-11 px-10 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                                                className="text-white font-bold h-11 px-10 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: '#4f46e5' }}
                                             >
                                                 Finalize & Launch
                                                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -3425,7 +3425,7 @@ function CreateCampaignContent() {
                                 <div className="p-8">
                                     <div className="text-center mb-10">
                                         <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                                            style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                                            style={{ background: '#4f46e5' }}>
                                             <Rocket className="w-9 h-9 text-white" />
                                         </div>
                                         <h2 className="text-2xl font-black text-gray-900">Mission Ready</h2>
@@ -3556,7 +3556,7 @@ function CreateCampaignContent() {
                                                         <div key={index} className="flex gap-4 items-center">
                                                             <div className="w-10 h-10 rounded-xl border-2 flex items-center justify-center font-bold text-sm"
                                                             style={index === 0
-                                                                ? { background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)', borderColor: 'transparent', color: '#fff' }
+                                                                ? { background: '#4f46e5', borderColor: 'transparent', color: '#fff' }
                                                                 : { background: '#fff', borderColor: '#e5e7eb', color: '#9ca3af' }}>
                                                                 {step.step_number}
                                                             </div>
@@ -3596,7 +3596,7 @@ function CreateCampaignContent() {
                                         onClick={() => { setErrors(prev => ({ ...prev, launch: undefined })); launchMutation.mutate(); }}
                                         isLoading={launchMutation.isPending}
                                         disabled={launchMutation.isPending}
-                                        className="h-14 px-10 text-lg font-black uppercase tracking-widest text-white rounded-xl transition-all hover:scale-[1.005] active:scale-[0.998] hover:shadow-lg" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                                        className="h-14 px-10 text-lg font-black uppercase tracking-widest text-white rounded-xl transition-all hover:scale-[1.005] active:scale-[0.998] hover:shadow-lg" style={{ background: '#4f46e5' }}
                                     >
                                         <Rocket className="w-6 h-6 mr-3" />
                                         Execute Campaign

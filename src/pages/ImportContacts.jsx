@@ -167,7 +167,7 @@ export default function ImportContacts() {
         <div className="w-full max-w-5xl space-y-6">
             <div>
                 <Link to="/app/contacts" className="text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1.5 mb-3"><ArrowLeft className="w-4 h-4" /> Contacts</Link>
-                <h1 className="text-2xl font-bold text-gray-900">Import contacts and companies</h1>
+                <h1 className="text-xl font-semibold tracking-tight text-slate-900">Import contacts and companies</h1>
                 <p className="text-sm text-gray-400 mt-1">CSV or Excel. Contacts match on email, companies on domain then name; existing records are updated.</p>
             </div>
 

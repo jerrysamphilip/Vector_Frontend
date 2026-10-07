@@ -107,12 +107,12 @@ export default function Lists() {
         <div className="w-full space-y-6">
             <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Lists</h1>
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900">Lists</h1>
                     <p className="text-sm text-gray-400 mt-1">Static lists you curate, and active lists that follow a filter</p>
                 </div>
                 {canManage && (
                     <button onClick={() => setEditing('new')} style={{ background: BRAND_GRADIENT }}
-                        className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm hover:shadow-md whitespace-nowrap">
+                        className="flex items-center gap-2 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90 whitespace-nowrap">
                         <Plus className="w-4 h-4" /> New list
                     </button>
                 )}

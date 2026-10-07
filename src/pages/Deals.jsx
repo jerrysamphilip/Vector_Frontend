@@ -157,7 +157,7 @@ export default function Deals() {
         <div className="w-full space-y-6">
             <PageHeader title="Opportunities" subtitle="Deals in the sales pipeline">
                 {isAdmin && <button onClick={() => setManaging(true)} className="h-10 px-4 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 flex items-center gap-1.5"><Settings2 className="w-4 h-4" /> Stages</button>}
-                <button onClick={() => setCreating(true)} style={{ background: BRAND_GRADIENT }} className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm hover:shadow-md"><Plus className="w-4 h-4" /> New opportunity</button>
+                <button onClick={() => setCreating(true)} style={{ background: BRAND_GRADIENT }} className="flex items-center gap-2 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90"><Plus className="w-4 h-4" /> New opportunity</button>
             </PageHeader>
             <div className={`${card} px-5 py-4 flex items-center gap-3 flex-wrap`} style={cardShadow}>
                 <Seg options={[['board', <span key="b" className="flex items-center gap-1.5"><LayoutGrid className="w-3.5 h-3.5" />Board</span>], ['list', <span key="l" className="flex items-center gap-1.5"><List className="w-3.5 h-3.5" />List</span>]]}

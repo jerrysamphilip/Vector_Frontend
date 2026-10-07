@@ -14,78 +14,11 @@ import Loading from '../components/common/Loading';
 import ProspectListsTable from '../components/prospects/ProspectListsTable';
 import ProspectListModal from '../components/prospects/ProspectListModal';
 import BouncedRevalidationModal from '../components/prospects/BouncedRevalidationModal';
-
-// ── Sparklines ───────────────────────────────────────────────────
-function BarSparkline({ color = '#fff', animKey = 0 }) {
-    const bars = [40, 65, 50, 80, 60, 90, 70, 85, 55, 75];
-    return (
-        <svg width="80" height="32" viewBox="0 0 80 32">
-            {bars.map((h, i) => (
-                <rect key={`${animKey}-${i}`} x={i * 8 + 1} y={32 - h * 0.3}
-                    width="5" height={h * 0.3} rx="2"
-                    fill={color} opacity="0.55"
-                    className="spark-bar"
-                    style={{ animationDelay: `${i * 55}ms` }} />
-            ))}
-        </svg>
-    );
-}
-
-function WaveSparkline({ color = '#fff', animKey = 0 }) {
-    return (
-        <svg width="80" height="32" viewBox="0 0 80 32">
-            <path key={animKey}
-                d="M0,24 C10,20 15,8 25,12 C35,16 40,6 50,10 C60,14 65,4 80,8"
-                fill="none" stroke={color} strokeWidth="2.5"
-                strokeLinecap="round" opacity="0.7"
-                className="spark-wave" />
-        </svg>
-    );
-}
+import KpiTile from '../components/ui/KpiTile';
 
 // ── GradientCard ─────────────────────────────────────────────────
-function GradientCard({ label, value, sub, from, to, dark = false, chart = 'bar', trend, animDelay = '0ms', loading }) {
-    const [animKey, setAnimKey] = useState(0);
-    const mountedRef = useRef(false);
-    useEffect(() => {
-        if (!mountedRef.current) {
-            mountedRef.current = true;
-            const t = setTimeout(() => setAnimKey(k => k + 1), 100);
-            return () => clearTimeout(t);
-        }
-    }, []);
-    const textColor = dark ? '#1a1a1a' : '#ffffff';
-    const subColor  = dark ? 'rgba(26,26,26,0.6)' : 'rgba(255,255,255,0.7)';
-    return (
-        <div className="card-anim relative rounded-2xl p-5 overflow-hidden flex flex-col justify-between"
-            style={{ background: `linear-gradient(135deg, ${from}, ${to})`, minHeight: 130, animationDelay: animDelay }}
-            onMouseEnter={() => setAnimKey(k => k + 1)}>
-            <div className="absolute inset-0 opacity-10"
-                style={{ background: 'radial-gradient(circle at 80% 20%, #fff 0%, transparent 60%)' }} />
-            <div className="relative z-10 flex justify-between items-start">
-                <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: subColor }}>{label}</p>
-                    {loading
-                        ? <div className="h-8 w-16 rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.25)' }} />
-                        : <p className="text-3xl font-bold leading-none" style={{ color: textColor }}>
-                            {(value ?? 0).toLocaleString()}
-                          </p>
-                    }
-                    <p className="text-[12px] mt-1.5 font-medium" style={{ color: subColor }}>{sub}</p>
-                </div>
-                {trend !== undefined && (
-                    <span className="mt-1" style={{ color: textColor, opacity: 0.75 }}>
-                        {trend ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                    </span>
-                )}
-            </div>
-            <div className="relative z-10 mt-3">
-                {chart === 'bar'
-                    ? <BarSparkline color={textColor} animKey={animKey} />
-                    : <WaveSparkline color={textColor} animKey={animKey} />}
-            </div>
-        </div>
-    );
+function GradientCard(props) {
+    return <KpiTile {...props} />;
 }
 
 // ── File Drop Zone ────────────────────────────────────────────────
@@ -187,7 +120,7 @@ function UploadModal({ onClose }) {
                 onClick={e => e.stopPropagation()}>
 
                 {/* Gradient top bar */}
-                <div className="h-1.5 w-full" style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }} />
+                <div className="h-1.5 w-full" style={{ background: '#4f46e5' }} />
 
                 <div className="px-6 pt-5 pb-2 flex items-start justify-between">
                     <div>
@@ -236,7 +169,7 @@ function UploadModal({ onClose }) {
                     </button>
                     <button onClick={handleSubmit} disabled={loading}
                         className="flex-1 h-11 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
-                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                        style={{ background: '#4f46e5' }}>
                         {loading
                             ? <><Loader2 className="w-4 h-4 animate-spin" />Validating…</>
                             : <><Upload className="w-4 h-4" />Validate & Continue</>}
@@ -338,7 +271,7 @@ export default function Prospects() {
             {/* ── Page Header ── */}
             <div className="flex items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Prospect Lists</h1>
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900">Prospect Lists</h1>
                     <p className="text-sm text-gray-400 mt-1">
                         {total > 0
                             ? `${total.toLocaleString()} list${total !== 1 ? 's' : ''} · ${(stats?.total ?? 0).toLocaleString()} total contacts`
@@ -349,7 +282,7 @@ export default function Prospects() {
                     {canRevalidateBounced && (
                         <button
                             onClick={() => setShowBouncedRevalidation(true)}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors whitespace-nowrap"
+                            className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors whitespace-nowrap"
                             title="Admin-only hard bounce revalidation"
                         >
                             <ShieldCheck className="w-4 h-4" />
@@ -358,8 +291,8 @@ export default function Prospects() {
                     )}
                     <button
                         onClick={() => setShowUpload(true)}
-                        className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
-                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                        className="flex items-center gap-2 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
+                        style={{ background: '#4f46e5' }}>
                         <Plus className="w-4 h-4" />
                         New List
                     </button>

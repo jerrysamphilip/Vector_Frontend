@@ -4,6 +4,7 @@ import Layout from './components/layout/Layout';
 import AdminLayout from './components/layout/AdminLayout';
 import { ProtectedRoute, PublicRoute, PlatformAdminRoute, PermissionRoute } from './components/auth/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
+import Home from './pages/Home';
 import PlatformAdmin from './pages/PlatformAdmin';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
@@ -116,7 +117,7 @@ function App() {
                         )}
                     >
                         <Route index element={<Navigate to="dashboard" replace />} />
-                        <Route path="dashboard" element={<Dashboard />} />
+                        <Route path="dashboard" element={<Home />} />
                         <Route path="campaigns" element={<PermissionRoute permission="manage_campaigns"><Campaigns /></PermissionRoute>} />
                         <Route path="campaigns/new" element={<PermissionRoute permission="manage_campaigns"><CreateCampaign /></PermissionRoute>} />
                         <Route path="campaigns/:id" element={<PermissionRoute permission="manage_campaigns"><CampaignDetails /></PermissionRoute>} />

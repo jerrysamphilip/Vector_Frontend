@@ -13,6 +13,7 @@ import AlertPreferencesModal from '../components/inbox/AlertPreferencesModal';
 import Loading from '../components/common/Loading';
 import { apiClient as api } from '../api/http';
 import deliverabilityApi from '../api/deliverability';
+import KpiTile from '../components/ui/KpiTile';
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
 const getInboxes       = async ()     => (await api.get('/inboxes')).data;
@@ -54,33 +55,6 @@ function providerStyle(provider) {
     return PROVIDER_COLORS[(provider || '').toLowerCase()] || PROVIDER_COLORS.smtp;
 }
 
-// ─── Sparkline components (matching Dashboard) ────────────────────────────────
-function BarSparkline({ color = 'rgba(255,255,255,0.6)' }) {
-    const bars = [30, 55, 40, 75, 50, 90, 65];
-    const H = 36;
-    return (
-        <svg width="64" height={H} viewBox={`0 0 64 ${H}`} style={{ overflow: 'visible' }}>
-            {bars.map((pct, i) => {
-                const barH = (pct / 100) * H;
-                return (
-                    <rect key={i} x={i * 9 + 1} y={H - barH} width="6" height={barH}
-                        rx="2" fill={color} className="spark-bar"
-                        style={{ animationDelay: `${i * 60}ms` }}/>
-                );
-            })}
-        </svg>
-    );
-}
-
-function WaveSparkline({ color = 'rgba(255,255,255,0.5)' }) {
-    return (
-        <svg width="84" height="36" viewBox="0 0 84 36" fill="none">
-            <path d="M0 28 C12 28,12 10,22 12 C32 14,32 6,42 8 C52 10,52 24,62 18 C72 12,72 8,84 10"
-                stroke={color} strokeWidth="2.5" fill="none" strokeLinecap="round" className="spark-wave"/>
-        </svg>
-    );
-}
-
 // ─── Tiny sub-components ──────────────────────────────────────────────────────
 
 function ReputationRing({ value, size = 56 }) {
@@ -118,36 +92,8 @@ function Toggle({ checked, onChange, disabled = false }) {
 }
 
 // Dashboard-style gradient KPI card with sparkline
-function GradientKpi({ label, value, sub, from, to, dark, chart, animDelay }) {
-    const [sparkKey, setSparkKey] = useState(0);
-    useEffect(() => {
-        const delay = parseInt(animDelay) || 0;
-        const t = setTimeout(() => setSparkKey(k => k + 1), delay + 520);
-        return () => clearTimeout(t);
-    }, [animDelay]);
-
-    const textMain  = dark ? '#0046FF'             : '#ffffff';
-    const textMuted = dark ? 'rgba(0,70,255,0.65)' : 'rgba(255,255,255,0.75)';
-    const sparkCol  = dark ? 'rgba(0,70,255,0.30)' : 'rgba(255,255,255,0.5)';
-
-    return (
-        <div className="card-anim rounded-2xl p-5 shadow-md hover:shadow-xl transition-shadow cursor-default"
-             style={{ background: `linear-gradient(135deg, ${from}, ${to})`, animationDelay: animDelay }}
-             onMouseEnter={() => setSparkKey(k => k + 1)}>
-            <div className="flex items-end justify-between">
-                <div>
-                    <p className="text-xs font-semibold mb-1" style={{ color: textMuted }}>{label}</p>
-                    <p className="text-2xl font-bold" style={{ color: textMain }}>{value}</p>
-                    {sub && <p className="text-xs mt-1" style={{ color: textMuted }}>{sub}</p>}
-                </div>
-                <div className="opacity-90">
-                    {chart === 'bar'
-                        ? <BarSparkline key={sparkKey} color={sparkCol}/>
-                        : <WaveSparkline key={sparkKey} color={sparkCol}/>}
-                </div>
-            </div>
-        </div>
-    );
+function GradientKpi(props) {
+    return <KpiTile {...props} />;
 }
 
 function PoolBadge({ pool }) {
@@ -535,7 +481,7 @@ export default function EmailAccounts() {
                         </button>
                         <button
                             onClick={() => { setFormError(''); setIsEditMode(false); setSelectedInbox(null); setIsModalOpen(true); }}
-                            className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
+                            className="flex items-center gap-2 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90 hover:scale-[1.02] active:scale-[0.98]"
                             style={{ background: 'linear-gradient(135deg, #0046FF, #73C8D2)' }}
                         >
                             <Plus size={15}/> Connect Mailbox
