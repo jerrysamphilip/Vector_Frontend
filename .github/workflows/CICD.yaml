@@ -32,7 +32,7 @@ jobs:
           elif [ "$BRANCH" = "stage" ]; then
             echo "ENV=stage" >> $GITHUB_ENV
             echo "NAMESPACE=sales360-stage" >> $GITHUB_ENV
-            echo "MANIFEST=manifests/deployment-stage.yaml" >> $GITHUB_ENV
+            echo "MANIFEST=manifests/deployment.yaml" >> $GITHUB_ENV
           fi
 
       - name: Configure AWS credentials

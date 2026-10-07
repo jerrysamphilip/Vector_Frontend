@@ -1,135 +1,65 @@
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend
-  namespace: sales360
+  name: frontend
   labels:
-    app: backend
+    app: frontend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: backend
+      app: frontend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
   template:
     metadata:
       labels:
-        app: backend
+        app: frontend
     spec:
       containers:
-        - name: backend-container
-          image: <ECR_IMAGE_URI>
+        - name: frontend
+          image: frontend:latest   # replaced by CI/CD
+          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8001
-            
+            - containerPort: 80
+
+          # ✅ Inject namespace automatically
           env:
-            # - name: NODE_ENV
-            #   value: "devlopment"
-            - name: MYSQL_HOST
+            - name: APP_NAMESPACE
               valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: MYSQL_HOST
-          
-            - name: MYSQL_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: MYSQL_PORT
-
-
-            - name: MYSQL_USER
-              valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: MYSQL_USER
-
-            - name: MYSQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: MYSQL_PASSWORD
-
-
-            - name: MYSQL_DATABASE
-              valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: MYSQL_DATABASE
-          
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: OPENAI_API_KEY
-
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: AWS_ACCESS_KEY_ID
-
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: AWS_SECRET_ACCESS_KEY
-
-
-            - name: AWS_REGION
-              valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: AWS_REGION
-
-            - name: AWS_SES_CONFIGURATION_SET
-              valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: AWS_SES_CONFIGURATION_SET
-
-            - name: AWS_SNS_TOPIC_ARN
-              valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: AWS_SNS_TOPIC_ARN
-
-
-            - name: SENDER_EMAIL
-              valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: SENDER_EMAIL
-
+                fieldRef:
+                  fieldPath: metadata.namespace
             
-            - name: AWS_SNS_ENABLED
-              valueFrom:
-                secretKeyRef:
-                  name: sales360-secret
-                  key: AWS_SNS_ENABLED
-            
+          envFrom:
+            - secretRef:
+                name: frontend-env     # same name in each namespace
 
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "256Mi"
-            limits:
-              cpu: "1"
-              memory: "512Mi"
+          volumeMounts:
+            - name: env-config
+              mountPath: /usr/share/nginx/html/env-config.js
+              subPath: env-config.js
+
+      volumes:
+        - name: env-config
+          configMap:
+            name: frontend-env-config  # same name in each namespace
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend
-  namespace: sales360
+  name: frontend
   labels:
-    app: backend
+    app: frontend
 spec:
-  type: ClusterIP       
+  type: ClusterIP
   selector:
-    app: backend
+    app: frontend
   ports:
     - name: http
-      port: 8000
-      targetPort: 8001
+      port: 80
+      targetPort: 80
+

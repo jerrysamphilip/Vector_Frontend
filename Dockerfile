@@ -1,32 +1,30 @@
-FROM python:3.12.7-slim AS builder
+
+# ---------- Stage 1: Build the Vite app ----------
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    python3-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Copy dependency files
+COPY package*.json ./
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --user -r requirements.txt
+# Install dependencies
+RUN npm ci && npm cache clean --force
 
-FROM python:3.12.7-slim
-
-WORKDIR /app
-
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /root/.local
-
-# Copy application code
+# Copy all source code
 COPY . .
 
-# Make sure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
+# Build the production version
+RUN npm run build
 
-# Expose the port the app runs on
-EXPOSE 8001
+# ---------- Stage 2: Serve with Nginx ----------
+FROM nginx:alpine
 
-# Command to run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+# Copy build output from previous stage
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Copy our Docker-specific Nginx config
+COPY nginx.conf /etc/nginx/nginx.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
