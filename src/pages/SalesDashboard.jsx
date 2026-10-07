@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, Trophy } from 'lucide-react';
 import { money, moneyShort, pct, salesReportsApi } from '../api/sales';
 import { formatDateTime } from '../components/contacts/shared';
 import { HBar, MemberFilter, PageHeader, PeriodFilter, StatTile, card, cardShadow, periodRange } from '../components/sales/shared';
@@ -93,7 +93,22 @@ export default function SalesDashboard() {
                         </div>
                     )}
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    {(data.leaderboard || []).length > 0 && (
+                        <div className={`${card} p-5`} style={cardShadow}>
+                            <div className="flex items-center justify-between mb-2"><h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5"><Trophy className="w-4 h-4 text-amber-500" /> Leaderboard</h2><Link to="/app/sales-reports?tab=targets" className="text-xs font-semibold text-indigo-600">Targets →</Link></div>
+                            <ol className="divide-y divide-slate-50">
+                                {data.leaderboard.map(r => (
+                                    <li key={r.user_id} className="flex items-center gap-3 py-2 text-sm">
+                                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${r.rank === 1 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>{r.rank}</span>
+                                        <span className="flex-1 truncate text-slate-800">{r.name}</span>
+                                        <span className="tabular-nums font-semibold text-slate-700">{moneyShort(r.won_amount)}</span>
+                                        <span className="text-xs text-slate-400 w-14 text-right">{r.won_count} won</span>
+                                    </li>
+                                ))}
+                            </ol>
+                        </div>
+                    )}
                     <div className={`${card} p-5`} style={cardShadow}>
                         <div className="flex items-center justify-between mb-2"><h2 className="text-sm font-bold text-slate-800">My SQLs to convert</h2><Link to="/app/sql-queue" className="text-xs font-semibold text-indigo-600">SQL queue →</Link></div>
                         <ul className="divide-y divide-slate-50">

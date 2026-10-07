@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Search, Loader2, Target, LayoutGrid, List, AlertCircle } from 'lucide-react';
+import { Plus, Search, Loader2, Target, LayoutGrid, List, AlertCircle, MessageSquareReply, ChevronDown, ChevronUp } from 'lucide-react';
 import { contactsApi, errorMessage } from '../api/contacts';
 import { leadsApi } from '../api/sales';
 import { Avatar, ErrorNote, Field, Modal, PrimaryButton, SecondaryButton, inputClass, relativeDate, BRAND_GRADIENT } from '../components/contacts/shared';
@@ -70,6 +70,55 @@ function LeadCard({ lead }) {
     );
 }
 
+/** Positive campaign replies from contacts who have no open lead yet: one click to turn them into leads (BR-SF-01). */
+function ReplySuggestions() {
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const [open, setOpen] = useState(true);
+    const [error, setError] = useState(null);
+    const { data } = useQuery({ queryKey: ['reply-suggestions'], queryFn: leadsApi.replySuggestions });
+    const create = useMutation({
+        mutationFn: (messageId) => leadsApi.fromMessage(messageId),
+        onSuccess: (lead) => { queryClient.invalidateQueries({ queryKey: ['leads'] }); queryClient.invalidateQueries({ queryKey: ['reply-suggestions'] }); navigate(`/app/leads/${lead.lead_id}`); },
+        onError: (e) => {
+            const detail = e?.response?.data?.detail;
+            if (e?.response?.status === 409 && detail?.lead_id) navigate(`/app/leads/${detail.lead_id}`);
+            else setError(errorMessage(e));
+        },
+    });
+    const items = data?.items || [];
+    if (!items.length) return null;
+    return (
+        <div className={`${card} border-emerald-100`} style={cardShadow}>
+            <button onClick={() => setOpen(o => !o)} className="w-full px-5 py-3 flex items-center justify-between text-left">
+                <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <MessageSquareReply className="w-4 h-4 text-emerald-600" /> {items.length} positive {items.length === 1 ? 'reply' : 'replies'} without a lead
+                </span>
+                {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            </button>
+            {open && (
+                <div className="px-5 pb-4 space-y-2">
+                    <ErrorNote message={error} />
+                    {items.slice(0, 8).map(r => (
+                        <div key={r.message_id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100">
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-slate-800 truncate">
+                                    <Link to={`/app/contacts/${r.prospect_id}`} className="hover:text-indigo-700">{r.contact_name}</Link>
+                                    {r.company_name && <span className="font-normal text-slate-500"> · {r.company_name}</span>}
+                                    <span className="font-normal text-[11px] text-slate-400"> · {relativeDate(r.received_at)}</span>
+                                </p>
+                                <p className="text-xs text-slate-500 truncate">{r.snippet || r.subject}</p>
+                            </div>
+                            <PrimaryButton className="h-8 px-3 text-xs" loading={create.isPending && create.variables === r.message_id}
+                                onClick={() => create.mutate(r.message_id)}>Create lead</PrimaryButton>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function Leads() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -98,6 +147,7 @@ export default function Leads() {
                 <button onClick={() => setCreating(true)} style={{ background: BRAND_GRADIENT }}
                     className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm hover:shadow-md"><Plus className="w-4 h-4" /> New lead</button>
             </PageHeader>
+            <ReplySuggestions />
 
             <div className={`${card} px-5 py-4 flex items-center gap-3 flex-wrap`} style={cardShadow}>
                 <Seg options={[['board', <span key="b" className="flex items-center gap-1.5"><LayoutGrid className="w-3.5 h-3.5" />Board</span>], ['list', <span key="l" className="flex items-center gap-1.5"><List className="w-3.5 h-3.5" />List</span>]]}

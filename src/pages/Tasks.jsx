@@ -151,6 +151,7 @@ export default function Tasks() {
                                         <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
                                             {t.prospect_id && <Link to={`/app/contacts/${t.prospect_id}`} className="font-medium text-indigo-600 hover:text-indigo-800">{t.contact_name || t.contact_email}</Link>}
                                             {t.account_id && <Link to={`/app/accounts/${t.account_id}`} className="font-medium text-indigo-600 hover:text-indigo-800">{t.company_name}</Link>}
+                                            {t.opportunity_id && <Link to={`/app/deals/${t.opportunity_id}`} className="font-medium text-indigo-600 hover:text-indigo-800">Deal: {t.opportunity_name}</Link>}
                                             {scope !== 'mine' && t.owner_name && <span>for {t.owner_name}</span>}
                                             {t.reminder_due && <span className="flex items-center gap-1 text-amber-600"><Bell className="w-3 h-3" />reminder</span>}
                                         </p>

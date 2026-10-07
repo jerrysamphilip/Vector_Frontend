@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Loader2, Briefcase, LayoutGrid, List, Settings2, X } from 'lucide-react';
+import { Plus, Loader2, Briefcase, LayoutGrid, List, Settings2, X, AlertTriangle, Trophy, XCircle } from 'lucide-react';
 import { accountsApi, errorMessage } from '../api/contacts';
 import { dealsApi, money, moneyShort, stagesApi } from '../api/sales';
 import { getStoredUser } from '../lib/authStorage';
 import { ErrorNote, Field, Modal, OwnerSelect, PrimaryButton, SecondaryButton, inputClass, BRAND_GRADIENT } from '../components/contacts/shared';
-import { ClientTypeBadge, ClientTypeFilter, DealStatusBadge, Empty, OwnerFilter, PageHeader, Seg, card, cardShadow, selectSm, useTeamOwners } from '../components/sales/shared';
+import { ClientTypeBadge, ClientTypeFilter, DealStatusBadge, Empty, OwnerFilter, PageHeader, Seg, card, cardShadow, selectSm, useLeadsMeta, useTeamOwners } from '../components/sales/shared';
+import CloseReasonModal from '../components/sales/CloseReasonModal';
 
 export function DealFormModal({ onClose, onSaved, defaults = {} }) {
     const owners = useTeamOwners();
     const me = getStoredUser();
+    const meta = useLeadsMeta();
     const { data: stages = [] } = useQuery({ queryKey: ['sales-stages'], queryFn: () => stagesApi.list() });
     const { data: companies } = useQuery({ queryKey: ['accounts', 'picker'], queryFn: () => accountsApi.list({ page_size: 200, sort_by: 'name', sort_order: 'asc' }) });
     const [form, setForm] = useState({ name: '', account_id: '', amount: '', close_date: '', stage_id: '', client_type: '', owner_id: me?.user_id, ...defaults });
@@ -33,7 +35,7 @@ export function DealFormModal({ onClose, onSaved, defaults = {} }) {
                         {(companies?.items || []).map(a => <option key={a.account_id} value={a.account_id}>{a.name}</option>)}
                     </select>
                 </Field>
-                <Field label="Amount"><input className={inputClass} inputMode="decimal" value={form.amount} onChange={set('amount')} /></Field>
+                {meta?.can_see_amounts !== false && <Field label="Amount"><input className={inputClass} inputMode="decimal" value={form.amount} onChange={set('amount')} /></Field>}
                 <Field label="Expected close"><input type="date" className={inputClass} value={form.close_date} onChange={set('close_date')} /></Field>
                 <Field label="Stage">
                     <select className={inputClass} value={form.stage_id} onChange={set('stage_id')}>
@@ -97,6 +99,7 @@ function DealCard({ deal, onDragStart }) {
             className="block bg-white rounded-xl border border-slate-100 p-3 hover:border-indigo-200 hover:shadow-sm">
             <p className="text-sm font-semibold text-slate-800 truncate">{deal.name}</p>
             <p className="text-xs text-slate-500 truncate">{deal.company_name || '—'}</p>
+            {deal.stale && <span className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-orange-50 text-orange-700" title="No recent activity or past its close date"><AlertTriangle className="w-3 h-3" /> Stale · {deal.days_idle}d idle</span>}
             <div className="flex items-center justify-between mt-2">
                 <span className="text-sm font-bold text-slate-800">{moneyShort(deal.amount)}</span>
                 <ClientTypeBadge value={deal.client_type} />
@@ -121,6 +124,10 @@ export default function Deals() {
     const status = params.get('status') || (mode === 'list' ? '' : 'OPEN');
     const closeFrom = params.get('close_from') || '';
     const closeTo = params.get('close_to') || '';
+    const staleOnly = params.get('stale') === '1';
+    const [closing, setClosing] = useState(null);
+    const { data: allStages = [] } = useQuery({ queryKey: ['sales-stages'], queryFn: () => stagesApi.list() });
+    const closedStages = allStages.filter(s => s.is_won || s.is_lost);
     const [creating, setCreating] = useState(false);
     const [managing, setManaging] = useState(false);
     const [error, setError] = useState(null);
@@ -128,18 +135,21 @@ export default function Deals() {
 
     const filters = { owner, client_type: clientType };
     const board = useQuery({ queryKey: ['deals', 'board', filters], enabled: mode === 'board', queryFn: () => dealsApi.board(filters) });
-    const list = useQuery({ queryKey: ['deals', 'list', filters, status, closeFrom, closeTo], enabled: mode === 'list', placeholderData: keepPreviousData,
-        queryFn: () => dealsApi.list({ ...filters, status, close_from: closeFrom, close_to: closeTo, page_size: 500 }) });
+    const list = useQuery({ queryKey: ['deals', 'list', filters, status, closeFrom, closeTo, staleOnly], enabled: mode === 'list', placeholderData: keepPreviousData,
+        queryFn: () => dealsApi.list({ ...filters, status, close_from: closeFrom, close_to: closeTo, stale: staleOnly || undefined, page_size: 500 }) });
     const move = useMutation({
-        mutationFn: ({ deal, stage_id }) => dealsApi.update(deal.opportunity_id, { stage_id }),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['deals'] }), onError: e => setError(errorMessage(e)),
+        mutationFn: ({ deal, stage_id, closed_reason }) => dealsApi.update(deal.opportunity_id, closed_reason ? { stage_id, closed_reason } : { stage_id }),
+        onSuccess: () => { setClosing(null); setError(null); queryClient.invalidateQueries({ queryKey: ['deals'] }); }, onError: e => { setClosing(null); setError(errorMessage(e)); },
     });
-    const onDragStart = (e, deal) => e.dataTransfer.setData('text/plain', JSON.stringify({ id: deal.opportunity_id, stage: deal.stage_id }));
+    const onDragStart = (e, deal) => e.dataTransfer.setData('text/plain', JSON.stringify({ id: deal.opportunity_id, stage: deal.stage_id, name: deal.name }));
     const onDrop = (e, stageId) => {
         e.preventDefault();
         try {
             const d = JSON.parse(e.dataTransfer.getData('text/plain'));
-            if (d.stage !== stageId) move.mutate({ deal: { opportunity_id: d.id }, stage_id: stageId });
+            if (d.stage === stageId) return;
+            const target = allStages.find(s => s.stage_id === stageId);
+            if (target && (target.is_won || target.is_lost)) setClosing({ deal: { opportunity_id: d.id, name: d.name }, stage: target });
+            else move.mutate({ deal: { opportunity_id: d.id }, stage_id: stageId });
         } catch { /* not a deal */ }
     };
 
@@ -159,6 +169,10 @@ export default function Deals() {
                         <option value="">All</option><option value="OPEN">Open</option><option value="WON">Won</option><option value="LOST">Lost</option>
                     </select>
                 )}
+                <label className="flex items-center gap-1.5 text-sm text-slate-600">
+                    <input type="checkbox" className="accent-indigo-600" checked={staleOnly} onChange={e => update({ stale: e.target.checked ? '1' : '', mode: e.target.checked ? 'list' : mode, status: e.target.checked ? 'OPEN' : status })} />
+                    Stale only
+                </label>
                 {(closeFrom || closeTo) && (
                     <span className="h-8 px-3 flex items-center gap-1.5 text-sm rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200">
                         Closing {closeFrom || '…'} to {closeTo || '…'}<button onClick={() => update({ close_from: '', close_to: '' })} aria-label="Clear dates"><X className="w-3.5 h-3.5" /></button>
@@ -170,7 +184,8 @@ export default function Deals() {
 
             {mode === 'board' ? (
                 board.isLoading ? <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div> : (
-                    <div className="flex gap-4 overflow-x-auto pb-2">
+                    <div>
+                        <div className="flex gap-4 overflow-x-auto pb-2">
                         {(board.data?.columns || []).map(col => (
                             <div key={col.stage_id} onDragOver={e => e.preventDefault()} onDrop={e => onDrop(e, col.stage_id)}
                                 className="bg-slate-50/80 rounded-2xl p-3 w-72 flex-shrink-0 min-h-[260px]">
@@ -184,6 +199,17 @@ export default function Deals() {
                                 </div>
                             </div>
                         ))}
+                        </div>
+                        {closedStages.length > 0 && (
+                            <div className="flex gap-3 mt-3">
+                                {closedStages.map(s => (
+                                    <div key={s.stage_id} onDragOver={e => e.preventDefault()} onDrop={e => onDrop(e, s.stage_id)}
+                                        className={`flex-1 h-14 rounded-2xl border-2 border-dashed flex items-center justify-center gap-2 text-sm font-semibold ${s.is_won ? 'border-emerald-200 text-emerald-700 bg-emerald-50/50' : 'border-slate-200 text-slate-500 bg-slate-50/50'}`}>
+                                        {s.is_won ? <Trophy className="w-4 h-4" /> : <XCircle className="w-4 h-4" />} Drop here to mark {s.name}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )
             ) : (
@@ -198,7 +224,7 @@ export default function Deals() {
                                 <tbody className="divide-y divide-slate-50">
                                     {list.data.items.map(d => (
                                         <tr key={d.opportunity_id} onClick={() => navigate(`/app/deals/${d.opportunity_id}`)} className="cursor-pointer hover:bg-slate-50/70">
-                                            <td className="pl-5 pr-3 py-3"><p className="text-sm font-semibold text-slate-800">{d.name}</p><p className="text-xs text-slate-500">{d.company_name || '—'}</p></td>
+                                            <td className="pl-5 pr-3 py-3"><p className="text-sm font-semibold text-slate-800 flex items-center gap-2">{d.name}{d.stale && <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-orange-50 text-orange-700"><AlertTriangle className="w-3 h-3" /> {d.days_idle}d idle</span>}</p><p className="text-xs text-slate-500">{d.company_name || '—'}</p></td>
                                             <td className="px-3 py-3"><DealStatusBadge status={d.status} stageName={d.stage_name} /></td>
                                             <td className="px-3 py-3 text-sm text-right font-semibold tabular-nums">{money(d.amount)}</td>
                                             <td className="px-3 py-3 text-sm text-right text-slate-600 tabular-nums">{d.status === 'OPEN' ? money(d.weighted_amount) : '—'}</td>
@@ -214,6 +240,8 @@ export default function Deals() {
             )}
             {creating && <DealFormModal onClose={() => setCreating(false)} onSaved={d => { setCreating(false); queryClient.invalidateQueries({ queryKey: ['deals'] }); navigate(`/app/deals/${d.opportunity_id}`); }} />}
             {managing && <StagesModal onClose={() => setManaging(false)} />}
+            {closing && <CloseReasonModal stage={closing.stage} dealName={closing.deal.name} busy={move.isPending} onClose={() => setClosing(null)}
+                onConfirm={reason => move.mutate({ deal: closing.deal, stage_id: closing.stage.stage_id, closed_reason: reason })} />}
         </div>
     );
 }

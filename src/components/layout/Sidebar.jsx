@@ -30,6 +30,10 @@ import {
   TrendingUp,
   PieChart,
   Network,
+  Crosshair,
+  FileText,
+  Settings2,
+  CalendarSync,
 } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import { authApi } from '../../api/auth';
@@ -52,6 +56,10 @@ const baseNavigation = [
   { name: 'Pipeline',       href: '/app/pipeline',       icon: TrendingUp,      permission: null, section: 'Sales' },
   { name: 'Sales Reports',  href: '/app/sales-reports',  icon: PieChart,        permission: null, section: 'Sales' },
   { name: 'Sales Team',     href: '/app/sales-team',     icon: Network,         permission: null, section: 'Sales' },
+  { name: 'Targets',        href: '/app/sales-targets',  icon: Crosshair,       permission: null, section: 'Sales' },
+  { name: 'Templates',      href: '/app/templates',      icon: FileText,        permission: null, section: 'Sales' },
+  { name: 'Calendar Sync',  href: '/app/connections', icon: CalendarSync, permission: null, section: 'Sales' },
+  { name: 'Sales Settings', href: '/app/sales-settings', icon: Settings2,       permission: null, section: 'Sales', adminOnly: true },
   { name: 'Domain Health',  href: '/app/domain-health',  icon: Activity,        permission: null },
   { name: 'Inbox',          href: '/app/inbox',          icon: MessageSquare,   permission: null },
   { name: 'Email Accounts', href: '/app/inboxes',        icon: Inbox,           permission: 'manage_inboxes' },
@@ -262,7 +270,8 @@ export default function Sidebar() {
   const canSeeTeamManagement = currentRole === 'SUPER_ADMIN' || currentRole === 'ADMIN';
 
   const navigation = [
-    ...baseNavigation.filter(item => item.permission === null || hasPermission(item.permission)),
+    ...baseNavigation.filter(item => (item.permission === null || hasPermission(item.permission))
+      && (!item.adminOnly || ['SUPER_ADMIN', 'ADMIN'].includes(currentRole))),
     ...(canSeeTeamManagement && hasPermission('manage_team') ? [{ name: 'Team', href: '/app/team', icon: Shield, permission: 'manage_team' }] : []),
   ];
 

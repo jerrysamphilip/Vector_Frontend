@@ -33,6 +33,10 @@ import DealDetail from './pages/DealDetail';
 import Pipeline from './pages/Pipeline';
 import SalesReports from './pages/SalesReports';
 import SalesTeam from './pages/SalesTeam';
+import SalesSettings from './pages/SalesSettings';
+import SalesTargets from './pages/SalesTargets';
+import TemplateLibrary from './pages/TemplateLibrary';
+import Connections from './pages/Connections';
 import Reports from './pages/Reports';
 import DomainHealth from './pages/DomainHealth';
 import EmailAccounts from './pages/EmailAccounts';
@@ -136,6 +140,10 @@ function App() {
                         <Route path="pipeline" element={<Pipeline />} />
                         <Route path="sales-reports" element={<SalesReports />} />
                         <Route path="sales-team" element={<SalesTeam />} />
+                        <Route path="sales-settings" element={<SalesSettings />} />
+                        <Route path="sales-targets" element={<SalesTargets />} />
+                        <Route path="templates" element={<TemplateLibrary />} />
+                        <Route path="connections" element={<Connections />} />
                         <Route path="recently-deleted" element={<PermissionRoute permission="manage_prospects"><RecentlyDeleted /></PermissionRoute>} />
                         <Route path="analytics" element={<Dashboard />} />
                         <Route

@@ -33,7 +33,7 @@ export function ConvertModal({ lead, onClose, onConverted }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Opportunity name" className="sm:col-span-2" hint="Leave blank to use the company name and month">
                     <input className={inputClass} value={form.name} onChange={set('name')} placeholder={`${lead.company_name || lead.contact_name} - …`} /></Field>
-                <Field label="Amount"><input className={inputClass} inputMode="decimal" value={form.amount} onChange={set('amount')} placeholder="50000" /></Field>
+                {meta?.can_see_amounts !== false && <Field label="Amount"><input className={inputClass} inputMode="decimal" value={form.amount} onChange={set('amount')} placeholder="50000" /></Field>}
                 <Field label="Expected close"><input type="date" className={inputClass} value={form.close_date} onChange={set('close_date')} /></Field>
                 <Field label="Sales stage">
                     <select className={inputClass} value={form.stage_id} onChange={set('stage_id')}>
@@ -63,6 +63,7 @@ export default function LeadDetail() {
     const [next, setNext] = useState({ next_step: '', next_step_at: '' });
     const [notes, setNotes] = useState('');
     const [disq, setDisq] = useState(null);
+    const [recycleDays, setRecycleDays] = useState('');
     const [converting, setConverting] = useState(false);
     useEffect(() => {
         if (!lead) return;
@@ -129,7 +130,11 @@ export default function LeadDetail() {
                         ))}
                     </div>
                 )}
-                {lead.stage === 'DISQUALIFIED' && <p className="mt-4 text-sm text-slate-600"><span className="font-semibold">Disqualified:</span> {lead.disqualified_reason}</p>}
+                {lead.stage === 'DISQUALIFIED' && (
+                    <p className="mt-4 text-sm text-slate-600"><span className="font-semibold">Disqualified:</span> {lead.disqualified_reason}
+                        {lead.recycle_at && <span className="text-slate-500"> · comes back as a new lead on {new Date(`${lead.recycle_at}Z`).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
+                    </p>
+                )}
                 <div className="mt-3"><ErrorNote message={error} /></div>
             </div>
 
@@ -181,14 +186,22 @@ export default function LeadDetail() {
                 <Modal title="Disqualify lead" onClose={() => setDisq(null)} footer={<>
                     <SecondaryButton onClick={() => setDisq(null)} className="flex-1">Cancel</SecondaryButton>
                     <PrimaryButton disabled={!disq.trim()} loading={save.isPending} className="flex-1"
-                        onClick={() => save.mutate({ disqualified_reason: disq, stage: 'DISQUALIFIED' }, { onSuccess: () => setDisq(null) })}>Disqualify</PrimaryButton>
+                        onClick={() => save.mutate({ disqualified_reason: disq, stage: 'DISQUALIFIED', recycle_in_days: recycleDays === '' ? (meta?.default_recycle_days || null) : Number(recycleDays) || null }, { onSuccess: () => setDisq(null) })}>Disqualify</PrimaryButton>
                 </>}>
                 <Field label="Reason"><input className={inputClass} value={disq} onChange={e => setDisq(e.target.value)} placeholder="e.g. No budget this year" autoFocus /></Field>
                 <div className="flex flex-wrap gap-2 mt-3">
-                    {['No budget', 'Not the decision maker', 'No need', 'Went with a competitor', 'Unresponsive'].map(r => (
-                        <button key={r} onClick={() => setDisq(r)} className="px-2.5 py-1 rounded-lg bg-slate-100 text-xs text-slate-600 hover:bg-slate-200">{r}</button>
+                    {(meta?.disqualify_reasons || []).map(r => (
+                        <button key={r} onClick={() => setDisq(r)} className={`px-2.5 py-1 rounded-lg text-xs ${disq === r ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{r}</button>
                     ))}
                 </div>
+                <Field label="Try again later" className="mt-4" hint="The lead reopens as New for its owner after this many days. Leave empty for the default; 0 to never recycle.">
+                    <select className={inputClass} value={recycleDays} onChange={e => setRecycleDays(e.target.value)}>
+                        <option value="">In {meta?.default_recycle_days || 90} days (default)</option>
+                        <option value="30">In 30 days</option><option value="60">In 60 days</option>
+                        <option value="180">In 6 months</option><option value="365">In a year</option>
+                        <option value="0">Never</option>
+                    </select>
+                </Field>
             </Modal>
             )}
             {converting && <ConvertModal lead={lead} onClose={() => setConverting(false)}

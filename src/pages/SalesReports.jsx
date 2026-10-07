@@ -3,8 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { money, moneyShort, pct, salesReportsApi } from '../api/sales';
-import { ClientTypeFilter, HBar, MemberFilter, PageHeader, PeriodFilter, Seg, StatTile, card, cardShadow, periodRange, selectSm } from '../components/sales/shared';
+import { ClientTypeFilter, HBar, MemberFilter, PERIODS, PageHeader, PeriodFilter, Seg, StatTile, card, cardShadow, periodRange, selectSm } from '../components/sales/shared';
 import { Funnel } from './SalesDashboard';
+import CustomReports from '../components/sales/CustomReports';
 
 const WON = '#059669';
 const WEIGHTED = '#4f46e5';
@@ -53,6 +54,13 @@ function LeadsTab({ member, period }) {
                         ))}</tbody></table>
                 </div>
             </div>
+            {(data.disqualified_reasons || []).length > 0 && (
+                <div className={`${card} p-5`} style={cardShadow}>
+                    <h2 className="text-sm font-bold text-slate-800 mb-1">Why leads were disqualified</h2>
+                    <p className="text-xs text-slate-500 mb-3">Leads created in the period; "recycling" ones reopen later</p>
+                    {data.disqualified_reasons.map(r => <HBar key={r.reason} label={r.reason} value={r.count} max={data.disqualified_reasons[0].count} display={r.count} sub={r.recycling ? `${r.recycling} recycling` : undefined} tone="#64748b" />)}
+                </div>
+            )}
         </div>
     );
 }
@@ -120,6 +128,12 @@ function ForecastTab({ member }) {
                 <StatTile label="Open pipeline" value={moneyShort(data.total.pipeline)} sub={`${data.total.open_count} deals · best case ${moneyShort(data.total.best_case)}`} />
                 <StatTile label="Open, no close date" value={moneyShort(data.open_without_close_date.amount)} sub={`${data.open_without_close_date.count} deals not in the forecast`} />
             </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatTile label="Commit" value={moneyShort(data.total.commit)} sub="Won + deals reps committed" tone="text-indigo-700" />
+                <StatTile label="Best case" value={moneyShort(data.total.best_case_category)} sub="Commit + best-case deals" />
+                <StatTile label="Target" value={data.total.target ? moneyShort(data.total.target) : '—'} sub={data.total.target ? `${pct(data.total.attainment)} attained` : 'No targets set for this year'} />
+                <StatTile label="Gap to target" value={data.total.target ? moneyShort(Math.max(data.total.target - data.total.won, 0)) : '—'} sub={data.total.target ? `commit covers ${pct(Math.round((data.total.commit / data.total.target) * 100))}` : ''} />
+            </div>
             <div className={`${card} p-5`} style={cardShadow}>
                 <h2 className="text-sm font-bold text-slate-800">Quarter-wise, {data.label} ({data.start} to {data.end})</h2>
                 <p className="text-xs text-slate-500 mb-3">By expected close date. Each row links to the opportunities it counts.</p>
@@ -134,14 +148,14 @@ function ForecastTab({ member }) {
             </div>
             <div className={`${card} overflow-hidden`} style={cardShadow}>
                 <table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase">
-                    <th className="pl-5 py-2.5">Period</th><th className={th}>Won</th><th className={th}>Open pipeline</th><th className={th}>Weighted</th><th className={th}>Forecast</th><th className={`${th} pr-5`}>Best case</th></tr></thead>
+                    <th className="pl-5 py-2.5">Period</th><th className={th}>Target</th><th className={th}>Won</th><th className={th}>Attained</th><th className={th}>Commit</th><th className={th}>Best case (cat.)</th><th className={th}>Open pipeline</th><th className={th}>Weighted</th><th className={`${th} pr-5`}>Forecast</th></tr></thead>
                     <tbody className="divide-y divide-slate-50">
                         {data.quarters.map(q => (
                             <tr key={q.quarter}><td className="pl-5 py-2.5"><Link className="text-indigo-600 hover:text-indigo-800" to={link(q)}>{q.label}</Link></td>
-                                <td className={td}>{money(q.won)}</td><td className={td}>{money(q.pipeline)}</td><td className={td}>{money(q.weighted)}</td><td className={`${td} font-semibold`}>{money(q.forecast)}</td><td className={`${td} pr-5`}>{money(q.best_case)}</td></tr>
+                                <td className={td}>{q.target ? money(q.target) : '—'}</td><td className={td}>{money(q.won)}</td><td className={td}>{pct(q.attainment)}</td><td className={td}>{money(q.commit)}</td><td className={td}>{money(q.best_case_category)}</td><td className={td}>{money(q.pipeline)}</td><td className={td}>{money(q.weighted)}</td><td className={`${td} pr-5 font-semibold`}>{money(q.forecast)}</td></tr>
                         ))}
                         <tr className="bg-slate-50/60 font-semibold"><td className="pl-5 py-2.5"><Link className="text-indigo-600" to={link(data.total)}>{data.label}</Link></td>
-                            <td className={td}>{money(data.total.won)}</td><td className={td}>{money(data.total.pipeline)}</td><td className={td}>{money(data.total.weighted)}</td><td className={td}>{money(data.total.forecast)}</td><td className={`${td} pr-5`}>{money(data.total.best_case)}</td></tr>
+                            <td className={td}>{data.total.target ? money(data.total.target) : '—'}</td><td className={td}>{money(data.total.won)}</td><td className={td}>{pct(data.total.attainment)}</td><td className={td}>{money(data.total.commit)}</td><td className={td}>{money(data.total.best_case_category)}</td><td className={td}>{money(data.total.pipeline)}</td><td className={td}>{money(data.total.weighted)}</td><td className={`${td} pr-5`}>{money(data.total.forecast)}</td></tr>
                     </tbody></table>
             </div>
             <div className={`${card} p-5`} style={cardShadow}>
@@ -189,6 +203,128 @@ function TeamTab({ member, period }) {
     );
 }
 
+const COMMIT = '#4f46e5';
+function AttainmentBar({ row, max }) {
+    const w = v => (max > 0 ? Math.min(100, (v / max) * 100) : 0);
+    return (
+        <div className="relative h-4 rounded bg-slate-100 overflow-hidden" title={`Won ${money(row.won)} · commit ${money(row.commit)}${row.target ? ` · target ${money(row.target)}` : ''}`}>
+            <span className="absolute inset-y-0 left-0 rounded-r opacity-30" style={{ width: `${w(row.commit)}%`, background: COMMIT }} />
+            <span className="absolute inset-y-0 left-0 rounded-r" style={{ width: `${w(row.won)}%`, background: WON }} />
+            {row.target ? <span className="absolute inset-y-0 w-0.5 bg-slate-800" style={{ left: `${w(row.target)}%` }} /> : null}
+        </div>
+    );
+}
+
+function TargetsTab({ member, period }) {
+    const [quarter, setQuarter] = useState('');
+    const [fy, setFy] = useState('');
+    const { data } = useQuery({ queryKey: ['rep-targets', member, fy, quarter], queryFn: () => salesReportsApi.targets({ member, fy, quarter }) });
+    const range = periodRange(period);
+    const { data: board } = useQuery({ queryKey: ['rep-leaderboard', member, period], queryFn: () => salesReportsApi.leaderboard({ ...range, member }) });
+    if (!data) return <Spinner />;
+    const max = Math.max(...data.rows.map(r => Math.max(r.target || 0, r.commit || 0, r.won || 0)), 0);
+    const t = data.totals;
+    return (
+        <div className="space-y-5">
+            <div className="flex items-center gap-3 flex-wrap">
+                <select className={selectSm} value={fy || data.fy} onChange={e => setFy(e.target.value)} aria-label="Financial year">
+                    {[data.fy - 1, data.fy, data.fy + 1].map(y => <option key={y} value={y}>{y === data.fy ? data.fy_label : data.fy_label.replace(String(data.fy), String(y)).replace(String(data.fy + 1).slice(-2), String(y + 1).slice(-2))}</option>)}
+                </select>
+                <Seg value={quarter} onChange={setQuarter} options={[['', 'Full year'], ['1', 'Q1'], ['2', 'Q2'], ['3', 'Q3'], ['4', 'Q4']]} />
+                <span className="flex items-center gap-4 text-xs text-slate-600 ml-auto">
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm" style={{ background: WON }} />Won</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm opacity-30" style={{ background: COMMIT }} />Commit</span>
+                    <span className="flex items-center gap-1.5"><span className="w-0.5 h-3 bg-slate-800" />Target</span>
+                    <Link to="/app/sales-targets" className="font-semibold text-indigo-600 hover:text-indigo-800">Set targets →</Link>
+                </span>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatTile label="Target" value={t.target ? moneyShort(t.target) : '—'} sub={`${data.fy_label}${quarter ? ` Q${quarter}` : ''} · ${data.start} to ${data.end}`} />
+                <StatTile label="Won" value={moneyShort(t.won)} sub={t.attainment != null ? `${pct(t.attainment)} of target` : 'No target set'} tone="text-emerald-600" />
+                <StatTile label="Commit" value={moneyShort(t.commit)} sub="Won + committed deals" tone="text-indigo-700" />
+                <StatTile label="Best case" value={moneyShort(t.best_case)} sub="Commit + best-case deals" />
+            </div>
+            <div className={`${card} overflow-hidden`} style={cardShadow}>
+                <div className="overflow-x-auto"><table className="w-full text-sm">
+                    <thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase">
+                        <th className="pl-5 py-2.5 w-10">#</th><th className="py-2.5">Rep</th><th className="px-3 py-2.5 w-1/3">Progress</th>
+                        <th className={th}>Target</th><th className={th}>Won</th><th className={th}>Attained</th><th className={th}>Gap</th><th className={th}>Commit</th><th className={`${th} pr-5`}>Best case</th></tr></thead>
+                    <tbody className="divide-y divide-slate-50">
+                        {data.rows.map(r => (
+                            <tr key={r.user_id}>
+                                <td className="pl-5 py-2.5 text-slate-400 tabular-nums">{r.rank}</td>
+                                <td className="py-2.5"><p className="font-semibold text-slate-800">{r.name}</p><p className="text-xs text-slate-400">{r.level_label || '—'}</p></td>
+                                <td className="px-3 py-2.5"><AttainmentBar row={r} max={max} /></td>
+                                <td className={td}>{r.target ? money(r.target) : '—'}</td><td className={td}>{money(r.won)}</td>
+                                <td className={`${td} font-semibold ${r.attainment >= 100 ? 'text-emerald-600' : ''}`}>{pct(r.attainment)}</td>
+                                <td className={td}>{r.gap ? money(r.gap) : '—'}</td><td className={td}>{money(r.commit)}</td><td className={`${td} pr-5`}>{money(r.best_case)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table></div>
+            </div>
+            <div className={`${card} overflow-hidden`} style={cardShadow}>
+                <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                    <h2 className="text-sm font-bold text-slate-800">Leaderboard</h2>
+                    <span className="text-xs text-slate-500">Revenue won, {PERIODS[period].toLowerCase()} (period picker above)</span>
+                </div>
+                {!board ? <Spinner /> : (
+                    <table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase">
+                        <th className="pl-5 py-2.5 w-10">#</th><th className="py-2.5">Rep</th><th className={th}>Won amount</th><th className={th}>Deals won</th><th className={th}>SQLs</th><th className={th}>Activities</th><th className={`${th} pr-5`}>Win rate</th></tr></thead>
+                        <tbody className="divide-y divide-slate-50">{board.rows.map(r => (
+                            <tr key={r.user_id}><td className="pl-5 py-2.5 font-semibold text-slate-500 tabular-nums">{r.rank}</td><td className="py-2.5 font-medium text-slate-800">{r.name}</td>
+                                <td className={`${td} font-semibold`}>{money(r.won_amount)}</td><td className={td}>{r.won_count}</td><td className={td}>{r.sqls}</td><td className={td}>{r.activities}</td><td className={`${td} pr-5`}>{pct(r.win_rate)}</td></tr>
+                        ))}</tbody></table>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function RoiTab({ member, period }) {
+    const range = period === 'all' ? {} : periodRange(period);
+    const { data } = useQuery({ queryKey: ['rep-roi', member, period], queryFn: () => salesReportsApi.campaignRoi({ ...range, member }) });
+    if (!data) return <Spinner />;
+    const t = data.totals || {};
+    const maxRev = Math.max(...data.rows.map(r => r.revenue), 0);
+    return (
+        <div className="space-y-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatTile label="Contacts emailed" value={(t.contacts_emailed || 0).toLocaleString()} sub={`${t.replies || 0} replied`} />
+                <StatTile label="Leads → SQLs" value={`${t.leads || 0} → ${t.sqls || 0}`} sub={`${t.opportunities || 0} opportunities`} />
+                <StatTile label="Open pipeline" value={moneyShort(t.pipeline)} sub={`weighted ${moneyShort(t.weighted)}`} />
+                <StatTile label="Revenue won" value={moneyShort(t.revenue)} sub={`${t.won_count || 0} deals`} tone="text-emerald-600" />
+            </div>
+            {maxRev > 0 && (
+                <div className={`${card} p-5`} style={cardShadow}>
+                    <h2 className="text-sm font-bold text-slate-800 mb-3">Revenue won by campaign</h2>
+                    {data.rows.filter(r => r.revenue > 0).slice(0, 10).map(r => <HBar key={r.campaign_id} label={r.campaign_name} value={r.revenue} max={maxRev} display={moneyShort(r.revenue)} sub={`${r.won_count} deals`} tone={WON} />)}
+                </div>
+            )}
+            <div className={`${card} overflow-hidden`} style={cardShadow}>
+                <div className="overflow-x-auto"><table className="w-full text-sm">
+                    <thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase">
+                        <th className="pl-5 py-2.5">Campaign</th><th className={th}>Emailed</th><th className={th}>Replies</th><th className={th}>Reply rate</th><th className={th}>Leads</th><th className={th}>SQLs</th>
+                        <th className={th}>Opps</th><th className={th}>Pipeline</th><th className={th}>Won</th><th className={th}>Revenue</th><th className={`${th} pr-5`}>Per contact</th></tr></thead>
+                    <tbody className="divide-y divide-slate-50">
+                        {data.rows.map(r => (
+                            <tr key={r.campaign_id}>
+                                <td className="pl-5 py-2.5"><Link to={`/app/campaigns/${r.campaign_id}`} className="font-medium text-indigo-600 hover:text-indigo-800">{r.campaign_name}</Link></td>
+                                <td className={td}>{r.contacts_emailed}</td><td className={td}>{r.replies}</td><td className={td}>{pct(r.reply_rate)}</td>
+                                <td className={td}>{r.leads}</td><td className={td}>{r.sqls}</td><td className={td}>{r.opportunities}</td>
+                                <td className={td}>{money(r.pipeline)}</td><td className={td}>{r.won_count}</td><td className={`${td} font-semibold`}>{money(r.revenue)}</td>
+                                <td className={`${td} pr-5`}>{r.revenue_per_contact != null ? money(r.revenue_per_contact) : '—'}</td>
+                            </tr>
+                        ))}
+                        {!data.rows.length && <tr><td colSpan={11} className="text-center text-slate-400 py-10">No campaign activity in this period.</td></tr>}
+                    </tbody>
+                </table></div>
+                <p className="text-xs text-slate-400 px-5 py-3">A deal counts for the campaign its lead came from, otherwise the last campaign that emailed the contact before it was created.</p>
+            </div>
+        </div>
+    );
+}
+
 export default function SalesReports() {
     const [params, setParams] = useSearchParams();
     const tab = params.get('tab') || 'leads';
@@ -196,16 +332,19 @@ export default function SalesReports() {
     const [period, setPeriod] = useState('90');
     return (
         <div className="w-full space-y-6">
-            <PageHeader title="Sales reports" subtitle="Leads, SQLs, pipeline, forecast and team performance for you and your team">
-                <MemberFilter value={member} onChange={setMember} />
-                {['leads', 'team'].includes(tab) && <PeriodFilter value={period} onChange={setPeriod} />}
+            <PageHeader title="Sales reports" subtitle="Leads, SQLs, pipeline, forecast, targets and team performance for you and your team">
+                {tab !== 'custom' && <MemberFilter value={member} onChange={setMember} />}
+                {['leads', 'team', 'targets', 'roi'].includes(tab) && <PeriodFilter value={period} onChange={setPeriod} />}
             </PageHeader>
-            <Seg options={[['leads', 'Leads & SQLs'], ['pipeline', 'Pipeline'], ['forecast', 'Forecast'], ['team', 'Team performance']]}
+            <Seg options={[['leads', 'Leads & SQLs'], ['pipeline', 'Pipeline'], ['forecast', 'Forecast'], ['targets', 'Targets & leaderboard'], ['team', 'Team performance'], ['roi', 'Campaign ROI'], ['custom', 'Custom reports']]}
                 value={tab} onChange={v => setParams({ tab: v })} />
             {tab === 'leads' && <LeadsTab member={member} period={period} />}
             {tab === 'pipeline' && <PipelineTab member={member} />}
             {tab === 'forecast' && <ForecastTab member={member} />}
             {tab === 'team' && <TeamTab member={member} period={period} />}
+            {tab === 'targets' && <TargetsTab member={member} period={period} />}
+            {tab === 'roi' && <RoiTab member={member} period={period} />}
+            {tab === 'custom' && <CustomReports />}
         </div>
     );
 }

@@ -31,6 +31,8 @@ export const leadsApi = {
     update: (id, payload) => patch(`/leads/${id}`, payload),
     convert: (id, payload) => post(`/leads/${id}/convert`, payload),
     remove: (id) => del(`/leads/${id}`),
+    fromMessage: (messageId) => post('/leads/from-message', { message_id: messageId }),
+    replySuggestions: () => get('/leads/reply-suggestions'),
 };
 
 export const stagesApi = {
@@ -47,6 +49,8 @@ export const dealsApi = {
     update: (id, payload) => patch(`/opportunities/${id}`, payload),
     remove: (id) => del(`/opportunities/${id}`),
     revenue: (params) => get('/pipeline/revenue', params),
+    timeline: (id) => get(`/opportunities/${id}/timeline`),
+    logActivity: (id, payload) => post(`/opportunities/${id}/activities`, payload),
 };
 
 export const proposalsApi = {
@@ -64,6 +68,76 @@ export const salesReportsApi = {
     forecast: (params) => get('/sales-reports/forecast', params),
     team: (params) => get('/sales-reports/team-performance', params),
     dailyLimit: () => get('/sales-reports/daily-limit'),
+    targets: (params) => get('/sales-reports/targets', params),
+    leaderboard: (params) => get('/sales-reports/leaderboard', params),
+    campaignRoi: (params) => get('/sales-reports/campaign-roi', params),
+};
+
+export const notificationsApi = {
+    list: (params) => get('/notifications', params),
+    read: (ids) => post('/notifications/read', { ids }),
+    setEmail: (email) => put('/notifications/preferences', { email }),
+};
+
+export const settingsApi = {
+    get: () => get('/sales/settings'),
+    save: (payload) => put('/sales/settings', payload),
+};
+
+export const workflowApi = {
+    meta: () => get('/workflow/meta'),
+    list: () => get('/workflow/rules'),
+    create: (payload) => post('/workflow/rules', payload),
+    update: (id, payload) => patch(`/workflow/rules/${id}`, payload),
+    remove: (id) => del(`/workflow/rules/${id}`),
+};
+
+export const targetsApi = {
+    list: (fy) => get('/sales/targets', fy ? { fy } : undefined),
+    set: (payload) => put('/sales/targets', payload),
+};
+
+export const templatesApi = {
+    list: (params) => get('/template-library', params),
+    create: (payload) => post('/template-library', payload),
+    update: (id, payload) => patch(`/template-library/${id}`, payload),
+    remove: (id) => del(`/template-library/${id}`),
+    render: (id, prospectId, countUse = false) => post(`/template-library/${id}/render`, { prospect_id: prospectId || null, count_use: countUse }),
+};
+
+export const customReportsApi = {
+    meta: () => get('/reports/custom/meta'),
+    run: (definition) => post('/reports/custom/run', definition),
+    list: () => get('/reports/custom'),
+    get: (id) => get(`/reports/custom/${id}`),
+    create: (payload) => post('/reports/custom', payload),
+    update: (id, payload) => patch(`/reports/custom/${id}`, payload),
+    remove: (id) => del(`/reports/custom/${id}`),
+};
+
+export const productsApi = {
+    list: (includeInactive) => get('/products', includeInactive ? { include_inactive: true } : undefined),
+    create: (payload) => post('/products', payload),
+    update: (id, payload) => patch(`/products/${id}`, payload),
+};
+
+export const quotesApi = {
+    get: (proposalId) => get(`/proposals/${proposalId}/lines`),
+    save: (proposalId, lines) => put(`/proposals/${proposalId}/lines`, { lines }),
+    pdf: async (proposalId, name = 'proposal') => {
+        const res = await api.get(`/proposals/${proposalId}/pdf`, { responseType: 'blob' });
+        const url = URL.createObjectURL(res.data);
+        Object.assign(document.createElement('a'), { href: url, download: `${name}.pdf` }).click();
+        URL.revokeObjectURL(url);
+    },
+};
+
+export const connectionsApi = {
+    list: () => get('/connections'),
+    start: (provider) => post(`/connections/${provider}/start`),
+    update: (id, payload) => patch(`/connections/${id}`, payload),
+    sync: (id) => post(`/connections/${id}/sync`),
+    remove: (id) => del(`/connections/${id}`),
 };
 
 // One display currency for amounts (matches company revenue); set VITE_CURRENCY at build time to change it
