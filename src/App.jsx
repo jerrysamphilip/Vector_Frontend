@@ -16,6 +16,10 @@ import CampaignDetails from './pages/CampaignDetails';
 import AIEmailGenerator from './pages/AIEmailGenerator';
 import Prospects from './pages/Prospects';
 import ProspectValidate from './pages/ProspectValidate';
+import Contacts from './pages/Contacts';
+import ContactDetail from './pages/ContactDetail';
+import Accounts from './pages/Accounts';
+import AccountDetail from './pages/AccountDetail';
 import Reports from './pages/Reports';
 import DomainHealth from './pages/DomainHealth';
 import EmailAccounts from './pages/EmailAccounts';
@@ -102,6 +106,11 @@ function App() {
                         <Route path="ai-email" element={<AIEmailGenerator />} />
                         <Route path="prospects" element={<PermissionRoute permission="manage_prospects"><Prospects /></PermissionRoute>} />
                         <Route path="prospects/validate" element={<PermissionRoute permission="manage_prospects"><ProspectValidate /></PermissionRoute>} />
+                        {/* Contacts & accounts: everyone sees the ones they own; manage_prospects sees all */}
+                        <Route path="contacts" element={<Contacts />} />
+                        <Route path="contacts/:id" element={<ContactDetail />} />
+                        <Route path="accounts" element={<Accounts />} />
+                        <Route path="accounts/:id" element={<AccountDetail />} />
                         <Route path="analytics" element={<Dashboard />} />
                         <Route
                             path="reports"
