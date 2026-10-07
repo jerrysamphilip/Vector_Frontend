@@ -1,12 +1,59 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
     Search, Send, RefreshCw, Mail, User,
-    Check, CheckCheck, Clock, Paperclip, Smile, MoreVertical,
+    Check, CheckCheck, Clock, MoreVertical,
     ArrowDownLeft, ArrowUpRight, AlertTriangle,
-    Settings, ChevronRight, Info, Wifi,
+    Settings, ChevronRight, Info, Wifi, FileText, Target,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { apiClient as api } from '../../../api/http';
+import { leadsApi, templatesApi } from '../../../api/sales';
 import Loading from '../../common/Loading';
+
+/** Pick a library template; it is filled in for this contact and dropped into the reply (BR-SF-10). */
+function TemplatePicker({ prospectId, onPick }) {
+    const [open, setOpen] = useState(false);
+    const [items, setItems] = useState(null);
+    const [q, setQ] = useState('');
+    const [busy, setBusy] = useState(null);
+    useEffect(() => {
+        if (open && items === null) templatesApi.list().then(r => setItems(r.items)).catch(() => setItems([]));
+    }, [open, items]);
+    const pick = async (t) => {
+        setBusy(t.template_id);
+        try {
+            const r = await templatesApi.render(t.template_id, prospectId, true);
+            onPick(stripHtml(r.body));
+            setOpen(false);
+        } finally { setBusy(null); }
+    };
+    const shown = (items || []).filter(t => !q || `${t.name} ${t.subject}`.toLowerCase().includes(q.toLowerCase()));
+    return (
+        <div className="relative">
+            <button type="button" onClick={() => setOpen(o => !o)} title="Insert a template"
+                className="flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors">
+                <FileText className="w-4 h-4" /> Templates
+            </button>
+            {open && (
+                <div className="absolute bottom-10 left-0 w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-20 p-2">
+                    <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search templates…"
+                        className="w-full h-8 px-2.5 mb-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400" />
+                    <div className="max-h-64 overflow-y-auto">
+                        {items === null && <p className="text-xs text-gray-400 p-2">Loading…</p>}
+                        {items && !shown.length && <p className="text-xs text-gray-400 p-2">No templates. Add some under Sales → Templates.</p>}
+                        {shown.map(t => (
+                            <button type="button" key={t.template_id} onClick={() => pick(t)} disabled={!!busy}
+                                className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                                <p className="text-sm font-medium text-gray-800 truncate">{t.name}</p>
+                                <p className="text-[11px] text-gray-400 truncate">{t.category ? `${t.category} · ` : ''}{t.subject}</p>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
 
 // ── HTML → plain text ────────────────────────────────────────────
 function stripHtml(html = '') {
@@ -219,6 +266,20 @@ export default function InboxTab({ campaignId, inboxIds = [], onTabChange, class
     const [selectedId, setSelectedId]       = useState(null);
     const [messages, setMessages]           = useState([]);
     const [replyText, setReplyText]         = useState('');
+    const [leadBusy, setLeadBusy]           = useState(null);
+    const [leadError, setLeadError]         = useState(null);
+    const navigate = useNavigate();
+    const createLead = async (messageId) => {
+        setLeadBusy(messageId); setLeadError(null);
+        try {
+            const lead = await leadsApi.fromMessage(messageId);
+            navigate(`/app/leads/${lead.lead_id}`);
+        } catch (err) {
+            const detail = err?.response?.data?.detail;
+            if (err?.response?.status === 409 && detail?.lead_id) navigate(`/app/leads/${detail.lead_id}`);
+            else setLeadError(typeof detail === 'string' ? detail : 'Could not create the lead');
+        } finally { setLeadBusy(null); }
+    };
     const [loading, setLoading]             = useState(true);
     const [refreshing, setRefreshing]       = useState(false);
     const [sending, setSending]             = useState(false);
@@ -599,6 +660,13 @@ export default function InboxTab({ campaignId, inboxIds = [], onTabChange, class
                                                             <Check className="w-3 h-3" style={{ color: '#2d6bbf' }} title="Sent — delivery not yet confirmed" />
                                                         )
                                                     )}
+                                                    {!isOut && !isBounce && m.message_id && (
+                                                        <button type="button" onClick={() => createLead(m.message_id)} disabled={leadBusy === m.message_id}
+                                                            className="ml-1 flex items-center gap-1 text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                                                            title="Turn this reply into a lead">
+                                                            <Target className="w-3 h-3" /> {leadBusy === m.message_id ? 'Creating…' : 'Create lead'}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                             {isOut && (
@@ -614,6 +682,7 @@ export default function InboxTab({ campaignId, inboxIds = [], onTabChange, class
                             </div>
 
                             <div className="shrink-0 p-4 border-t border-gray-100 bg-white">
+                                {leadError && <p className="text-xs text-red-600 mb-2">{leadError}</p>}
                                 <form onSubmit={handleSend}>
                                     <div className="relative rounded-2xl border border-gray-200 bg-gray-50 focus-within:border-blue-400 focus-within:bg-white transition-all">
                                         <textarea
@@ -625,8 +694,8 @@ export default function InboxTab({ campaignId, inboxIds = [], onTabChange, class
                                         />
                                         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
                                             <div className="flex items-center gap-1">
-                                                <button type="button" className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"><Paperclip className="w-4 h-4" /></button>
-                                                <button type="button" className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"><Smile className="w-4 h-4" /></button>
+                                                <TemplatePicker prospectId={activeConversation?.prospect_id}
+                                                    onPick={text => setReplyText(prev => (prev.trim() ? `${prev}\n\n${text}` : text))} />
                                             </div>
                                             <button type="submit" disabled={!replyText.trim() || sending}
                                                 className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"

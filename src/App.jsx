@@ -24,6 +24,19 @@ import Lists from './pages/Lists';
 import ImportContacts from './pages/ImportContacts';
 import Tasks from './pages/Tasks';
 import RecentlyDeleted from './pages/RecentlyDeleted';
+import SalesDashboard from './pages/SalesDashboard';
+import Leads from './pages/Leads';
+import LeadDetail from './pages/LeadDetail';
+import SqlQueue from './pages/SqlQueue';
+import Deals from './pages/Deals';
+import DealDetail from './pages/DealDetail';
+import Pipeline from './pages/Pipeline';
+import SalesReports from './pages/SalesReports';
+import SalesTeam from './pages/SalesTeam';
+import SalesSettings from './pages/SalesSettings';
+import SalesTargets from './pages/SalesTargets';
+import TemplateLibrary from './pages/TemplateLibrary';
+import Connections from './pages/Connections';
 import Reports from './pages/Reports';
 import DomainHealth from './pages/DomainHealth';
 import EmailAccounts from './pages/EmailAccounts';
@@ -118,6 +131,19 @@ function App() {
                         <Route path="lists" element={<Lists />} />
                         <Route path="tasks" element={<Tasks />} />
                         <Route path="import" element={<PermissionRoute permission="manage_prospects"><ImportContacts /></PermissionRoute>} />
+                        <Route path="sales" element={<SalesDashboard />} />
+                        <Route path="leads" element={<Leads />} />
+                        <Route path="leads/:id" element={<LeadDetail />} />
+                        <Route path="sql-queue" element={<SqlQueue />} />
+                        <Route path="deals" element={<Deals />} />
+                        <Route path="deals/:id" element={<DealDetail />} />
+                        <Route path="pipeline" element={<Pipeline />} />
+                        <Route path="sales-reports" element={<SalesReports />} />
+                        <Route path="sales-team" element={<SalesTeam />} />
+                        <Route path="sales-settings" element={<SalesSettings />} />
+                        <Route path="sales-targets" element={<SalesTargets />} />
+                        <Route path="templates" element={<TemplateLibrary />} />
+                        <Route path="connections" element={<Connections />} />
                         <Route path="recently-deleted" element={<PermissionRoute permission="manage_prospects"><RecentlyDeleted /></PermissionRoute>} />
                         <Route path="analytics" element={<Dashboard />} />
                         <Route
