@@ -19,6 +19,8 @@ import {
   ChevronUp,
   X,
   ArrowLeft,
+  Contact,
+  Building2,
 } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import { authApi } from '../../api/auth';
@@ -28,7 +30,9 @@ import { clearAuthSession, getStoredUser, hasPermission, setAuthSession } from '
 const baseNavigation = [
   { name: 'Dashboard',      href: '/app/dashboard',     icon: LayoutDashboard, permission: null },
   { name: 'Campaigns',      href: '/app/campaigns',      icon: Mail,            permission: 'manage_campaigns' },
-  { name: 'Prospects',      href: '/app/prospects',      icon: Users,           permission: 'manage_prospects' },
+  { name: 'Contacts',       href: '/app/contacts',       icon: Contact,         permission: null },
+  { name: 'Accounts',       href: '/app/accounts',       icon: Building2,       permission: null },
+  { name: 'Prospect Lists', href: '/app/prospects',      icon: Users,           permission: 'manage_prospects' },
   { name: 'Domain Health',  href: '/app/domain-health',  icon: Activity,        permission: null },
   { name: 'Inbox',          href: '/app/inbox',          icon: MessageSquare,   permission: null },
   { name: 'Email Accounts', href: '/app/inboxes',        icon: Inbox,           permission: 'manage_inboxes' },

@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import {
     X,
     Search,
@@ -586,9 +587,10 @@ export default function ProspectListModal({ list, onClose }) {
                                                     <ValidationIcon prospectId={prospect.prospect_id} validationMap={validationMap} prospect={prospect} />
                                                 </td>
                                                 <td className="py-3 px-4">
-                                                    <p className="text-sm font-normal text-slate-600">
+                                                    <Link to={`/app/contacts/${prospect.prospect_id}`} title="Open contact"
+                                                        className="text-sm font-normal text-indigo-600 hover:text-indigo-800 hover:underline">
                                                         {prospect.first_name || '-'}
-                                                    </p>
+                                                    </Link>
                                                 </td>
                                                 <td className="py-3 px-4">
                                                     <p className="text-sm font-normal text-slate-600">
