@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import EnrollmentResultModal from '../EnrollmentResultModal';
 import { Search, Download, Mail, Users, ChevronLeft, ChevronRight, Edit2, Save, X, Loader2, UserPlus, UserMinus } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -79,12 +80,14 @@ export default function LeadListTab({ campaignId }) {
     });
 
     // Enroll additional prospects into this already-created (possibly already-scheduled) campaign
+    const [enrollReport, setEnrollReport] = useState(null);
     const enrollMutation = useMutation({
         mutationFn: (listId) => campaignApi.enrollProspects(campaignId, [listId]),
-        onSuccess: () => {
+        onSuccess: (result) => {
             queryClient.invalidateQueries(['campaign-prospects', campaignId]);
             setShowAddModal(false);
             setSelectedListId('');
+            setEnrollReport({ enrolled: result?.enrolled_count || 0, rejected: result?.rejected || [], rejectedCount: result?.rejected_count });
         },
     });
 
@@ -186,6 +189,12 @@ export default function LeadListTab({ campaignId }) {
             animate="animate"
             className="space-y-4"
         >
+            {enrollReport && (
+                <EnrollmentResultModal title="Contacts added to campaign" enrolled={enrollReport.enrolled}
+                    rejected={enrollReport.rejected} rejectedCount={enrollReport.rejectedCount}
+                    note={enrollReport.rejected.length ? 'These contacts were not added:' : null}
+                    onClose={() => setEnrollReport(null)} />
+            )}
             {/* Section Header */}
             <motion.div
                 variants={itemVariants}
