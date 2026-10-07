@@ -118,19 +118,19 @@ export default function Accounts() {
         <div className="w-full space-y-6">
             <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900">Companies</h1>
                     <p className="text-sm text-gray-400 mt-1">Companies your contacts work at</p>
                 </div>
                 <div className="flex items-center gap-2">
                     {canManage && (
                         <button onClick={() => backfill.mutate()} disabled={backfill.isPending}
                             title="Create companies from contacts' email domains and company names, and link contacts that have none"
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap disabled:opacity-60">
+                            className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap disabled:opacity-60">
                             {backfill.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Link contacts by company
                         </button>
                     )}
                     <button onClick={() => setShowNew(true)}
-                        className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all hover:shadow-md hover:scale-[1.02] whitespace-nowrap"
+                        className="flex items-center gap-2 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90 hover:scale-[1.02] whitespace-nowrap"
                         style={{ background: BRAND_GRADIENT }}>
                         <Plus className="w-4 h-4" /> New company
                     </button>

@@ -1,83 +1,55 @@
-import { useEffect, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard,
-  Mail,
-  Users,
-  Activity,
-  MessageSquare,
-  Inbox,
-  BarChart3,
-  Shield,
-  KeyRound,
-  Eye,
-  EyeOff,
-  CheckCircle,
-  LogOut,
-  ChevronUp,
-  X,
-  ArrowLeft,
-  Contact,
-  Building2,
-  ListChecks,
-  CheckSquare,
-  Gauge,
-  Target,
-  Inbox as InboxIcon,
-  Briefcase,
-  TrendingUp,
-  PieChart,
-  Network,
-  Crosshair,
-  FileText,
-  Settings2,
-  CalendarSync,
+  Home, Mail, Users, Activity, MessageSquare, Inbox, BarChart3, Shield, KeyRound, Eye, EyeOff, CheckCircle,
+  LogOut, X, ArrowLeft, Contact, Building2, ListChecks, CheckSquare, Gauge, Target, Inbox as InboxIcon,
+  Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles,
 } from 'lucide-react';
-import logo from '../../assets/logo.png';
+import logoMark from '../../assets/logo-mark.png';
 import { authApi } from '../../api/auth';
+import { tasksApi } from '../../api/contacts';
 import { clearAuthSession, getStoredUser, hasPermission, setAuthSession } from '../../lib/authStorage';
 
-// permission: null means always visible
-const baseNavigation = [
-  { name: 'Dashboard',      href: '/app/dashboard',     icon: LayoutDashboard, permission: null },
-  { name: 'Campaigns',      href: '/app/campaigns',      icon: Mail,            permission: 'manage_campaigns' },
-  { name: 'Contacts',       href: '/app/contacts',       icon: Contact,         permission: null },
-  { name: 'Companies',      href: '/app/accounts',       icon: Building2,       permission: null },
-  { name: 'Lists',          href: '/app/lists',          icon: ListChecks,      permission: null },
-  { name: 'Tasks',          href: '/app/tasks',          icon: CheckSquare,     permission: null },
-  { name: 'Prospect Lists', href: '/app/prospects',      icon: Users,           permission: 'manage_prospects' },
-  // Sales (BRD v2.0 Phase 2)
-  { name: 'Sales Dashboard', href: '/app/sales',         icon: Gauge,           permission: null, section: 'Sales' },
-  { name: 'Leads',          href: '/app/leads',          icon: Target,          permission: null, section: 'Sales' },
-  { name: 'SQL Queue',      href: '/app/sql-queue',      icon: InboxIcon,       permission: null, section: 'Sales' },
-  { name: 'Opportunities',  href: '/app/deals',          icon: Briefcase,       permission: null, section: 'Sales' },
-  { name: 'Pipeline',       href: '/app/pipeline',       icon: TrendingUp,      permission: null, section: 'Sales' },
-  { name: 'Sales Reports',  href: '/app/sales-reports',  icon: PieChart,        permission: null, section: 'Sales' },
-  { name: 'Sales Team',     href: '/app/sales-team',     icon: Network,         permission: null, section: 'Sales' },
-  { name: 'Targets',        href: '/app/sales-targets',  icon: Crosshair,       permission: null, section: 'Sales' },
-  { name: 'Templates',      href: '/app/templates',      icon: FileText,        permission: null, section: 'Sales' },
-  { name: 'Calendar Sync',  href: '/app/connections', icon: CalendarSync, permission: null, section: 'Sales' },
-  { name: 'Sales Settings', href: '/app/sales-settings', icon: Settings2,       permission: null, section: 'Sales', adminOnly: true },
-  { name: 'Domain Health',  href: '/app/domain-health',  icon: Activity,        permission: null },
-  { name: 'Inbox',          href: '/app/inbox',          icon: MessageSquare,   permission: null },
-  { name: 'Email Accounts', href: '/app/inboxes',        icon: Inbox,           permission: 'manage_inboxes' },
-  { name: 'Reports',        href: '/app/reports',        icon: BarChart3,       permission: 'view_analytics' },
+// Grouped navigation. permission: null = everyone; admin: admins only.
+const NAV = [
+  { items: [
+    { name: 'Home', href: '/app/dashboard', icon: Home },
+    { name: 'Inbox', href: '/app/inbox', icon: MessageSquare },
+    { name: 'Tasks', href: '/app/tasks', icon: CheckSquare, badge: 'tasks' },
+  ] },
+  { title: 'Outreach', items: [
+    { name: 'Campaigns', href: '/app/campaigns', icon: Mail, permission: 'manage_campaigns' },
+    { name: 'Campaign analytics', href: '/app/analytics', icon: BarChart3 },
+    { name: 'Templates', href: '/app/templates', icon: FileText },
+    { name: 'AI email writer', href: '/app/ai-email', icon: Sparkles },
+    { name: 'Email accounts', href: '/app/inboxes', icon: Inbox, permission: 'manage_inboxes' },
+    { name: 'Domain health', href: '/app/domain-health', icon: Activity },
+    { name: 'Reports', href: '/app/reports', icon: PieChart, permission: 'view_analytics' },
+  ] },
+  { title: 'CRM', items: [
+    { name: 'Contacts', href: '/app/contacts', icon: Contact },
+    { name: 'Companies', href: '/app/accounts', icon: Building2 },
+    { name: 'Lists', href: '/app/lists', icon: ListChecks },
+    { name: 'Prospect lists', href: '/app/prospects', icon: Users, permission: 'manage_prospects' },
+  ] },
+  { title: 'Sales', items: [
+    { name: 'Overview', href: '/app/sales', icon: Gauge },
+    { name: 'Leads', href: '/app/leads', icon: Target },
+    { name: 'SQL queue', href: '/app/sql-queue', icon: InboxIcon },
+    { name: 'Deals', href: '/app/deals', icon: Briefcase },
+    { name: 'Pipeline', href: '/app/pipeline', icon: TrendingUp },
+    { name: 'Sales reports', href: '/app/sales-reports', icon: PieChart },
+    { name: 'Targets', href: '/app/sales-targets', icon: Crosshair },
+  ] },
+  { title: 'Workspace', collapsible: true, items: [
+    { name: 'Team', href: '/app/team', icon: Shield, permission: 'manage_team', admin: true },
+    { name: 'Sales team', href: '/app/sales-team', icon: Network },
+    { name: 'Sales settings', href: '/app/sales-settings', icon: Settings2, admin: true },
+    { name: 'Calendar sync', href: '/app/connections', icon: CalendarSync },
+  ] },
 ];
-
-const sidebarVariants = {
-  initial: { x: -64, opacity: 0 },
-  animate: { x: 0, opacity: 1, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
-};
-const logoVariants = {
-  initial: { scale: 0.8, opacity: 0 },
-  animate: { scale: 1, opacity: 1, transition: { delay: 0.2, duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
-};
-const navItemVariants = {
-  initial: { x: -20, opacity: 0 },
-  animate: (i) => ({ x: 0, opacity: 1, transition: { delay: 0.3 + i * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] } }),
-};
 
 const ROLE_LABELS = {
   PLATFORM_ADMIN: 'Platform Admin',
@@ -261,198 +233,122 @@ function ChangePasswordModal({ currentUser, onClose }) {
   );
 }
 
-// ── Main Sidebar ───────────────────────────────────────────
+
+export function getUserInitials(user) { return getInitials(user); }
+
+function NavItem({ item, badge }) {
+  return (
+    <NavLink to={item.href} end={item.href === '/app/dashboard'}
+      className={({ isActive }) => `flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-[13px] font-medium transition-colors ${
+        isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
+      {({ isActive }) => (<>
+        <item.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+        <span className="truncate">{item.name}</span>
+        {badge > 0 && <span className="ml-auto text-[11px] font-semibold tabular-nums px-1.5 rounded-md bg-slate-100 text-slate-600">{badge}</span>}
+      </>)}
+    </NavLink>
+  );
+}
+
+// ── Sidebar ────────────────────────────────────────────────
 export default function Sidebar() {
-  const location = useLocation();
-  const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(() => getStoredUser());
-  const currentRole = currentUser?.role || '';
-  const canSeeTeamManagement = currentRole === 'SUPER_ADMIN' || currentRole === 'ADMIN';
-
-  const navigation = [
-    ...baseNavigation.filter(item => (item.permission === null || hasPermission(item.permission))
-      && (!item.adminOnly || ['SUPER_ADMIN', 'ADMIN'].includes(currentRole))),
-    ...(canSeeTeamManagement && hasPermission('manage_team') ? [{ name: 'Team', href: '/app/team', icon: Shield, permission: 'manage_team' }] : []),
-  ];
-
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [changePwOpen, setChangePwOpen] = useState(false);
-  const tenantLabel = currentUser?.tenant_name || (currentUser?.tenant_id ? 'Workspace' : 'Platform Scope');
-  const roleLabel = ROLE_LABELS[currentRole] || currentRole;
+  const role = currentUser?.role || '';
+  const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(role);
+  const [workspaceOpen, setWorkspaceOpen] = useState(() => {
+    try { return localStorage.getItem('nav-workspace-open') === '1'; } catch { return false; }
+  });
+  const { data: dueTasks } = useQuery({ queryKey: ['tasks', 'nav-due'], queryFn: () => tasksApi.list({ due: 'today', page_size: 1 }), refetchInterval: 120000 });
+  const badges = { tasks: dueTasks?.total || 0 };
 
   useEffect(() => {
-    let active = true;
     const user = getStoredUser();
-    if (!user) return;
-    setCurrentUser(user);
-
-    // Backfill tenant_name for older sessions created before tenant_name was included in auth payload.
-    if (user.tenant_id && !user.tenant_name) {
-      authApi.me()
-        .then((fresh) => {
-          if (!active || !fresh) return;
-          setAuthSession({ user: fresh });
-          setCurrentUser(fresh);
-        })
-        .catch(() => {});
+    if (user?.tenant_id && !user.tenant_name) {
+      authApi.me().then(fresh => { if (fresh) { setAuthSession({ user: fresh }); setCurrentUser(fresh); } }).catch(() => {});
     }
-
-    return () => { active = false; };
   }, []);
 
+  const groups = NAV.map(g => ({ ...g, items: g.items.filter(i => (!i.permission || hasPermission(i.permission)) && (!i.admin || isAdmin)) }))
+    .filter(g => g.items.length);
+  const toggleWorkspace = () => setWorkspaceOpen(v => { try { localStorage.setItem('nav-workspace-open', v ? '0' : '1'); } catch { /* ignore */ } return !v; });
+
+  return (
+    <aside className="fixed top-0 left-0 w-60 h-screen z-40 flex flex-col bg-white border-r border-slate-200">
+      <div className="h-14 flex items-center gap-2.5 px-4 shrink-0">
+        <img src={logoMark} alt="" className="w-7 h-7" />
+        <span className="text-[15px] font-bold tracking-tight text-slate-900">OUTREACH360<span className="text-indigo-600">.AI</span></span>
+      </div>
+      <div className="mx-3 mb-2 px-3 py-2 rounded-lg border border-slate-200">
+        <p className="text-[13px] font-semibold text-slate-800 truncate">{currentUser?.tenant_name || 'Workspace'}</p>
+        <p className="text-[11px] text-slate-500">{ROLE_LABELS[role] || role}</p>
+      </div>
+      <nav className="flex-1 overflow-y-auto px-3 pb-4">
+        {groups.map((g, gi) => {
+          const open = !g.collapsible || workspaceOpen;
+          return (
+            <div key={g.title || gi} className={gi ? 'mt-4' : 'mt-1'}>
+              {g.title && (g.collapsible ? (
+                <button onClick={toggleWorkspace} className="w-full flex items-center justify-between px-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-600">
+                  {g.title}<ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? '' : '-rotate-90'}`} />
+                </button>
+              ) : <p className="px-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-slate-400">{g.title}</p>)}
+              {open && <div className="space-y-0.5">{g.items.map(i => <NavItem key={i.href} item={i} badge={badges[i.badge]} />)}</div>}
+            </div>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}
+
+// ── Profile menu (top bar avatar) ──────────────────────────
+export function ProfileMenu() {
+  const navigate = useNavigate();
+  const ref = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [changePwOpen, setChangePwOpen] = useState(false);
+  const currentUser = getStoredUser();
+  const role = currentUser?.role || '';
+  useEffect(() => {
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
   const handleLogout = async () => {
-    try { await authApi.logout(); } catch {}
+    try { await authApi.logout(); } catch { /* ignore */ }
     clearAuthSession();
     navigate('/login', { replace: true });
   };
-
   return (
-    <>
-      <motion.aside
-        className="fixed top-0 left-0 w-64 h-screen z-40 flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-blue-600 text-white"
-        variants={sidebarVariants}
-        initial="initial"
-        animate="animate"
-      >
-        {/* Logo */}
-        <motion.div
-          className="h-20 flex items-center px-6 border-b border-white/10"
-          variants={logoVariants}
-          initial="initial"
-          animate="animate"
-        >
-          <div className="flex items-center gap-3 group cursor-pointer justify-center w-full" onClick={() => navigate('/app/dashboard')}>
-            <motion.img
-              src={logo} alt="Logo"
-              className="max-w-[250px] h-auto object-contain"
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-            />
+    <div className="relative" ref={ref}>
+      <button onClick={() => setOpen(v => !v)} aria-label="Account" className="w-9 h-9 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center hover:ring-4 hover:ring-indigo-100">
+        {getInitials(currentUser)}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-11 w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+          <div className="px-4 py-4 border-b border-slate-100">
+            <p className="text-sm font-semibold text-slate-900">{currentUser?.first_name} {currentUser?.last_name}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{currentUser?.email}</p>
+            <span className={`mt-2 inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full ${ROLE_COLORS[role] || 'bg-slate-100 text-slate-600'}`}>{ROLE_LABELS[role] || role}</span>
           </div>
-        </motion.div>
-
-        {/* Navigation */}
-        <nav className="flex-1 py-6 space-y-1 px-3 overflow-y-auto">
-          {navigation.map((item, index) => {
-            const isActive = location.pathname === item.href ||
-              (item.href !== '/' && location.pathname.startsWith(item.href + '/'));
-            const heading = item.section && navigation[index - 1]?.section !== item.section;
-            const endsSection = !item.section && navigation[index - 1]?.section;
-            return (
-              <motion.div
-                key={item.name}
-                variants={navItemVariants} initial="initial" animate="animate" custom={index}
-                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-              >
-                {heading && <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">{item.section}</p>}
-                {endsSection && <div className="mx-3 my-3 border-t border-white/10" />}
-                <NavLink
-                  to={item.href}
-                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 relative ${
-                    isActive
-                      ? 'bg-blue-500/25 text-white border border-blue-400/30'
-                      : 'text-slate-400 hover:bg-white/10 hover:text-white border border-transparent'
-                  }`}
-                >
-                  {isActive && (
-                    <motion.div
-                      className="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-6 rounded-full bg-blue-400"
-                      layoutId="activeIndicator"
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                    />
-                  )}
-                  <item.icon className={`w-5 h-5 transition-transform duration-300 group-hover:scale-110 ${isActive ? 'text-blue-400' : 'text-slate-400 group-hover:text-blue-300'}`} />
-                  <span className="tracking-wide">{item.name}</span>
-                </NavLink>
-              </motion.div>
-            );
-          })}
-        </nav>
-
-        {/* Profile trigger */}
-        <div className="px-3 pb-4 border-t border-white/10 pt-3">
-          <button
-            onClick={() => setProfileOpen(v => !v)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10 transition-colors"
-          >
-            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              {getInitials(currentUser)}
-            </div>
-            <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-medium text-white truncate leading-tight">
-                {currentUser?.first_name} {currentUser?.last_name}
-              </p>
-              <p className="text-xs text-slate-400 truncate leading-tight">
-                {tenantLabel}
-              </p>
-              <span className={`mt-0.5 inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-tight ${ROLE_COLORS[currentRole] || 'bg-slate-100 text-slate-600'}`}>
-                {roleLabel}
-              </span>
-            </div>
-            <ChevronUp className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200 ${profileOpen ? '' : 'rotate-180'}`} />
-          </button>
+          <div className="py-1">
+            {currentUser?.auth_provider !== 'google' && (
+              <button onClick={() => { setOpen(false); setChangePwOpen(true); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                <KeyRound className="w-4 h-4 text-slate-400" /> Change password
+              </button>
+            )}
+            <button onClick={() => { setOpen(false); navigate('/app/connections'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+              <CalendarSync className="w-4 h-4 text-slate-400" /> Calendar and email sync
+            </button>
+            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50">
+              <LogOut className="w-4 h-4" /> Sign out
+            </button>
+          </div>
         </div>
-      </motion.aside>
-
-      {/* Profile card — pops to the right of sidebar */}
+      )}
       <AnimatePresence>
-        {profileOpen && (
-          <>
-            <div className="fixed inset-0" style={{ zIndex: 49 }} onClick={() => setProfileOpen(false)} />
-            <motion.div
-              className="fixed bottom-4 left-[268px] w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"
-              style={{ zIndex: 50 }}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-            >
-              {/* Avatar + info */}
-              <div className="px-5 pt-5 pb-4 flex flex-col items-center text-center border-b border-slate-100">
-                <div className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-bold mb-3">
-                  {getInitials(currentUser)}
-                </div>
-                <p className="text-sm font-semibold text-slate-900">
-                  {currentUser?.first_name} {currentUser?.last_name}
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5">{currentUser?.email}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{tenantLabel}</p>
-                <span className={`mt-2 inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full ${ROLE_COLORS[currentRole] || 'bg-slate-100 text-slate-600'}`}>
-                  {roleLabel}
-                </span>
-              </div>
-
-              {/* Actions */}
-              <div className="py-1.5">
-                {currentUser?.auth_provider !== 'google' && (
-                  <button
-                    onClick={() => { setProfileOpen(false); setChangePwOpen(true); }}
-                    className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    <KeyRound className="w-4 h-4 text-slate-400" />
-                    Change Password
-                  </button>
-                )}
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sign out
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
+        {changePwOpen && <ChangePasswordModal currentUser={currentUser} onClose={() => setChangePwOpen(false)} />}
       </AnimatePresence>
-
-      {/* Change Password modal */}
-      <AnimatePresence>
-        {changePwOpen && (
-          <ChangePasswordModal currentUser={currentUser} onClose={() => setChangePwOpen(false)} />
-        )}
-      </AnimatePresence>
-    </>
+    </div>
   );
 }

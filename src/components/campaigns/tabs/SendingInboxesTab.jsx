@@ -105,7 +105,7 @@ export default function SendingInboxesTab({ campaign }) {
                         </p>
                         <button
                             className="inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-medium text-sm"
-                            style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                            style={{ background: '#4f46e5' }}
                         >
                             Assign Inboxes
                         </button>
@@ -231,7 +231,7 @@ export default function SendingInboxesTab({ campaign }) {
                                         <button
                                             onClick={() => handleSave(inbox.inbox_id)}
                                             className="w-full text-white text-xs font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-md"
-                                            style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                                            style={{ background: '#4f46e5' }}
                                         >
                                             <Save className="w-3.5 h-3.5" /> Save Credentials
                                         </button>

@@ -18,82 +18,14 @@ import {
     XCircle,
 } from 'lucide-react';
 import { platformAdminApi } from '../api/platformAdmin';
+import KpiTile from '../components/ui/KpiTile';
 
 function Skeleton({ className = '' }) {
     return <div className={`animate-pulse rounded-xl bg-slate-200/70 ${className}`} />;
 }
 
-function BarSparkline({ color = 'rgba(255,255,255,0.5)' }) {
-    const bars = [36, 48, 42, 64, 54, 74, 62];
-    const H = 36;
-    return (
-        <svg width="68" height={H} viewBox={`0 0 68 ${H}`} style={{ overflow: 'visible' }}>
-            {bars.map((pct, i) => {
-                const barH = (pct / 100) * H;
-                return (
-                    <rect
-                        key={i}
-                        x={i * 9 + 1}
-                        y={H - barH}
-                        width="6"
-                        height={barH}
-                        rx="2"
-                        fill={color}
-                        className="spark-bar"
-                        style={{ animationDelay: `${i * 55}ms` }}
-                    />
-                );
-            })}
-        </svg>
-    );
-}
-
-function WaveSparkline({ color = 'rgba(255,255,255,0.45)' }) {
-    return (
-        <svg width="84" height="36" viewBox="0 0 84 36" fill="none">
-            <path
-                d="M0 27 C12 25,14 10,24 12 C34 14,36 7,46 10 C56 13,60 26,70 18 C76 13,79 11,84 10"
-                stroke={color}
-                strokeWidth="2.5"
-                fill="none"
-                strokeLinecap="round"
-                className="spark-wave"
-            />
-        </svg>
-    );
-}
-
-function GradientCard({ label, value, sub, from, to, dark = false, chart = 'bar', trend = true, delay = '0ms' }) {
-    const textMain = dark ? '#0046FF' : '#ffffff';
-    const textMuted = dark ? 'rgba(0,70,255,0.65)' : 'rgba(255,255,255,0.78)';
-    const sparkColor = dark ? 'rgba(0,70,255,0.30)' : 'rgba(255,255,255,0.48)';
-
-    return (
-        <div
-            className="card-anim rounded-[22px] p-5 shadow-sm transition-shadow hover:shadow-md"
-            style={{ background: `linear-gradient(135deg, ${from}, ${to})`, animationDelay: delay }}
-        >
-            <div className="flex items-end justify-between gap-4">
-                <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: textMuted }}>
-                        {label}
-                    </p>
-                    <p className="mt-2 text-3xl font-bold" style={{ color: textMain }}>
-                        {value}
-                    </p>
-                    <p className="mt-1 text-xs" style={{ color: textMuted }}>
-                        {sub}
-                    </p>
-                </div>
-                <div className="opacity-95">
-                    {chart === 'bar' ? <BarSparkline color={sparkColor} /> : <WaveSparkline color={sparkColor} />}
-                </div>
-            </div>
-            <div className="mt-3 text-xs font-medium" style={{ color: textMuted }}>
-                {trend ? 'Healthy platform signal' : 'Needs attention'}
-            </div>
-        </div>
-    );
+function GradientCard(props) {
+    return <KpiTile {...props} />;
 }
 
 function SectionCard({ title, subtitle, icon: Icon, children, delay = '0ms', action = null }) {
@@ -200,7 +132,7 @@ function TenantDetailModal({ tenantId, onClose }) {
                 >
                     <div
                         className="flex items-start justify-between px-7 py-6 text-white"
-                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                        style={{ background: '#4f46e5' }}
                     >
                         <div>
                             <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
@@ -248,9 +180,9 @@ function TenantDetailModal({ tenantId, onClose }) {
                                     <div className="overflow-x-auto">
                                         <table className="w-full min-w-[680px] text-left">
                                             <thead>
-                                                <tr style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }}>
+                                                <tr className="bg-slate-50 border-b border-slate-200">
                                                     {['Name', 'Email', 'Role', 'Status'].map((header) => (
-                                                        <th key={header} className="px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-white/90">
+                                                        <th key={header} className="px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500/90">
                                                             {header}
                                                         </th>
                                                     ))}
@@ -330,7 +262,7 @@ function CreateTenantModal({ onClose, onCreated }) {
                 >
                     {/* Header */}
                     <div className="flex items-start justify-between px-7 py-6 text-white"
-                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                        style={{ background: '#4f46e5' }}>
                         <div>
                             <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
                                 <Building2 className="h-3.5 w-3.5" />
@@ -377,7 +309,7 @@ function CreateTenantModal({ onClose, onCreated }) {
                                 <button
                                     onClick={() => { onCreated?.(); onClose(); }}
                                     className="w-full rounded-2xl py-3 text-sm font-semibold text-white transition hover:opacity-90"
-                                    style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                                    style={{ background: '#4f46e5' }}
                                 >
                                     Done
                                 </button>
@@ -458,7 +390,7 @@ function CreateTenantModal({ onClose, onCreated }) {
                                         type="submit"
                                         disabled={mutation.isPending}
                                         className="flex-1 rounded-2xl py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                                        style={{ background: '#4f46e5' }}
                                     >
                                         {mutation.isPending ? 'Creating…' : 'Create Tenant'}
                                     </button>
@@ -551,7 +483,7 @@ export default function PlatformAdmin() {
                         <button
                             onClick={() => setShowCreateModal(true)}
                             className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
-                            style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                            style={{ background: '#4f46e5' }}
                         >
                             <Plus className="h-4 w-4" />
                             Add Tenant
@@ -619,9 +551,9 @@ export default function PlatformAdmin() {
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[760px] text-left">
                             <thead>
-                                <tr style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }}>
+                                <tr className="bg-slate-50 border-b border-slate-200">
                                     {['Tenant', 'Status', 'Users', 'Campaigns', 'Created', 'Actions'].map((header) => (
-                                        <th key={header} className="px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-white/90">
+                                        <th key={header} className="px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500/90">
                                             {header}
                                         </th>
                                     ))}

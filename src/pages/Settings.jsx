@@ -97,7 +97,7 @@ export default function SettingsPage() {
                         <Settings className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Account Settings</h1>
+                        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Account Settings</h1>
                         <p className="text-slate-500 text-sm">Manage your profile and security preferences</p>
                     </div>
                 </div>

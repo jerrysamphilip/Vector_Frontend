@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button';
 import Loading from '../components/common/Loading';
 import usersApi from '../api/users';
 import { getStoredUser } from '../lib/authStorage';
+import KpiTile from '../components/ui/KpiTile';
 
 // ── Constants ──────────────────────────────────────────────────
 const ROLE_META = {
@@ -66,75 +67,9 @@ function formatDate(value) {
     } catch { return '-'; }
 }
 
-// ── Sparklines (same as Dashboard) ─────────────────────────────
-function BarSparkline({ color = 'rgba(255,255,255,0.55)' }) {
-    const bars = [40, 60, 45, 80, 55, 90, 70];
-    const H = 36;
-    return (
-        <svg width="64" height={H} viewBox={`0 0 64 ${H}`} style={{ overflow: 'visible' }}>
-            {bars.map((pct, i) => {
-                const barH = (pct / 100) * H;
-                return (
-                    <rect key={i} x={i * 9 + 1} y={H - barH} width="6" height={barH} rx="2"
-                        fill={color} className="spark-bar"
-                        style={{ animationDelay: `${i * 60}ms` }}
-                    />
-                );
-            })}
-        </svg>
-    );
-}
-
-function WaveSparkline({ color = 'rgba(255,255,255,0.5)' }) {
-    return (
-        <svg width="84" height="36" viewBox="0 0 84 36" fill="none">
-            <path d="M0 28 C12 28,12 10,22 12 C32 14,32 6,42 8 C52 10,52 24,62 18 C72 12,72 8,84 10"
-                stroke={color} strokeWidth="2.5" fill="none" strokeLinecap="round" className="spark-wave" />
-        </svg>
-    );
-}
-
 // ── Gradient stat card (same as Dashboard) ─────────────────────
-function GradientCard({ label, value, sub, from, to, dark = false, chart = 'bar', trend, animDelay = '0ms' }) {
-    const [sparkKey, setSparkKey] = useState(0);
-
-    useEffect(() => {
-        const delay = parseInt(animDelay) || 0;
-        const t = setTimeout(() => setSparkKey(k => k + 1), delay + 520);
-        return () => clearTimeout(t);
-    }, [animDelay]);
-
-    const textMain   = dark ? '#0046FF'              : '#ffffff';
-    const textMuted  = dark ? 'rgba(0,70,255,0.65)' : 'rgba(255,255,255,0.75)';
-    const sparkColor = dark ? 'rgba(0,70,255,0.30)' : 'rgba(255,255,255,0.5)';
-
-    return (
-        <div
-            className="card-anim rounded-2xl p-5 shadow-md hover:shadow-xl transition-shadow cursor-default"
-            style={{ background: `linear-gradient(135deg, ${from}, ${to})`, animationDelay: animDelay }}
-            onMouseEnter={() => setSparkKey(k => k + 1)}
-        >
-            <div className="flex items-end justify-between">
-                <div>
-                    <p className="text-xs font-semibold mb-1" style={{ color: textMuted }}>{label}</p>
-                    <p className="text-2xl font-bold leading-none" style={{ color: textMain }}>{value}</p>
-                    <p className="text-xs mt-1.5" style={{ color: textMuted }}>{sub}</p>
-                </div>
-                <div className="opacity-90 flex-shrink-0">
-                    {chart === 'bar'
-                        ? <BarSparkline  key={sparkKey} color={sparkColor} />
-                        : <WaveSparkline key={sparkKey} color={sparkColor} />
-                    }
-                </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs" style={{ color: textMuted }}>
-                {trend
-                    ? <><TrendingUp  size={12} style={{ color: textMain }} /><span>Growing team</span></>
-                    : <><TrendingDown size={12} style={{ color: textMain }} /><span>Pending action</span></>
-                }
-            </div>
-        </div>
-    );
+function GradientCard(props) {
+    return <KpiTile {...props} />;
 }
 
 // ── Role badge ─────────────────────────────────────────────────
@@ -198,7 +133,7 @@ function PermissionsModal({ user, onClose, onSave, onReset, isSaving, isResettin
             <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
 
                 {/* Gradient header */}
-                <div className="px-6 py-5" style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }}>
+                <div className="px-6 py-5" style={{ background: '#4f46e5' }}>
                     <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                             <Avatar firstName={user.first_name} lastName={user.last_name} email={user.email} size="lg" />
@@ -258,7 +193,7 @@ function PermissionsModal({ user, onClose, onSave, onReset, isSaving, isResettin
                         <button disabled={!hasChanges || isSaving}
                             onClick={() => onSave([...draft])}
                             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-opacity"
-                            style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                            style={{ background: '#4f46e5' }}
                         >
                             {isSaving ? 'Saving…' : 'Save Permissions'}
                         </button>
@@ -363,7 +298,7 @@ export default function TeamManagement() {
                 <div className="min-h-[60vh] flex items-center justify-center">
                     <div className="text-center max-w-sm card-anim">
                         <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                            style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                            style={{ background: '#4f46e5' }}>
                             <Shield className="w-8 h-8 text-white" />
                         </div>
                         <h2 className="text-xl font-bold text-gray-800">Access Restricted</h2>
@@ -386,7 +321,7 @@ export default function TeamManagement() {
                 <button
                     onClick={() => setIsInviteOpen(true)}
                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
-                    style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                    style={{ background: '#4f46e5' }}
                 >
                     <UserPlus className="w-4 h-4" />
                     Invite Member
@@ -535,12 +470,12 @@ export default function TeamManagement() {
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }}>
-                                    <th className="text-left px-6 py-3 text-xs font-semibold text-white uppercase tracking-wide">Member</th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-white uppercase tracking-wide">Role</th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-white uppercase tracking-wide">Status</th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-white uppercase tracking-wide">Last Active</th>
-                                    <th className="text-right px-6 py-3 text-xs font-semibold text-white uppercase tracking-wide">Actions</th>
+                                <tr className="bg-slate-50 border-b border-slate-200">
+                                    <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Member</th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Role</th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Last Active</th>
+                                    <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -594,7 +529,7 @@ export default function TeamManagement() {
                                                         {roleDraft !== u.role && (
                                                             <button onClick={() => handleRoleSave(u)} disabled={changeRoleMutation.isPending}
                                                                 className="px-2.5 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50"
-                                                                style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                                                                style={{ background: '#4f46e5' }}>
                                                                 Save
                                                             </button>
                                                         )}
@@ -663,7 +598,7 @@ export default function TeamManagement() {
 
                         {/* Gradient header */}
                         <div className="px-6 py-5 flex items-center justify-between"
-                            style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }}>
+                            style={{ background: '#4f46e5' }}>
                             <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
                                     <UserPlus className="w-4 h-4 text-white" />
@@ -733,7 +668,7 @@ export default function TeamManagement() {
                                 </Button>
                                 <button type="submit" disabled={inviteMutation.isPending}
                                     className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
-                                    style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                                    style={{ background: '#4f46e5' }}>
                                     <UserPlus className="w-4 h-4" />
                                     {inviteMutation.isPending ? 'Sending…' : 'Send Invite'}
                                 </button>

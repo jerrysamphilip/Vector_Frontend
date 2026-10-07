@@ -9,7 +9,7 @@ export default function Inbox() {
                 {/* ── Header ── */}
                 <div className="flex items-center justify-between shrink-0">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Unified Inbox</h1>
+                        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Unified Inbox</h1>
                         <p className="text-sm text-gray-400 mt-1">All your prospect replies in one place.</p>
                     </div>
                 </div>

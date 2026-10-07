@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { X, Loader2, AlertTriangle } from 'lucide-react';
 import { contactsApi } from '../../api/contacts';
 
-export const BRAND_GRADIENT = 'linear-gradient(135deg, #2d6bbf, #73C8D2)';
+// Primary brand colour (solid indigo since the redesign; kept under the old name for existing callers)
+export const BRAND_GRADIENT = '#4f46e5';
 
 const GRADIENTS = [
     'from-indigo-400 to-violet-500',
@@ -112,12 +113,12 @@ export function TagInput({ value = [], onChange, suggestions = [], placeholder =
     );
 }
 
-export const inputClass = 'w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all';
+export const inputClass = 'w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all';
 
 export function Field({ label, children, hint, className = '' }) {
     return (
         <label className={`block ${className}`}>
-            <span className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">{label}</span>
+            <span className="block text-xs font-medium text-slate-600 mb-1.5">{label}</span>
             {children}
             {hint && <span className="block text-xs text-gray-400 mt-1">{hint}</span>}
         </label>
@@ -225,10 +226,9 @@ export function ErrorNote({ message }) {
 export function Modal({ title, subtitle, onClose, children, footer, width = 'max-w-lg' }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-            <div className={`relative bg-white rounded-3xl shadow-2xl w-full ${width} max-h-[90vh] flex flex-col overflow-hidden`}
+            <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} />
+            <div className={`relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${width} max-h-[90vh] flex flex-col overflow-hidden`}
                 onClick={e => e.stopPropagation()}>
-                <div className="h-1.5 w-full flex-shrink-0" style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }} />
                 <div className="px-6 pt-5 pb-3 flex items-start justify-between flex-shrink-0">
                     <div>
                         <h2 className="text-lg font-bold text-gray-900">{title}</h2>
@@ -248,8 +248,7 @@ export function Modal({ title, subtitle, onClose, children, footer, width = 'max
 export function PrimaryButton({ children, loading, className = '', ...props }) {
     return (
         <button {...props} disabled={loading || props.disabled}
-            className={`h-10 px-5 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-2 hover:shadow-md ${className}`}
-            style={{ background: BRAND_GRADIENT }}>
+            className={`h-9 px-4 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${className}`}>
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {children}
         </button>
@@ -259,7 +258,7 @@ export function PrimaryButton({ children, loading, className = '', ...props }) {
 export function SecondaryButton({ children, className = '', ...props }) {
     return (
         <button {...props}
-            className={`h-10 px-4 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60 ${className}`}>
+            className={`h-9 px-3.5 text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-60 ${className}`}>
             {children}
         </button>
     );

@@ -151,7 +151,7 @@ export default function ProspectValidate() {
                         <button
                             onClick={handleRevalidate}
                             disabled={revalidating || confirming}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98] btn-pulse active:ring-2 active:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center gap-2"
+                            className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] btn-pulse active:ring-2 active:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center gap-2"
                         >
                             {revalidating ? (
                                 <><Loader2 className="w-4 h-4 animate-spin" /> Revalidating...</>
@@ -162,7 +162,7 @@ export default function ProspectValidate() {
                         <button
                             onClick={handleConfirm}
                             disabled={confirming || revalidating || acceptedCount === 0}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98] btn-pulse active:ring-2 active:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center gap-2"
+                            className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] btn-pulse active:ring-2 active:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center gap-2"
                         >
                             {confirming ? (
                                 <><Loader2 className="w-4 h-4 animate-spin" /> Confirming...</>

@@ -3,9 +3,9 @@ import { contactsApi } from '../../api/contacts';
 import { leadsApi } from '../../api/sales';
 import { inputClass } from '../contacts/shared';
 
-export const card = 'bg-white rounded-2xl border border-gray-100';
-export const cardShadow = { boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
-export const selectSm = 'h-9 px-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-indigo-400';
+export const card = 'bg-white rounded-xl border border-slate-200';
+export const cardShadow = {};
+export const selectSm = 'h-9 px-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:border-indigo-400';
 
 export function useLeadsMeta() {
     const { data } = useQuery({ queryKey: ['leads-meta'], queryFn: leadsApi.meta, staleTime: 300000 });
@@ -22,8 +22,8 @@ export function PageHeader({ title, subtitle, children }) {
     return (
         <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-                {subtitle && <p className="text-sm text-gray-400 mt-1">{subtitle}</p>}
+                <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
+                {subtitle && <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>}
             </div>
             {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
         </div>
@@ -34,8 +34,8 @@ export function StatTile({ label, value, sub, tone = 'text-slate-900', onClick }
     const Tag = onClick ? 'button' : 'div';
     return (
         <Tag onClick={onClick} className={`${card} px-4 py-3 text-left ${onClick ? 'hover:border-indigo-200' : ''}`} style={cardShadow}>
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">{label}</p>
-            <p className={`text-2xl font-bold mt-0.5 ${tone}`}>{value}</p>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+            <p className={`text-2xl font-bold tracking-tight mt-1 tabular-nums ${tone}`}>{value}</p>
             {sub && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
         </Tag>
     );
@@ -43,10 +43,10 @@ export function StatTile({ label, value, sub, tone = 'text-slate-900', onClick }
 
 export function Seg({ options, value, onChange }) {
     return (
-        <div className="flex bg-white rounded-xl border border-slate-200 p-0.5">
+        <div className="flex bg-slate-100 rounded-lg p-0.5">
             {options.map(([v, label]) => (
-                <button key={label} onClick={() => onChange(v)}
-                    className={`px-3 h-8 text-sm font-medium rounded-lg whitespace-nowrap ${value === v ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>{label}</button>
+                <button key={typeof label === 'string' ? label : v} onClick={() => onChange(v)}
+                    className={`px-3 h-8 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${value === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>{label}</button>
             ))}
         </div>
     );

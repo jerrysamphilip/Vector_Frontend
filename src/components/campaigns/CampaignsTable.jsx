@@ -36,7 +36,7 @@ function loadVisibleCols() {
 function GradientTh({ children, className = '' }) {
     return (
         <th className={`py-3.5 px-4 ${className}`}>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-white/90">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 {children}
             </span>
         </th>
@@ -154,18 +154,18 @@ export default function CampaignsTable({
 
             <div className="overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm custom-scrollbar" style={{ maxHeight: 'calc(100vh - 180px)' }}>
                 <table className="w-full text-left border-collapse min-w-max">
-                    <thead className="sticky top-0 z-30 shadow-sm" style={{ background: '#1f4bba' }}>
+                    <thead className="sticky top-0 z-30 shadow-sm" style={{ background: '#f8fafc' }}>
                         <tr>
-                            <th className="py-3.5 px-4 w-[50px] min-w-[50px] sticky left-0 z-20" style={{ background: '#1f4bba' }}>
+                            <th className="py-3.5 px-4 w-[50px] min-w-[50px] sticky left-0 z-20" style={{ background: '#f8fafc' }}>
                                 <input type="checkbox"
-                                    className="w-4 h-4 rounded border-white/40 bg-white/20 text-white cursor-pointer"
+                                    className="w-4 h-4 rounded border-slate-300 bg-white text-indigo-600 cursor-pointer"
                                     checked={allSelected} onChange={onToggleAll} />
                             </th>
-                            <th className="py-3.5 px-4 w-[280px] min-w-[280px] max-w-[280px] sticky left-[50px] z-20" style={{ background: '#1f4bba' }}>
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-white/90">Campaign</span>
+                            <th className="py-3.5 px-4 w-[280px] min-w-[280px] max-w-[280px] sticky left-[50px] z-20" style={{ background: '#f8fafc' }}>
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Campaign</span>
                             </th>
-                            <th className="py-3.5 px-4 w-[140px] min-w-[140px] sticky left-[330px] z-20 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)]" style={{ background: '#1f4bba' }}>
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-white/90">Status</span>
+                            <th className="py-3.5 px-4 w-[140px] min-w-[140px] sticky left-[330px] z-20 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)]" style={{ background: '#f8fafc' }}>
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Status</span>
                             </th>
                             {show('inProgress') && <GradientTh className="min-w-[100px]">In Progress</GradientTh>}
                             {show('sent') && <GradientTh className="min-w-[100px]">Sent</GradientTh>}
@@ -175,8 +175,8 @@ export default function CampaignsTable({
                             {show('senderBounced') && <GradientTh>Sender Bounced</GradientTh>}
                             {show('positive') && <GradientTh>Positive</GradientTh>}
                             {show('repliedNoOOO') && <GradientTh>Replied w/o OOO</GradientTh>}
-                            <th className="py-3.5 px-4 w-[100px] min-w-[100px] text-right sticky right-0 z-20 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.15)]" style={{ background: '#1f4bba' }}>
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-white/90">Actions</span>
+                            <th className="py-3.5 px-4 w-[100px] min-w-[100px] text-right sticky right-0 z-20 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.15)]" style={{ background: '#f8fafc' }}>
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Actions</span>
                             </th>
                         </tr>
                     </thead>

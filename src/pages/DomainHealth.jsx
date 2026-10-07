@@ -9,73 +9,11 @@ import {
 import deliverabilityApi from '../api/deliverability';
 import ReputationGauge from '../components/deliverability/ReputationGauge';
 import DeliverabilityTrendsChart from '../components/deliverability/DeliverabilityTrendsChart';
-
-// ── Sparklines ───────────────────────────────────────────────────
-function BarSparkline({ color = '#fff', animKey = 0 }) {
-    const bars = [40, 65, 50, 80, 60, 90, 70, 85, 55, 75];
-    return (
-        <svg width="80" height="32" viewBox="0 0 80 32">
-            {bars.map((h, i) => (
-                <rect key={`${animKey}-${i}`} x={i * 8 + 1} y={32 - h * 0.3}
-                    width="5" height={h * 0.3} rx="2"
-                    fill={color} opacity="0.55"
-                    className="spark-bar"
-                    style={{ animationDelay: `${i * 55}ms` }} />
-            ))}
-        </svg>
-    );
-}
-
-function WaveSparkline({ color = '#fff', animKey = 0 }) {
-    return (
-        <svg width="80" height="32" viewBox="0 0 80 32">
-            <path key={animKey}
-                d="M0,24 C10,20 15,8 25,12 C35,16 40,6 50,10 C60,14 65,4 80,8"
-                fill="none" stroke={color} strokeWidth="2.5"
-                strokeLinecap="round" opacity="0.7"
-                className="spark-wave" />
-        </svg>
-    );
-}
+import KpiTile from '../components/ui/KpiTile';
 
 // ── GradientCard ─────────────────────────────────────────────────
-function GradientCard({ label, value, sub, from, to, dark = false, chart = 'bar', trend, animDelay = '0ms' }) {
-    const [animKey, setAnimKey] = useState(0);
-    const mountedRef = useRef(false);
-    useEffect(() => {
-        if (!mountedRef.current) {
-            mountedRef.current = true;
-            const t = setTimeout(() => setAnimKey(k => k + 1), 100);
-            return () => clearTimeout(t);
-        }
-    }, []);
-    const textColor = dark ? '#1a1a1a' : '#ffffff';
-    const subColor  = dark ? 'rgba(26,26,26,0.6)' : 'rgba(255,255,255,0.7)';
-    return (
-        <div className="card-anim relative rounded-2xl p-5 overflow-hidden flex flex-col justify-between"
-            style={{ background: `linear-gradient(135deg, ${from}, ${to})`, minHeight: 130, animationDelay: animDelay }}
-            onMouseEnter={() => setAnimKey(k => k + 1)}>
-            <div className="absolute inset-0 opacity-10"
-                style={{ background: 'radial-gradient(circle at 80% 20%, #fff 0%, transparent 60%)' }} />
-            <div className="relative z-10 flex justify-between items-start">
-                <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: subColor }}>{label}</p>
-                    <p className="text-3xl font-bold leading-none" style={{ color: textColor }}>{value}</p>
-                    <p className="text-[12px] mt-1.5 font-medium" style={{ color: subColor }}>{sub}</p>
-                </div>
-                {trend !== undefined && (
-                    <span className="mt-1" style={{ color: textColor, opacity: 0.75 }}>
-                        {trend ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                    </span>
-                )}
-            </div>
-            <div className="relative z-10 mt-3">
-                {chart === 'bar'
-                    ? <BarSparkline color={textColor} animKey={animKey} />
-                    : <WaveSparkline color={textColor} animKey={animKey} />}
-            </div>
-        </div>
-    );
+function GradientCard(props) {
+    return <KpiTile {...props} />;
 }
 
 // ── Auth status helpers ──────────────────────────────────────────
@@ -107,7 +45,7 @@ function DomainCard({ domain, expanded, onToggle, onScan, onDelete, scanning }) 
 
             {/* Gradient top strip */}
             <div className="h-1 w-full"
-                style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }} />
+                style={{ background: '#4f46e5' }} />
 
             <div className="p-5">
                 {/* Header row */}
@@ -221,7 +159,7 @@ function DomainCard({ domain, expanded, onToggle, onScan, onDelete, scanning }) 
                                         onClick={() => onScan(domain.domain_name)}
                                         disabled={scanning === domain.domain_name}
                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                                        style={{ background: '#4f46e5' }}>
                                         <RefreshCcw className={`w-3.5 h-3.5 ${scanning === domain.domain_name ? 'animate-spin' : ''}`} />
                                         Run Diagnostics
                                     </button>
@@ -355,7 +293,7 @@ export default function DomainHealth() {
             {/* ── Page Header ── */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Domain Health</h1>
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900">Domain Health</h1>
                     <p className="text-sm text-gray-400 mt-1">Monitor deliverability, authentication, and sending reputation.</p>
                 </div>
                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"

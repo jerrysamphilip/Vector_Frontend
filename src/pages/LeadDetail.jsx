@@ -54,6 +54,11 @@ export function ConvertModal({ lead, onClose, onConverted }) {
 
 export default function LeadDetail() {
     const { id } = useParams();
+    return <LeadPanel id={id} />;
+}
+
+/** The lead record; also shown beside the list in the Leads split view (embedded). */
+export function LeadPanel({ id, embedded = false, onRemoved }) {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const meta = useLeadsMeta();
@@ -77,7 +82,7 @@ export default function LeadDetail() {
         onSuccess: data => { queryClient.setQueryData(['lead', id], data); setError(null); refresh(); },
         onError: err => setError(errorMessage(err)),
     });
-    const remove = useMutation({ mutationFn: () => leadsApi.remove(id), onSuccess: () => { refresh(); navigate('/app/leads'); }, onError: err => setError(errorMessage(err)) });
+    const remove = useMutation({ mutationFn: () => leadsApi.remove(id), onSuccess: () => { refresh(); if (onRemoved) onRemoved(); else navigate('/app/leads'); }, onError: err => setError(errorMessage(err)) });
 
     if (isLoading) return <div className="py-32 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-indigo-500" /></div>;
     if (loadError || !lead) return <div className="py-24 text-center"><p className="text-lg font-bold text-slate-800">Lead not found</p><Link to="/app/leads" className="inline-block mt-4 text-sm font-semibold text-indigo-600">← Back to leads</Link></div>;
@@ -88,13 +93,20 @@ export default function LeadDetail() {
 
     return (
         <div className="w-full space-y-5">
-            <button onClick={() => navigate(-1)} className="text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1.5"><ArrowLeft className="w-4 h-4" /> Back</button>
+            {embedded ? (
+                <div className="flex justify-end"><Link to={`/app/leads/${lead.lead_id}`} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">Open full page →</Link></div>
+            ) : (
+                <nav className="flex items-center gap-1.5 text-sm text-slate-500">
+                    <button onClick={() => navigate(-1)} className="p-1 -ml-1 rounded hover:bg-slate-100" aria-label="Back"><ArrowLeft className="w-4 h-4" /></button>
+                    <Link to="/app/leads" className="hover:text-slate-800">Leads</Link><span>/</span><span className="text-slate-800 font-medium truncate">{lead.contact_name}</span>
+                </nav>
+            )}
             <div className={`${card} p-6`} style={cardShadow}>
                 <div className="flex flex-col lg:flex-row gap-5">
                     <div className="flex items-start gap-4 flex-1 min-w-0">
                         <Avatar first={lead.contact_name?.split(' ')[0]} last={lead.contact_name?.split(' ')[1]} seed={lead.contact_email} size="lg" />
                         <div className="min-w-0">
-                            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3 flex-wrap">{lead.contact_name} <LeadStageBadge stage={lead.stage} label={lead.stage_label} /></h1>
+                            <h1 className="text-xl font-semibold tracking-tight text-slate-900 flex items-center gap-3 flex-wrap">{lead.contact_name} <LeadStageBadge stage={lead.stage} label={lead.stage_label} /></h1>
                             <p className="text-sm text-slate-500">{[lead.contact_title, lead.company_name].filter(Boolean).join(' · ')}</p>
                             <p className="text-sm text-slate-500 mt-1">
                                 <Link to={`/app/contacts/${lead.prospect_id}`} className="font-semibold text-indigo-600 hover:text-indigo-800">Open contact</Link>
@@ -124,7 +136,7 @@ export default function LeadDetail() {
                     <div className="mt-6 grid grid-cols-4 gap-1">
                         {flow.map((s, i) => (
                             <button key={s.value} onClick={() => s.value !== lead.stage && save.mutate({ stage: s.value })} disabled={save.isPending}
-                                className={`h-10 text-xs sm:text-sm font-semibold first:rounded-l-xl last:rounded-r-xl ${i <= flowIndex ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                                className={`h-9 text-xs font-semibold first:rounded-l-lg last:rounded-r-lg ${i === flowIndex ? 'bg-indigo-600 text-white' : i < flowIndex ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
                                 {s.label}
                             </button>
                         ))}

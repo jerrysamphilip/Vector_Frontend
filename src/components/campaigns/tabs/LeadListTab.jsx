@@ -250,7 +250,7 @@ export default function LeadListTab({ campaignId }) {
                                     onClick={() => setStatusFilter(key)}
                                     className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
                                     style={statusFilter === key
-                                        ? { background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)', color: '#fff' }
+                                        ? { background: '#4f46e5', color: '#fff' }
                                         : { background: 'rgba(0,0,0,0.04)', color: '#6b7280' }
                                     }
                                 >
@@ -640,7 +640,7 @@ export default function LeadListTab({ campaignId }) {
                                 onClick={() => enrollMutation.mutate(selectedListId)}
                                 disabled={!selectedListId || enrollMutation.isPending}
                                 className="px-4 py-2 rounded-xl text-sm font-medium text-white disabled:opacity-50"
-                                style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                                style={{ background: '#4f46e5' }}
                             >
                                 {enrollMutation.isPending ? 'Adding…' : 'Add to Campaign'}
                             </button>

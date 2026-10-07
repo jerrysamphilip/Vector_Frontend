@@ -425,15 +425,15 @@ export default function Contacts() {
             {/* Header */}
             <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
+                    <h1 className="text-xl font-semibold tracking-tight text-slate-900">Contacts</h1>
                     <p className="text-sm text-gray-400 mt-1">Every contact in one place{canManage ? '' : ' · showing contacts you own'}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                     {canManage && <>
-                        <Link to="/app/import" className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><Upload className="w-4 h-4" /> Import</Link>
+                        <Link to="/app/import" className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><Upload className="w-4 h-4" /> Import</Link>
                         {meta?.can_export && (
                             <div className="relative">
-                                <button onClick={() => setShowExport(s => !s)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><Download className="w-4 h-4" /> Export</button>
+                                <button onClick={() => setShowExport(s => !s)} className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><Download className="w-4 h-4" /> Export</button>
                                 {showExport && (
                                     <div className="absolute right-0 top-12 z-30 w-56 bg-white border border-slate-200 rounded-xl shadow-xl p-1">
                                         {['csv', 'xlsx'].map(fmt => (
@@ -446,11 +446,11 @@ export default function Contacts() {
                                 )}
                             </div>
                         )}
-                        <button onClick={() => setShowFields(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><SlidersHorizontal className="w-4 h-4" /> Properties</button>
-                        <button onClick={() => setShowMerge(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><GitMerge className="w-4 h-4" /> Duplicates</button>
-                        <Link to="/app/recently-deleted" className="flex items-center gap-2 px-3 py-2.5 rounded-xl font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap" title="Recently deleted"><Archive className="w-4 h-4" /></Link>
+                        <button onClick={() => setShowFields(true)} className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><SlidersHorizontal className="w-4 h-4" /> Properties</button>
+                        <button onClick={() => setShowMerge(true)} className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><GitMerge className="w-4 h-4" /> Duplicates</button>
+                        <Link to="/app/recently-deleted" className="flex items-center gap-2 h-9 px-2.5 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap" title="Recently deleted"><Archive className="w-4 h-4" /></Link>
                     </>}
-                    <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all hover:shadow-md whitespace-nowrap" style={{ background: BRAND_GRADIENT }}>
+                    <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90 whitespace-nowrap" style={{ background: BRAND_GRADIENT }}>
                         <Plus className="w-4 h-4" /> Add contact
                     </button>
                 </div>

@@ -11,6 +11,7 @@ import {
     XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
 import { reportsApi } from '../api/reports';
+import KpiTile from '../components/ui/KpiTile';
 
 // ── Date helpers ────────────────────────────────────────────────
 const DATE_RANGES = [
@@ -52,78 +53,10 @@ function Skeleton({ className = '' }) {
 }
 
 // ── Bar sparkline (same as Dashboard) ──────────────────────────
-function BarSparkline({ color = 'rgba(255,255,255,0.55)' }) {
-    const bars = [30, 55, 40, 75, 50, 90, 65];
-    const H = 36;
-    return (
-        <svg width="64" height={H} viewBox={`0 0 64 ${H}`} style={{ overflow: 'visible' }}>
-            {bars.map((pct, i) => {
-                const barH = (pct / 100) * H;
-                return (
-                    <rect key={i} x={i * 9 + 1} y={H - barH} width="6" height={barH} rx="2"
-                        fill={color} className="spark-bar"
-                        style={{ animationDelay: `${i * 60}ms` }}
-                    />
-                );
-            })}
-        </svg>
-    );
-}
-
 // ── Wave sparkline (same as Dashboard) ─────────────────────────
-function WaveSparkline({ color = 'rgba(255,255,255,0.5)' }) {
-    return (
-        <svg width="84" height="36" viewBox="0 0 84 36" fill="none">
-            <path
-                d="M0 28 C12 28,12 10,22 12 C32 14,32 6,42 8 C52 10,52 24,62 18 C72 12,72 8,84 10"
-                stroke={color} strokeWidth="2.5" fill="none" strokeLinecap="round"
-                className="spark-wave"
-            />
-        </svg>
-    );
-}
-
 // ── Gradient Card (identical to Dashboard) ──────────────────────
-function GradientCard({ label, value, sub, from, to, dark = false, chart = 'bar', trend, animDelay = '0ms' }) {
-    const [sparkKey, setSparkKey] = useState(0);
-
-    useEffect(() => {
-        const delay = parseInt(animDelay) || 0;
-        const t = setTimeout(() => setSparkKey(k => k + 1), delay + 520);
-        return () => clearTimeout(t);
-    }, [animDelay]);
-
-    const textMain  = dark ? '#0046FF'              : '#ffffff';
-    const textMuted = dark ? 'rgba(0,70,255,0.65)' : 'rgba(255,255,255,0.75)';
-    const sparkColor = dark ? 'rgba(0,70,255,0.30)' : 'rgba(255,255,255,0.5)';
-
-    return (
-        <div
-            className="card-anim rounded-2xl p-5 shadow-md hover:shadow-xl transition-shadow cursor-default"
-            style={{ background: `linear-gradient(135deg, ${from}, ${to})`, animationDelay: animDelay }}
-            onMouseEnter={() => setSparkKey(k => k + 1)}
-        >
-            <div className="flex items-end justify-between">
-                <div>
-                    <p className="text-xs font-semibold mb-1" style={{ color: textMuted }}>{label}</p>
-                    <p className="text-2xl font-bold leading-none" style={{ color: textMain }}>{value}</p>
-                    <p className="text-xs mt-1.5" style={{ color: textMuted }}>{sub}</p>
-                </div>
-                <div className="opacity-90 flex-shrink-0">
-                    {chart === 'bar'
-                        ? <BarSparkline  key={sparkKey} color={sparkColor} />
-                        : <WaveSparkline key={sparkKey} color={sparkColor} />
-                    }
-                </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs" style={{ color: textMuted }}>
-                {trend
-                    ? <><TrendingUp  size={12} style={{ color: textMain }} /><span>Good performance</span></>
-                    : <><TrendingDown size={12} style={{ color: textMain }} /><span>Needs improvement</span></>
-                }
-            </div>
-        </div>
-    );
+function GradientCard(props) {
+    return <KpiTile {...props} />;
 }
 
 // ── Mini icon KPI card ──────────────────────────────────────────
@@ -481,9 +414,9 @@ function ProviderTable({ providers, loading }) {
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
-                        <tr style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }}>
+                        <tr className="bg-slate-50 border-b border-slate-200">
                             {['Provider', 'Sent', 'Delivered', 'Open %', 'Reply %', 'Bounce %'].map(h => (
-                                <th key={h} className={`px-5 py-3 text-xs font-semibold text-white ${h === 'Provider' ? 'text-left' : 'text-right'}`}>{h}</th>
+                                <th key={h} className={`px-5 py-3 text-xs font-semibold text-slate-500 ${h === 'Provider' ? 'text-left' : 'text-right'}`}>{h}</th>
                             ))}
                         </tr>
                     </thead>
@@ -569,7 +502,7 @@ function TopCampaignsTable({ campaigns, loading, onExport, exporting }) {
                 </div>
                 <button onClick={onExport} disabled={exporting}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-xl disabled:opacity-50 transition-all hover:opacity-90 shadow-sm"
-                    style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                    style={{ background: '#4f46e5' }}>
                     <Download className="w-3.5 h-3.5" />
                     {exporting ? 'Exporting…' : 'Export CSV'}
                 </button>
@@ -577,9 +510,9 @@ function TopCampaignsTable({ campaigns, loading, onExport, exporting }) {
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
-                        <tr style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }}>
+                        <tr className="bg-slate-50 border-b border-slate-200">
                             {['Campaign', 'Status', 'Sent', 'Opened', 'Replied', 'Open %', 'Reply %', 'Bounce %'].map(h => (
-                                <th key={h} className={`px-5 py-3 text-xs font-semibold text-white ${h === 'Campaign' ? 'text-left' : 'text-right'}`}>{h}</th>
+                                <th key={h} className={`px-5 py-3 text-xs font-semibold text-slate-500 ${h === 'Campaign' ? 'text-left' : 'text-right'}`}>{h}</th>
                             ))}
                         </tr>
                     </thead>
@@ -630,7 +563,7 @@ function MailboxHealthTable({ mailboxHealth, loading, onExport, exporting }) {
                 </div>
                 <button onClick={onExport} disabled={exporting}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-xl disabled:opacity-50 transition-all hover:opacity-90 shadow-sm"
-                    style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                    style={{ background: '#4f46e5' }}>
                     <Download className="w-3.5 h-3.5" />
                     {exporting ? 'Exporting…' : 'Export CSV'}
                 </button>
@@ -638,9 +571,9 @@ function MailboxHealthTable({ mailboxHealth, loading, onExport, exporting }) {
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
-                        <tr style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }}>
+                        <tr className="bg-slate-50 border-b border-slate-200">
                             {['Mailbox', 'Leads', 'Sent', 'Opens', 'Open %', 'Replies', 'Reply %', 'Bounce %'].map(h => (
-                                <th key={h} className={`px-5 py-3 text-xs font-semibold text-white ${h === 'Mailbox' ? 'text-left' : 'text-right'}`}>{h}</th>
+                                <th key={h} className={`px-5 py-3 text-xs font-semibold text-slate-500 ${h === 'Mailbox' ? 'text-left' : 'text-right'}`}>{h}</th>
                             ))}
                         </tr>
                     </thead>
@@ -721,7 +654,7 @@ function TeamPerformanceTable({ users, loading }) {
                                     <td className="px-4 py-3.5">
                                         <div className="flex items-center gap-2.5">
                                             <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-                                                style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                                                style={{ background: '#4f46e5' }}>
                                                 {u.first_name?.[0]}{u.last_name?.[0]}
                                             </div>
                                             <div>
@@ -893,7 +826,7 @@ export default function Reports() {
                             <button key={r.days} onClick={() => setRange(r.days)} disabled={isFetching}
                                 className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
                                 style={range === r.days
-                                    ? { background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)', color: '#ffffff' }
+                                    ? { background: '#4f46e5', color: '#ffffff' }
                                     : { color: '#9ca3af' }
                                 }
                             >{r.label}</button>
@@ -907,7 +840,7 @@ export default function Reports() {
                     {/* Export CSV */}
                     <button onClick={handleExportGlobal} disabled={exportingGlobal}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-xl disabled:opacity-50 transition-all hover:opacity-90 shadow-sm"
-                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                        style={{ background: '#4f46e5' }}>
                         <Download className="w-3.5 h-3.5" />
                         {exportingGlobal ? 'Exporting…' : 'Export CSV'}
                     </button>

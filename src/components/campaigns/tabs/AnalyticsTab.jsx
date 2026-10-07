@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import { campaignApi } from '../../../api/campaigns';
+import KpiTile from '../../ui/KpiTile';
 
 // Dashboard Theme Colors
 const COLORS = {
@@ -30,97 +31,9 @@ const COLORS = {
 };
 
 // ─── Inline SVG sparklines for gradient cards ───────────────────────────
-function BarSparkline({ color = 'rgba(255,255,255,0.6)' }) {
-    const bars = [30, 55, 40, 75, 50, 90, 65];
-    const H = 36;
-    return (
-        <svg width="64" height={H} viewBox={`0 0 64 ${H}`} style={{ overflow: 'visible' }}>
-            {bars.map((pct, i) => {
-                const barH = (pct / 100) * H;
-                return (
-                    <rect
-                        key={i}
-                        x={i * 9 + 1}
-                        y={H - barH}
-                        width="6"
-                        height={barH}
-                        rx="2"
-                        fill={color}
-                        className="spark-bar"
-                        style={{ animationDelay: `${i * 60}ms` }}
-                    />
-                );
-            })}
-        </svg>
-    );
-}
-function WaveSparkline({ color = 'rgba(255,255,255,0.5)' }) {
-    return (
-        <svg width="84" height="36" viewBox="0 0 84 36" fill="none">
-            <path
-                d="M0 28 C12 28,12 10,22 12 C32 14,32 6,42 8 C52 10,52 24,62 18 C72 12,72 8,84 10"
-                stroke={color}
-                strokeWidth="2.5"
-                fill="none"
-                strokeLinecap="round"
-                className="spark-wave"
-            />
-        </svg>
-    );
-}
-
 // ─── Gradient Card with hover-replay sparkline ───────────────────────────────
-function GradientCard({ label, value, sub, from, to, dark, chart, trend, animDelay, link, targetTab, onTabChange }) {
-    const [sparkKey, setSparkKey] = useState(0);
-
-    useEffect(() => {
-        const delay = parseInt(animDelay) || 0;
-        const t = setTimeout(() => setSparkKey(k => k + 1), delay + 520);
-        return () => clearTimeout(t);
-    }, [animDelay]);
-
-    const textMain   = dark ? '#0046FF'              : '#ffffff';
-    const textMuted  = dark ? 'rgba(0,70,255,0.65)' : 'rgba(255,255,255,0.75)';
-    const sparkColor = dark ? 'rgba(0,70,255,0.30)' : 'rgba(255,255,255,0.5)';
-
-    return (
-        <div
-            className="card-anim rounded-2xl p-5 shadow-sm hover:shadow-xl transition-shadow cursor-default flex flex-col justify-between"
-            style={{ background: `linear-gradient(135deg, ${from}, ${to})`, animationDelay: animDelay }}
-            onMouseEnter={() => setSparkKey(k => k + 1)}
-        >
-            <div className="flex items-end justify-between">
-                <div>
-                    <p className="text-xs font-semibold mb-1" style={{ color: textMuted }}>{label}</p>
-                    <p className="text-2xl font-bold" style={{ color: textMain }}>{value}</p>
-                    <p className="text-xs mt-1" style={{ color: textMuted }}>{sub}</p>
-                </div>
-                <div className="opacity-90">
-                    {chart === 'bar'
-                        ? <BarSparkline  key={sparkKey} color={sparkColor} />
-                        : <WaveSparkline key={sparkKey} color={sparkColor} />
-                    }
-                </div>
-            </div>
-            <div className="mt-3 flex items-center justify-between text-xs" style={{ color: textMuted }}>
-                {/* <div className="flex items-center gap-1">
-                    {trend
-                        ? <><TrendingUp size={12} style={{ color: textMain }}/> <span>Good performance</span></>
-                        : <><TrendingDown size={12} style={{ color: textMain }}/> <span>Needs improvement</span></>
-                    }
-                </div> */}
-                {link && (
-                    <button 
-                        onClick={() => onTabChange && targetTab && onTabChange(targetTab)} 
-                        className="font-medium hover:underline flex items-center transition-opacity hover:opacity-80"
-                        style={{ color: textMain }}
-                    >
-                        {link}
-                    </button>
-                )}
-            </div>
-        </div>
-    );
+function GradientCard(props) {
+    return <KpiTile {...props} />;
 }
 
 
