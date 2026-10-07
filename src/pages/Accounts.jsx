@@ -204,7 +204,7 @@ export default function Accounts() {
                                         </td>
                                         <td className="px-3 py-3 text-sm text-slate-600">{a.industry || '—'}</td>
                                         <td className="px-3 py-3 text-sm text-slate-600">{[a.city, a.country].filter(Boolean).join(', ') || '—'}</td>
-                                        <td className="px-3 py-3">{a.lifecycle_stage ? <StageBadge value={a.lifecycle_stage} label={stageLabel(a.lifecycle_stage)} /> : <span className="text-slate-300">—</span>}</td>
+                                        <td className="px-3 py-3">{a.lifecycle_stage ? <StageBadge value={a.lifecycle_stage} label={stageLabel[a.lifecycle_stage]} /> : <span className="text-slate-300">—</span>}</td>
                                         <td className="px-3 py-3 text-sm text-slate-600">{formatRevenue(a.annual_revenue) || '—'}</td>
                                         <td className="px-3 py-3 text-sm font-semibold text-slate-800">{a.contact_count}</td>
                                         <td className="px-3 py-3 text-sm text-slate-600">{a.owner_name || <span className="text-slate-400">Unassigned</span>}</td>
