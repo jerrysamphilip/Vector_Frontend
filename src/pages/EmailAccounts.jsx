@@ -5,7 +5,7 @@ import {
     Activity, AlertTriangle, CheckCircle2, Flame, Loader2,
     Mail, Pencil, Plus, RefreshCcw, Search, ShieldCheck,
     Sparkles, Trash2, X, Zap, TrendingUp, Send, MailOpen, BellRing,
-    MessageSquare, ArrowRight, Settings2, Clock,
+    MessageSquare, ArrowRight, Settings2, Clock, KeyRound,
 } from 'lucide-react';
 import PageTransition from '../components/layout/PageTransition';
 import ConnectionWizard from '../components/inbox/ConnectionWizard';
@@ -22,6 +22,8 @@ const createInbox      = async (d)    => (await api.post('/inboxes', d)).data;
 const updateInbox      = async ({id, data}) => (await api.put(`/inboxes/${id}`, data)).data;
 const deleteInbox      = async (id)   => api.delete(`/inboxes/${id}`);
 const runWarmupCycle   = async ()     => (await api.post('/inboxes/warmup/run')).data;
+// Microsoft 365 blocks password sign-in; connect with OAuth instead (BR-DF-05)
+const startMs365       = async (id)   => (await api.post(`/inboxes/${id}/oauth/microsoft/start`)).data;
 const getAlertPreferences = async ()  => await deliverabilityApi.getAlertPreferences();
 const saveAlertPreferences = async (preferences) => await deliverabilityApi.updateAlertPreferences(preferences);
 
@@ -215,7 +217,7 @@ function EventRow({ event }) {
 }
 
 // ─── Inbox Row (table-style, matching dashboard card patterns) ────────────────
-function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete, onToggleWarmup, isUpdating }) {
+function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete, onToggleWarmup, isUpdating, onConnectMs365 }) {
     const ps = providerStyle(inbox.provider);
     const sentPct = inbox.current_daily_limit
         ? Math.min(Math.round(((inbox.emails_sent_today || 0) / inbox.current_daily_limit) * 100), 100)
@@ -245,7 +247,13 @@ function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete, onToggleWarmu
                     <div className="flex items-center gap-1.5 mt-0.5">
                         <PoolBadge pool={inbox.warmup_pool || 'FOUNDATION'}/>
                         <span className="text-[10px] text-gray-400">Day {inbox.warmup_day || 0}</span>
+                        {inbox.auth_type === 'OAUTH_MS365' && <span className="text-[10px] font-semibold text-sky-700 bg-sky-50 px-1.5 rounded">Microsoft 365</span>}
                     </div>
+                    {(inbox.oauth_error || inbox.imap_last_error) && (
+                        <p className="text-[10px] text-red-600 truncate max-w-[260px]" title={inbox.oauth_error || inbox.imap_last_error}>
+                            {inbox.oauth_error ? 'Sign-in problem: ' : 'Reply sync failing: '}{inbox.oauth_error || inbox.imap_last_error}
+                        </p>
+                    )}
                 </div>
             </div>
 
@@ -284,6 +292,10 @@ function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete, onToggleWarmu
                     onChange={() => onToggleWarmup(inbox)}
                     disabled={isUpdating}
                 />
+                <button onClick={() => onConnectMs365(inbox)} title={inbox.auth_type === 'OAUTH_MS365' ? 'Reconnect Microsoft 365' : 'Connect with Microsoft 365 (OAuth)'}
+                    className="rounded-lg p-1.5 text-gray-400 transition hover:bg-sky-50 hover:text-sky-700">
+                    <KeyRound size={13}/>
+                </button>
                 <button onClick={() => onEdit(inbox)}
                     className="rounded-lg p-1.5 text-gray-400 transition hover:bg-[#eff3ff] hover:text-[#0046FF]">
                     <Pencil size={13}/>
@@ -316,6 +328,14 @@ export default function EmailAccounts() {
     const [detailTab,     setDetailTab]     = useState('Overview');
     const [saveSuccess,   setSaveSuccess]   = useState(false);
     const saveTimer = useRef(null);
+    // Result of the Microsoft 365 sign-in redirect (?ms365=connected|error&message=…)
+    const [ms365Notice, setMs365Notice] = useState(() => {
+        const q = new URLSearchParams(window.location.search);
+        if (!q.get('ms365')) return null;
+        return q.get('ms365') === 'connected'
+            ? { ok: true, text: 'Microsoft 365 mailbox connected. Replies will sync within a few minutes.' }
+            : { ok: false, text: q.get('message') || 'Microsoft 365 sign-in failed.' };
+    });
 
     const [drawerForm, setDrawerForm] = useState({
         warmup_enabled: false, warmup_auto_adjust: true, warmup_randomize: true,
@@ -464,6 +484,15 @@ export default function EmailAccounts() {
         { key: 'disabled', label: 'Warmup Off' },
     ];
 
+    const connectMs365 = async (inbox) => {
+        try {
+            const { authorize_url } = await startMs365(inbox.inbox_id);
+            window.location.href = authorize_url;
+        } catch (err) {
+            setMs365Notice({ ok: false, text: err?.response?.data?.detail || 'Could not start Microsoft 365 sign-in.' });
+        }
+    };
+
     const poolStyle = POOL_STYLES[overview.current_pool] || POOL_STYLES.FOUNDATION;
     const repColor  = overview.average_reputation >= 92 ? '#0046FF'
                     : overview.average_reputation >= 75 ? '#FF9013' : '#ef4444';
@@ -471,6 +500,13 @@ export default function EmailAccounts() {
     return (
         <PageTransition>
             <div className="space-y-6">
+
+                {ms365Notice && (
+                    <div className={`flex items-center justify-between px-4 py-3 rounded-xl border text-sm ${ms365Notice.ok ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-red-50 border-red-100 text-red-800'}`}>
+                        {ms365Notice.text}
+                        <button onClick={() => setMs365Notice(null)} aria-label="Dismiss"><X size={14}/></button>
+                    </div>
+                )}
 
                 {/* ── Header ─────────────────────────────────────────────────── */}
                 <header className="w-full flex items-center justify-between mb-2">
@@ -633,6 +669,7 @@ export default function EmailAccounts() {
                                                     data: { warmup_enabled: !inbox.warmup_enabled },
                                                 })}
                                                 isUpdating={updateMutation.isPending}
+                                                onConnectMs365={connectMs365}
                                             />
                                         ))}
                                     </AnimatePresence>

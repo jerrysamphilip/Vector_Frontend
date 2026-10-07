@@ -189,8 +189,9 @@ function TimelineItem({ item, onChanged }) {
                 <p className="text-sm font-semibold text-slate-800">{e.subject || '(no subject)'}</p>
                 <p className="text-xs text-slate-500 mt-0.5">
                     {item.kind === 'EMAIL_SENT' ? `To ${e.to_email}` : `From ${e.from_email || e.to_email}`}
-                    {e.campaign_name ? ` · ${e.campaign_name}` : ''}{e.status && item.kind === 'EMAIL_SENT' ? ` · ${e.status.toLowerCase()}` : ''}
+                    {e.campaign_name ? ` · ${e.campaign_name}` : ''}{item.kind === 'EMAIL_SENT' && (e.final_status || e.status) ? ` · ${(e.final_status || e.status).toLowerCase()}` : ''}
                 </p>
+                {e.failure_reason && ['FAILED', 'BOUNCED', 'CANCELLED', 'REJECTED'].includes(e.status) && <p className="text-xs text-red-600 mt-0.5">{e.failure_reason}</p>}
                 {e.snippet && <p className="text-sm text-slate-600 mt-1 line-clamp-3 whitespace-pre-wrap">{e.snippet}</p>}
                 {item.kind === 'EMAIL_RECEIVED' && e.conversation_id && <Link to="/app/inbox" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 mt-1 inline-block">Open in Inbox →</Link>}
             </div>
