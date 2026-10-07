@@ -4,18 +4,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     ArrowLeft, Mail, Phone, Smartphone, Building2, Linkedin, MapPin, Pencil, Trash2, Loader2,
     StickyNote, PhoneCall, CalendarDays, Send, Inbox, Eye, MousePointerClick, AlertOctagon,
-    MailX, Megaphone, ListPlus, Check, X, Globe2,
+    MailX, Megaphone, ListPlus, Check, X, Globe2, History, CheckSquare, Square, AlertTriangle, ListTodo, Plus,
 } from 'lucide-react';
-import { contactsApi, errorMessage } from '../api/contacts';
+import { contactsApi, tasksApi, errorMessage } from '../api/contacts';
 import {
     Avatar, TagInput, OwnerSelect, CustomFieldInput, Field, inputClass, ErrorNote,
-    PrimaryButton, SecondaryButton, formatDateTime, relativeDate, parseDate,
+    PrimaryButton, SecondaryButton, formatDateTime, relativeDate, parseDate, useCrmMeta,
+    StageBadge, StatusBadge, formatCustomValue,
 } from '../components/contacts/shared';
 
 const CALL_OUTCOMES = ['Connected', 'Left voicemail', 'No answer', 'Wrong number', 'Busy'];
 
 const TIMELINE_FILTERS = [
-    ['', 'All'], ['NOTE', 'Notes'], ['CALL', 'Calls'], ['MEETING', 'Meetings'], ['EMAIL', 'Emails'], ['CAMPAIGN,LIST', 'Campaigns & lists'],
+    ['', 'All'], ['NOTE', 'Notes'], ['CALL', 'Calls'], ['EMAIL', 'Emails'], ['MEETING', 'Meetings'],
+    ['TASK', 'Tasks'], ['PROPERTY', 'Changes'], ['CAMPAIGN,LIST', 'Campaigns & lists'],
 ];
 
 const KIND_STYLE = {
@@ -23,6 +25,7 @@ const KIND_STYLE = {
     LIST_NOTE: { icon: StickyNote, color: 'bg-amber-50 text-amber-600', label: 'List note' },
     CALL: { icon: PhoneCall, color: 'bg-emerald-100 text-emerald-700', label: 'Call' },
     MEETING: { icon: CalendarDays, color: 'bg-violet-100 text-violet-700', label: 'Meeting' },
+    EMAIL_LOGGED: { icon: Mail, color: 'bg-blue-50 text-blue-700', label: 'Email (logged)' },
     EMAIL_SENT: { icon: Send, color: 'bg-blue-100 text-blue-700', label: 'Email sent' },
     EMAIL_RECEIVED: { icon: Inbox, color: 'bg-cyan-100 text-cyan-700', label: 'Reply received' },
     EMAIL_OPENED: { icon: Eye, color: 'bg-slate-100 text-slate-600', label: 'Opened' },
@@ -31,7 +34,12 @@ const KIND_STYLE = {
     UNSUBSCRIBED: { icon: MailX, color: 'bg-red-100 text-red-600', label: 'Unsubscribed' },
     CAMPAIGN_ENROLLED: { icon: Megaphone, color: 'bg-indigo-100 text-indigo-700', label: 'Added to campaign' },
     ADDED_TO_LIST: { icon: ListPlus, color: 'bg-slate-100 text-slate-600', label: 'Added to list' },
+    PROPERTY_CHANGE: { icon: History, color: 'bg-slate-100 text-slate-500', label: 'Property changed' },
+    TASK: { icon: ListTodo, color: 'bg-rose-100 text-rose-700', label: 'Task' },
 };
+
+const card = 'bg-white rounded-2xl border border-gray-100 p-5';
+const cardShadow = { boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 
 function toLocalInput(date = new Date()) {
     const d = new Date(date);
@@ -39,64 +47,68 @@ function toLocalInput(date = new Date()) {
     return d.toISOString().slice(0, 16);
 }
 
-// ── Log activity ────────────────────────────────────────────────
-function ActivityComposer({ contactId, onLogged }) {
+// ── Composer: note / call / email / meeting / task ─────────────
+function Composer({ contactId, owners, onLogged }) {
     const [type, setType] = useState('NOTE');
-    const [form, setForm] = useState({ subject: '', body: '', outcome: 'Connected', duration_minutes: '', occurred_at: toLocalInput() });
+    const blank = { subject: '', body: '', outcome: 'Connected', duration_minutes: '', occurred_at: toLocalInput(), due_at: '', priority: 'MEDIUM', owner_id: '' };
+    const [form, setForm] = useState(blank);
     const [error, setError] = useState(null);
     const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }));
 
-    const log = useMutation({
-        mutationFn: () => contactsApi.logActivity(contactId, {
-            activity_type: type,
-            subject: form.subject || undefined,
-            body: form.body || undefined,
-            outcome: type === 'CALL' ? form.outcome : undefined,
-            duration_minutes: type !== 'NOTE' && form.duration_minutes ? Number(form.duration_minutes) : undefined,
-            occurred_at: type !== 'NOTE' && form.occurred_at ? new Date(form.occurred_at).toISOString() : undefined,
-        }),
-        onSuccess: () => {
-            setForm(f => ({ ...f, subject: '', body: '', duration_minutes: '', occurred_at: toLocalInput() }));
-            setError(null);
-            onLogged();
-        },
+    const save = useMutation({
+        mutationFn: () => type === 'TASK'
+            ? tasksApi.create({ title: form.subject, notes: form.body || undefined, prospect_id: contactId, priority: form.priority,
+                due_at: form.due_at ? new Date(form.due_at).toISOString() : undefined, owner_id: form.owner_id || undefined })
+            : contactsApi.logActivity(contactId, {
+                activity_type: type, subject: form.subject || undefined, body: form.body || undefined,
+                outcome: type === 'CALL' ? form.outcome : undefined,
+                duration_minutes: ['CALL', 'MEETING'].includes(type) && form.duration_minutes ? Number(form.duration_minutes) : undefined,
+                occurred_at: type !== 'NOTE' && form.occurred_at ? new Date(form.occurred_at).toISOString() : undefined,
+            }),
+        onSuccess: () => { setForm(blank); setError(null); onLogged(); },
         onError: err => setError(errorMessage(err)),
     });
 
-    const tabs = [['NOTE', 'Note', StickyNote], ['CALL', 'Log call', PhoneCall], ['MEETING', 'Log meeting', CalendarDays]];
+    const tabs = [['NOTE', 'Note', StickyNote], ['CALL', 'Call', PhoneCall], ['EMAIL', 'Email', Mail], ['MEETING', 'Meeting', CalendarDays], ['TASK', 'Task', ListTodo]];
+    const subjectPlaceholder = { CALL: 'Call subject', EMAIL: 'Email subject', MEETING: 'Meeting title', TASK: 'What needs doing?' }[type];
+    const canSave = type === 'TASK' ? form.subject.trim() : (form.body.trim() || form.subject.trim());
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div className="flex gap-1 mb-4">
+        <div className={card} style={cardShadow}>
+            <div className="flex gap-1 mb-4 flex-wrap">
                 {tabs.map(([value, label, Icon]) => (
                     <button key={value} onClick={() => setType(value)}
                         className={`h-8 px-3 rounded-lg text-sm font-medium flex items-center gap-1.5 ${type === value ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
-                        <Icon className="w-3.5 h-3.5" /> {label}
+                        <Icon className="w-3.5 h-3.5" /> {value === 'NOTE' || value === 'TASK' ? label : `Log ${label.toLowerCase()}`}
                     </button>
                 ))}
             </div>
             <div className="space-y-3">
                 {type !== 'NOTE' && (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <input className={inputClass} value={form.subject} onChange={set('subject')} placeholder={type === 'CALL' ? 'Call subject' : 'Meeting title'} />
-                        <input type="datetime-local" className={inputClass} value={form.occurred_at} onChange={set('occurred_at')} aria-label="When" />
-                        <div className="flex gap-2">
-                            {type === 'CALL' && (
-                                <select className={inputClass} value={form.outcome} onChange={set('outcome')} aria-label="Outcome">
-                                    {CALL_OUTCOMES.map(o => <option key={o}>{o}</option>)}
-                                </select>
-                            )}
-                            <input type="number" min="0" className={`${inputClass} ${type === 'CALL' ? 'w-24' : ''}`} value={form.duration_minutes} onChange={set('duration_minutes')} placeholder="Mins" aria-label="Duration in minutes" />
-                        </div>
+                        <input className={`${inputClass} ${type === 'TASK' ? 'sm:col-span-3' : ''}`} value={form.subject} onChange={set('subject')} placeholder={subjectPlaceholder} />
+                        {type !== 'TASK' && <input type="datetime-local" className={inputClass} value={form.occurred_at} onChange={set('occurred_at')} aria-label="When" />}
+                        {type === 'CALL' && (
+                            <div className="flex gap-2">
+                                <select className={inputClass} value={form.outcome} onChange={set('outcome')} aria-label="Outcome">{CALL_OUTCOMES.map(o => <option key={o}>{o}</option>)}</select>
+                                <input type="number" min="0" className={`${inputClass} w-24`} value={form.duration_minutes} onChange={set('duration_minutes')} placeholder="Mins" aria-label="Duration in minutes" />
+                            </div>
+                        )}
+                        {type === 'MEETING' && <input type="number" min="0" className={inputClass} value={form.duration_minutes} onChange={set('duration_minutes')} placeholder="Minutes" aria-label="Duration in minutes" />}
+                        {type === 'TASK' && <>
+                            <Field label="Due"><input type="datetime-local" className={inputClass} value={form.due_at} onChange={set('due_at')} /></Field>
+                            <Field label="Priority"><select className={inputClass} value={form.priority} onChange={set('priority')}><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option></select></Field>
+                            <Field label="Assign to"><select className={inputClass} value={form.owner_id} onChange={set('owner_id')}><option value="">Me</option>{owners.map(o => <option key={o.user_id} value={o.user_id}>{o.name}</option>)}</select></Field>
+                        </>}
                     </div>
                 )}
                 <textarea rows={type === 'NOTE' ? 3 : 2} value={form.body} onChange={set('body')}
-                    placeholder={type === 'NOTE' ? 'Write a note about this contact…' : 'What was discussed?'}
+                    placeholder={{ NOTE: 'Write a note about this contact…', TASK: 'Notes (optional)', EMAIL: 'What did the email say?' }[type] || 'What was discussed?'}
                     className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 resize-y" />
                 <ErrorNote message={error} />
                 <div className="flex justify-end">
-                    <PrimaryButton onClick={() => log.mutate()} loading={log.isPending} disabled={!form.body.trim() && !form.subject.trim()}>
-                        {type === 'NOTE' ? 'Save note' : type === 'CALL' ? 'Log call' : 'Log meeting'}
+                    <PrimaryButton onClick={() => save.mutate()} loading={save.isPending} disabled={!canSave}>
+                        {{ NOTE: 'Save note', CALL: 'Log call', EMAIL: 'Log email', MEETING: 'Log meeting', TASK: 'Create task' }[type]}
                     </PrimaryButton>
                 </div>
             </div>
@@ -109,10 +121,7 @@ function ActivityBody({ item, onChanged }) {
     const a = item.activity;
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState({ subject: a.subject || '', body: a.body || '', outcome: a.outcome || '' });
-    const save = useMutation({
-        mutationFn: () => contactsApi.updateActivity(a.activity_id, draft),
-        onSuccess: () => { setEditing(false); onChanged(); },
-    });
+    const save = useMutation({ mutationFn: () => contactsApi.updateActivity(a.activity_id, draft), onSuccess: () => { setEditing(false); onChanged(); } });
     const remove = useMutation({ mutationFn: () => contactsApi.deleteActivity(a.activity_id), onSuccess: onChanged });
 
     if (editing) {
@@ -120,9 +129,7 @@ function ActivityBody({ item, onChanged }) {
             <div className="space-y-2 mt-1">
                 {a.activity_type !== 'NOTE' && <input className={inputClass} value={draft.subject} onChange={e => setDraft(d => ({ ...d, subject: e.target.value }))} placeholder="Subject" />}
                 {a.activity_type === 'CALL' && (
-                    <select className={inputClass} value={draft.outcome} onChange={e => setDraft(d => ({ ...d, outcome: e.target.value }))}>
-                        {CALL_OUTCOMES.map(o => <option key={o}>{o}</option>)}
-                    </select>
+                    <select className={inputClass} value={draft.outcome} onChange={e => setDraft(d => ({ ...d, outcome: e.target.value }))}>{CALL_OUTCOMES.map(o => <option key={o}>{o}</option>)}</select>
                 )}
                 <textarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm" value={draft.body} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} />
                 <div className="flex gap-2">
@@ -133,12 +140,9 @@ function ActivityBody({ item, onChanged }) {
         );
     }
     return (
-        <div className="group">
-            {a.subject && a.activity_type !== 'NOTE' && <p className="text-sm font-semibold text-slate-800">{a.subject}</p>}
-            {a.subject && a.activity_type === 'NOTE' && !a.body && <p className="text-sm text-slate-700">{a.subject}</p>}
-            {(a.outcome || a.duration_minutes) && (
-                <p className="text-xs text-slate-500 mt-0.5">{[a.outcome, a.duration_minutes ? `${a.duration_minutes} min` : null].filter(Boolean).join(' · ')}</p>
-            )}
+        <div>
+            {a.subject && (a.activity_type !== 'NOTE' || !a.body) && <p className={`text-sm ${a.activity_type === 'NOTE' ? 'text-slate-700' : 'font-semibold text-slate-800'}`}>{a.subject}</p>}
+            {(a.outcome || a.duration_minutes) && <p className="text-xs text-slate-500 mt-0.5">{[a.outcome, a.duration_minutes ? `${a.duration_minutes} min` : null].filter(Boolean).join(' · ')}</p>}
             {a.body && <p className="text-sm text-slate-700 whitespace-pre-wrap mt-1">{a.body}</p>}
             <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
                 <span>{a.created_by_name ? `by ${a.created_by_name}` : ''}</span>
@@ -155,8 +159,30 @@ function TimelineItem({ item, onChanged }) {
     const style = KIND_STYLE[item.kind] || KIND_STYLE.NOTE;
     const Icon = style.icon;
     let body = null;
+    let label = style.label;
     if (item.activity) body = <ActivityBody item={item} onChanged={onChanged} />;
-    else if (item.kind === 'EMAIL_SENT' || item.kind === 'EMAIL_RECEIVED') {
+    else if (item.kind === 'PROPERTY_CHANGE') {
+        const c = item.change;
+        label = c.field === 'created' ? 'Created' : c.field === 'deleted' ? (c.new_value ? 'Deleted' : 'Restored') : `${c.label} changed`;
+        body = (
+            <p className="text-sm text-slate-600">
+                {['created', 'deleted'].includes(c.field) ? (c.new_value || 'Restored') : <>
+                    <span className="line-through text-slate-400">{c.old_value || 'empty'}</span> → <span className="font-medium text-slate-800">{c.new_value || 'empty'}</span>
+                </>}
+                <span className="text-xs text-slate-400"> · {c.changed_by_name ? `by ${c.changed_by_name}` : 'system'} · {c.source.toLowerCase()}</span>
+            </p>
+        );
+    } else if (item.kind === 'TASK') {
+        const t = item.task;
+        label = t.status === 'DONE' ? 'Task completed' : 'Task';
+        body = (
+            <div>
+                <p className={`text-sm font-semibold ${t.status === 'DONE' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{t.title}</p>
+                <p className="text-xs text-slate-500">{[t.owner_name && `for ${t.owner_name}`, t.due_at && `due ${formatDateTime(t.due_at)}`, t.priority.toLowerCase()].filter(Boolean).join(' · ')}</p>
+                {t.notes && <p className="text-sm text-slate-600 mt-1 whitespace-pre-wrap">{t.notes}</p>}
+            </div>
+        );
+    } else if (item.kind === 'EMAIL_SENT' || item.kind === 'EMAIL_RECEIVED') {
         const e = item.email;
         body = (
             <div>
@@ -166,9 +192,7 @@ function TimelineItem({ item, onChanged }) {
                     {e.campaign_name ? ` · ${e.campaign_name}` : ''}{e.status && item.kind === 'EMAIL_SENT' ? ` · ${e.status.toLowerCase()}` : ''}
                 </p>
                 {e.snippet && <p className="text-sm text-slate-600 mt-1 line-clamp-3 whitespace-pre-wrap">{e.snippet}</p>}
-                {item.kind === 'EMAIL_RECEIVED' && e.conversation_id && (
-                    <Link to="/app/inbox" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 mt-1 inline-block">Open in Inbox →</Link>
-                )}
+                {item.kind === 'EMAIL_RECEIVED' && e.conversation_id && <Link to="/app/inbox" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 mt-1 inline-block">Open in Inbox →</Link>}
             </div>
         );
     } else if (item.email) body = <p className="text-sm text-slate-600">{item.email.subject || '(no subject)'}</p>;
@@ -188,11 +212,9 @@ function TimelineItem({ item, onChanged }) {
     return (
         <li className="relative pl-12 pb-6 last:pb-0">
             <span className="absolute left-[15px] top-8 bottom-0 w-px bg-slate-100" />
-            <span className={`absolute left-0 top-0 w-8 h-8 rounded-full flex items-center justify-center ${style.color}`}>
-                <Icon className="w-4 h-4" />
-            </span>
+            <span className={`absolute left-0 top-0 w-8 h-8 rounded-full flex items-center justify-center ${style.color}`}><Icon className="w-4 h-4" /></span>
             <div className="flex items-baseline justify-between gap-3">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{style.label}</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
                 <time className="text-xs text-slate-400 whitespace-nowrap" title={formatDateTime(item.at)}>{relativeDate(item.at)} · {parseDate(item.at).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}</time>
             </div>
             <div className="mt-1">{body}</div>
@@ -200,7 +222,46 @@ function TimelineItem({ item, onChanged }) {
     );
 }
 
-// ── Details (view / edit) ───────────────────────────────────────
+// ── Left column: CRM properties + details ───────────────────────
+function CrmCard({ contact, meta, onUpdate, error }) {
+    const unsub = contact.consent_status === 'UNSUBSCRIBED';
+    return (
+        <div className={card} style={cardShadow}>
+            <h2 className="text-sm font-bold text-slate-800 mb-3">About this contact</h2>
+            <div className="space-y-3">
+                <Field label="Lifecycle stage" hint={contact.can_override_lifecycle ? null : 'Moves forward only'}>
+                    <select className={inputClass} value={contact.lifecycle_stage || ''} onChange={e => onUpdate({ lifecycle_stage: e.target.value })}>
+                        {!contact.lifecycle_stage && <option value="">—</option>}
+                        {(meta?.lifecycle_stages || []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                </Field>
+                <Field label="Lead status">
+                    <select className={inputClass} value={contact.lead_status || ''} onChange={e => onUpdate({ lead_status: e.target.value || null })}>
+                        <option value="">—</option>
+                        {(meta?.lead_statuses || []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                </Field>
+                <Field label="Email subscription">
+                    <div className="flex items-center justify-between gap-2">
+                        <span className={`text-sm font-semibold ${unsub ? 'text-red-600' : 'text-emerald-700'}`}>{unsub ? 'Unsubscribed' : 'Subscribed'}</span>
+                        <button onClick={() => window.confirm(unsub
+                            ? 'Resubscribe this contact? They are removed from the global unsubscribe list and can be emailed again. Only do this with their consent.'
+                            : 'Unsubscribe this contact? They are added to the global unsubscribe list and queued emails are cancelled.') && onUpdate({ consent_status: unsub ? 'OPT_IN' : 'UNSUBSCRIBED' })}
+                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">{unsub ? 'Resubscribe' : 'Unsubscribe'}</button>
+                    </div>
+                </Field>
+                <Field label="Legal basis for processing">
+                    <select className={inputClass} value={contact.legal_basis || ''} onChange={e => onUpdate({ legal_basis: e.target.value || null })}>
+                        <option value="">Not recorded</option>
+                        {(meta?.legal_bases || []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                </Field>
+                <ErrorNote message={error} />
+            </div>
+        </div>
+    );
+}
+
 function DetailsCard({ contact, fields, onSaved }) {
     const [editing, setEditing] = useState(false);
     const [form, setForm] = useState({});
@@ -211,7 +272,8 @@ function DetailsCard({ contact, fields, onSaved }) {
             phone: contact.phone || '', mobile_phone: contact.mobile_phone || '', designation: contact.designation || '',
             company_name: contact.company_name || '', industry: contact.industry || '', linkedin_url: contact.linkedin_url || '',
             poc_city: contact.poc_city || '', poc_state: contact.poc_state || '', poc_country: contact.poc_country || '',
-            custom_fields: Object.fromEntries(fields.map(f => [f.field_key, contact.custom_fields?.[f.field_key] ?? ''])),
+            lead_source: contact.lead_source || '',
+            custom_fields: Object.fromEntries(fields.map(f => [f.field_key, contact.custom_fields?.[f.field_key] ?? (f.field_type === 'MULTI_CHECKBOX' ? [] : '')])),
         });
         setError(null);
         setEditing(true);
@@ -227,6 +289,7 @@ function DetailsCard({ contact, fields, onSaved }) {
         onError: err => setError(errorMessage(err)),
     });
     const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }));
+    const groups = fields.reduce((acc, f) => { (acc[f.group_name || 'Other properties'] ||= []).push(f); return acc; }, {});
 
     const rows = [
         [Mail, 'Email', contact.email && <a href={`mailto:${contact.email}`} className="text-indigo-600 hover:underline break-all">{contact.email}</a>],
@@ -234,12 +297,16 @@ function DetailsCard({ contact, fields, onSaved }) {
         [Smartphone, 'Mobile', contact.mobile_phone && <a href={`tel:${contact.mobile_phone}`} className="text-indigo-600 hover:underline">{contact.mobile_phone}</a>],
         [Building2, 'Industry', contact.industry],
         [MapPin, 'Location', [contact.poc_city, contact.poc_state, contact.poc_country].filter(Boolean).join(', ')],
-        [Globe2, 'Timezone', contact.timezone],
-        [Linkedin, 'LinkedIn', contact.linkedin_url && <a href={contact.linkedin_url} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline break-all">Profile</a>],
+        [Globe2, 'Time zone', contact.timezone],
+        [Linkedin, 'LinkedIn', contact.linkedin_url && <a href={contact.linkedin_url} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">Profile</a>],
+        [ListPlus, 'Lead source', contact.lead_source],
+        [CalendarDays, 'Created', formatDateTime(contact.created_at)],
+        [Send, 'Last contacted', contact.last_contacted_at ? formatDateTime(contact.last_contacted_at) : null],
+        [History, 'Last activity', contact.last_activity_at ? formatDateTime(contact.last_activity_at) : null],
     ];
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div className={card} style={cardShadow}>
             <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-bold text-slate-800">Details</h2>
                 {!editing && <button onClick={start} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"><Pencil className="w-3 h-3" /> Edit</button>}
@@ -256,19 +323,25 @@ function DetailsCard({ contact, fields, onSaved }) {
                         <Field label="Mobile"><input type="tel" className={inputClass} value={form.mobile_phone} onChange={set('mobile_phone')} /></Field>
                     </div>
                     <Field label="Job title"><input className={inputClass} value={form.designation} onChange={set('designation')} /></Field>
-                    <Field label="Company" hint="Changing it links the contact to that account"><input className={inputClass} value={form.company_name} onChange={set('company_name')} /></Field>
+                    <Field label="Company" hint="Changing it links the contact to that company"><input className={inputClass} value={form.company_name} onChange={set('company_name')} /></Field>
                     <Field label="Industry"><input className={inputClass} value={form.industry} onChange={set('industry')} /></Field>
+                    <Field label="Lead source"><input className={inputClass} value={form.lead_source} onChange={set('lead_source')} /></Field>
                     <div className="grid grid-cols-3 gap-2">
                         <Field label="City"><input className={inputClass} value={form.poc_city} onChange={set('poc_city')} /></Field>
                         <Field label="State"><input className={inputClass} value={form.poc_state} onChange={set('poc_state')} /></Field>
                         <Field label="Country"><input className={inputClass} value={form.poc_country} onChange={set('poc_country')} /></Field>
                     </div>
                     <Field label="LinkedIn"><input type="url" className={inputClass} value={form.linkedin_url} onChange={set('linkedin_url')} /></Field>
-                    {fields.map(f => (
-                        <Field key={f.field_id} label={f.label}>
-                            <CustomFieldInput field={f} value={form.custom_fields[f.field_key]}
-                                onChange={v => setForm(s => ({ ...s, custom_fields: { ...s.custom_fields, [f.field_key]: v } }))} />
-                        </Field>
+                    {Object.entries(groups).map(([group, gf]) => (
+                        <div key={group} className="space-y-3 pt-1">
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{group}</p>
+                            {gf.map(f => (
+                                <Field key={f.field_id} label={`${f.label}${f.required ? ' *' : ''}`}>
+                                    <CustomFieldInput field={f} value={form.custom_fields[f.field_key]}
+                                        onChange={v => setForm(s => ({ ...s, custom_fields: { ...s.custom_fields, [f.field_key]: v } }))} />
+                                </Field>
+                            ))}
+                        </div>
                     ))}
                     <ErrorNote message={error} />
                     <div className="flex gap-2">
@@ -281,38 +354,70 @@ function DetailsCard({ contact, fields, onSaved }) {
                     {rows.map(([Icon, label, value]) => (
                         <div key={label} className="flex items-start gap-3 text-sm">
                             <Icon className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                            <dt className="w-28 text-slate-500 flex-shrink-0">{label}</dt>
+                            <dt className="w-24 text-slate-500 flex-shrink-0">{label}</dt>
                             <dd className="text-slate-800 min-w-0">{value || <span className="text-slate-300">—</span>}</dd>
                         </div>
                     ))}
-                    {fields.length > 0 && <div className="border-t border-slate-100 my-3" />}
-                    {fields.map(f => {
-                        const value = contact.custom_fields?.[f.field_key];
-                        return (
-                            <div key={f.field_id} className="flex items-start gap-3 text-sm">
-                                <span className="w-4 flex-shrink-0" />
-                                <dt className="w-28 text-slate-500 flex-shrink-0 truncate" title={f.label}>{f.label}</dt>
-                                <dd className="text-slate-800 min-w-0 break-words">
-                                    {value === undefined || value === '' ? <span className="text-slate-300">—</span>
-                                        : f.field_type === 'URL' ? <a href={value} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">{value}</a>
-                                        : f.field_type === 'NUMBER' && typeof value === 'number' ? value.toLocaleString()
-                                        : String(value)}
-                                </dd>
-                            </div>
-                        );
-                    })}
+                    {Object.entries(groups).map(([group, gf]) => (
+                        <div key={group}>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mt-4 mb-2">{group}</p>
+                            {gf.map(f => (
+                                <div key={f.field_id} className="flex items-start gap-3 text-sm py-1">
+                                    <span className="w-4 flex-shrink-0" />
+                                    <dt className="w-24 text-slate-500 flex-shrink-0 truncate" title={f.label}>{f.label}</dt>
+                                    <dd className="text-slate-800 min-w-0 break-words">{formatCustomValue(f, contact.custom_fields?.[f.field_key]) ?? <span className="text-slate-300">—</span>}</dd>
+                                </div>
+                            ))}
+                        </div>
+                    ))}
                 </dl>
             )}
         </div>
     );
 }
 
-function SideCard({ title, children, empty }) {
+function SideCard({ title, children, empty, action }) {
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <h2 className="text-sm font-bold text-slate-800 mb-3">{title}</h2>
+        <div className={card} style={cardShadow}>
+            <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-slate-800">{title}</h2>
+                {action}
+            </div>
             {children || <p className="text-sm text-slate-400">{empty}</p>}
         </div>
+    );
+}
+
+function TasksCard({ contactId, onChanged }) {
+    const queryClient = useQueryClient();
+    const { data } = useQuery({ queryKey: ['tasks', 'contact', contactId], queryFn: () => tasksApi.list({ prospect_id: contactId, status: 'ALL' }) });
+    const toggle = useMutation({
+        mutationFn: t => tasksApi.update(t.task_id, { status: t.status === 'DONE' ? 'OPEN' : 'DONE' }),
+        onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); onChanged(); },
+    });
+    const items = data?.items || [];
+    const open = items.filter(t => t.status === 'OPEN');
+    const done = items.filter(t => t.status === 'DONE').slice(0, 3);
+    return (
+        <SideCard title={`Tasks${open.length ? ` (${open.length})` : ''}`} empty="No tasks. Use the Task tab to add one.">
+            {items.length > 0 && (
+                <ul className="space-y-2">
+                    {[...open, ...done].map(t => (
+                        <li key={t.task_id} className="flex items-start gap-2 text-sm">
+                            <button onClick={() => toggle.mutate(t)} className="mt-0.5 text-slate-400 hover:text-indigo-600" aria-label={t.status === 'DONE' ? 'Reopen task' : 'Complete task'}>
+                                {t.status === 'DONE' ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
+                            </button>
+                            <div className="min-w-0">
+                                <p className={t.status === 'DONE' ? 'text-slate-400 line-through' : 'text-slate-800'}>{t.title}</p>
+                                <p className={`text-xs ${t.overdue ? 'text-red-600 font-semibold' : 'text-slate-400'}`}>
+                                    {[t.due_at && (t.overdue ? `Overdue · ${formatDateTime(t.due_at)}` : `Due ${formatDateTime(t.due_at)}`), t.owner_name].filter(Boolean).join(' · ')}
+                                </p>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </SideCard>
     );
 }
 
@@ -321,12 +426,15 @@ export default function ContactDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const { meta, stageLabel, statusLabel } = useCrmMeta();
     const [timelineFilter, setTimelineFilter] = useState('');
+    const [timelineUser, setTimelineUser] = useState('');
+    const [quickError, setQuickError] = useState(null);
 
     const { data: contact, isLoading, error } = useQuery({ queryKey: ['contact', id], queryFn: () => contactsApi.get(id), retry: false });
     const { data: timeline, isFetching: timelineLoading } = useQuery({
-        queryKey: ['contact-timeline', id, timelineFilter],
-        queryFn: () => contactsApi.timeline(id, timelineFilter),
+        queryKey: ['contact-timeline', id, timelineFilter, timelineUser],
+        queryFn: () => contactsApi.timeline(id, { types: timelineFilter, user_id: timelineUser }),
         enabled: !!contact,
     });
     const { data: owners = [] } = useQuery({ queryKey: ['contact-owners'], queryFn: contactsApi.owners });
@@ -336,15 +444,21 @@ export default function ContactDetail() {
     const refresh = () => {
         queryClient.invalidateQueries({ queryKey: ['contact', id] });
         queryClient.invalidateQueries({ queryKey: ['contact-timeline', id] });
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
         queryClient.invalidateQueries({ queryKey: ['contacts'] });
     };
     const onSaved = data => {
         queryClient.setQueryData(['contact', id], data);
+        queryClient.invalidateQueries({ queryKey: ['contact-timeline', id] });
         queryClient.invalidateQueries({ queryKey: ['contacts'] });
         queryClient.invalidateQueries({ queryKey: ['contact-facets'] });
     };
 
-    const quickUpdate = useMutation({ mutationFn: payload => contactsApi.update(id, payload), onSuccess: onSaved });
+    const quickUpdate = useMutation({
+        mutationFn: payload => contactsApi.update(id, payload),
+        onSuccess: data => { setQuickError(null); onSaved(data); },
+        onError: err => setQuickError(errorMessage(err)),
+    });
     const remove = useMutation({
         mutationFn: () => contactsApi.remove(id),
         onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contacts'] }); navigate('/app/contacts'); },
@@ -364,25 +478,24 @@ export default function ContactDetail() {
     const s = contact.stats;
     const stats = [
         ['Emails sent', s.emails_sent], ['Opened', s.emails_opened], ['Replies', s.replies],
-        ['Calls', s.calls], ['Meetings', s.meetings], ['Last emailed', s.last_emailed_at ? relativeDate(s.last_emailed_at) : '—'],
+        ['Calls', s.calls], ['Meetings', s.meetings], ['Open tasks', s.open_tasks],
     ];
 
     return (
         <div className="w-full space-y-5">
-            <button onClick={() => navigate(-1)} className="text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1.5">
-                <ArrowLeft className="w-4 h-4" /> Back
-            </button>
+            <button onClick={() => navigate(-1)} className="text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1.5"><ArrowLeft className="w-4 h-4" /> Back</button>
 
             {/* Header */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden" style={cardShadow}>
                 <div className="h-1.5" style={{ background: 'linear-gradient(90deg, #2d6bbf, #73C8D2)' }} />
                 <div className="p-6 flex flex-col lg:flex-row lg:items-start gap-5">
                     <Avatar first={contact.first_name} last={contact.last_name} seed={contact.email} size="lg" />
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                             <h1 className="text-2xl font-bold text-gray-900">{contact.full_name}</h1>
+                            <StageBadge value={contact.lifecycle_stage} label={stageLabel[contact.lifecycle_stage]} />
+                            <StatusBadge value={contact.lead_status} label={statusLabel[contact.lead_status]} />
                             {contact.consent_status === 'UNSUBSCRIBED' && <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Unsubscribed</span>}
-                            {contact.is_valid_email === false && <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Email invalid</span>}
                         </div>
                         <p className="text-sm text-slate-500 mt-0.5">
                             {contact.designation}
@@ -396,9 +509,13 @@ export default function ContactDetail() {
                             {contact.phone && <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 text-slate-600 hover:text-indigo-600"><Phone className="w-4 h-4" />{contact.phone}</a>}
                             {contact.mobile_phone && <a href={`tel:${contact.mobile_phone}`} className="flex items-center gap-1.5 text-slate-600 hover:text-indigo-600"><Smartphone className="w-4 h-4" />{contact.mobile_phone}</a>}
                         </div>
+                        {contact.quality_flags?.length > 0 && (
+                            <div className="mt-3 flex items-start gap-2 text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 max-w-xl">
+                                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" /> <span>{contact.quality_flags.join(' · ')}</span>
+                            </div>
+                        )}
                         <div className="mt-4 max-w-xl">
-                            <TagInput value={contact.tags} onChange={tags => quickUpdate.mutate({ tags })}
-                                suggestions={(facets?.tags || []).map(t => t.tag)} />
+                            <TagInput value={contact.tags} onChange={tags => quickUpdate.mutate({ tags })} suggestions={(facets?.tags || []).map(t => t.tag)} />
                         </div>
                     </div>
                     <div className="flex flex-col gap-3 lg:w-56">
@@ -409,7 +526,7 @@ export default function ContactDetail() {
                                 : <p className="text-sm font-medium text-slate-800">{contact.owner_name || 'Unassigned'}</p>}
                         </div>
                         {contact.can_delete && (
-                            <button onClick={() => window.confirm(`Delete ${contact.full_name}? Their emails, activity and campaign history are deleted too.`) && remove.mutate()}
+                            <button onClick={() => window.confirm(`Delete ${contact.full_name}? You can restore them from Recently deleted for 90 days.`) && remove.mutate()}
                                 className="h-9 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center gap-1.5 border border-red-100">
                                 {remove.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Delete contact
                             </button>
@@ -426,10 +543,64 @@ export default function ContactDetail() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
-                {/* Left: profile */}
+            {/* Three columns: properties · activity · associations (BR-CM-12) */}
+            <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)_300px] gap-5 items-start">
                 <div className="space-y-5">
+                    <CrmCard contact={contact} meta={meta} onUpdate={payload => quickUpdate.mutate(payload)} error={quickError} />
                     <DetailsCard contact={contact} fields={fields} onSaved={onSaved} />
+                </div>
+
+                <div className="space-y-5 min-w-0">
+                    <Composer contactId={id} owners={owners} onLogged={refresh} />
+                    <div className={card} style={cardShadow}>
+                        <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
+                            <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">Activity {timelineLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />}</h2>
+                            <select value={timelineUser} onChange={e => setTimelineUser(e.target.value)} className="h-8 px-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-600" aria-label="Filter by user">
+                                <option value="">Everyone</option>
+                                {owners.map(o => <option key={o.user_id} value={o.user_id}>{o.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="flex gap-1 flex-wrap mb-5">
+                            {TIMELINE_FILTERS.map(([value, label]) => (
+                                <button key={label} onClick={() => setTimelineFilter(value)}
+                                    className={`h-7 px-2.5 rounded-lg text-xs font-semibold ${timelineFilter === value ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>{label}</button>
+                            ))}
+                        </div>
+                        {(timeline?.items || []).length === 0 ? (
+                            <p className="text-sm text-slate-400 py-8 text-center">Nothing here yet.</p>
+                        ) : (
+                            <ul>
+                                {timeline.items.map((item, i) => (
+                                    <TimelineItem key={`${item.kind}-${item.activity?.activity_id || item.change?.change_id || item.task?.task_id || item.email?.message_id || item.list?.list_id || item.campaign?.campaign_id}-${i}`} item={item} onChanged={refresh} />
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </div>
+
+                <div className="space-y-5 lg:col-start-2 2xl:col-start-auto">
+                    <SideCard title="Company" empty="Not linked to a company.">
+                        {contact.account && (
+                            <div className="text-sm">
+                                <Link to={`/app/accounts/${contact.account.account_id}`} className="font-semibold text-indigo-600 hover:text-indigo-800">{contact.account.name}</Link>
+                                <p className="text-xs text-slate-500 mt-0.5">{[contact.account.domain, contact.account.industry].filter(Boolean).join(' · ')}</p>
+                                <p className="text-xs text-slate-500 mt-1">{contact.account.contact_count} contact{contact.account.contact_count === 1 ? '' : 's'}{contact.account.lifecycle_stage ? ` · ${stageLabel[contact.account.lifecycle_stage] || contact.account.lifecycle_stage}` : ''}</p>
+                            </div>
+                        )}
+                    </SideCard>
+                    <TasksCard contactId={id} onChanged={refresh} />
+                    <SideCard title="Lists" empty="Not on any list.">
+                        {contact.lists.length > 0 && (
+                            <ul className="space-y-2">
+                                {contact.lists.map(l => (
+                                    <li key={l.list_id} className="text-sm flex justify-between gap-2">
+                                        <Link to={`/app/contacts?list_id=${l.list_id}`} className="text-slate-700 hover:text-indigo-600 truncate">{l.list_name}</Link>
+                                        <span className="text-xs text-slate-400 whitespace-nowrap">{l.list_type === 'ACTIVE' ? 'active' : relativeDate(l.added_at)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </SideCard>
                     <SideCard title="Campaigns" empty="Not in any campaign yet.">
                         {contact.campaigns.length > 0 && (
                             <ul className="space-y-2.5">
@@ -442,55 +613,8 @@ export default function ContactDetail() {
                             </ul>
                         )}
                     </SideCard>
-                    <SideCard title="Lists" empty="Not on any list (added manually).">
-                        {contact.lists.length > 0 && (
-                            <ul className="space-y-2">
-                                {contact.lists.map(l => (
-                                    <li key={l.list_id} className="text-sm flex justify-between gap-2">
-                                        <Link to={`/app/contacts?list_id=${l.list_id}`} className="text-slate-700 hover:text-indigo-600 truncate">{l.list_name}</Link>
-                                        <span className="text-xs text-slate-400 whitespace-nowrap">{relativeDate(l.added_at)}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </SideCard>
-                    {contact.persona && (
-                        <SideCard title="Persona">
-                            <p className="text-sm text-slate-700">{contact.persona.persona_type.replace(/_/g, ' ').toLowerCase()}</p>
-                        </SideCard>
-                    )}
-                </div>
-
-                {/* Right: activity */}
-                <div className="xl:col-span-2 space-y-5">
-                    <ActivityComposer contactId={id} onLogged={refresh} />
-                    <div className="bg-white rounded-2xl border border-gray-100 p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                        <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
-                            <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                Activity {timelineLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />}
-                            </h2>
-                            <div className="flex gap-1 flex-wrap">
-                                {TIMELINE_FILTERS.map(([value, label]) => (
-                                    <button key={label} onClick={() => setTimelineFilter(value)}
-                                        className={`h-7 px-2.5 rounded-lg text-xs font-semibold ${timelineFilter === value ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        {(timeline?.items || []).length === 0 ? (
-                            <p className="text-sm text-slate-400 py-8 text-center">Nothing here yet. Log a call, meeting or note above.</p>
-                        ) : (
-                            <ul>
-                                {timeline.items.map((item, i) => <TimelineItem key={`${item.kind}-${item.activity?.activity_id || item.email?.message_id || item.list?.list_id || item.campaign?.campaign_id}-${i}`} item={item} onChanged={refresh} />)}
-                            </ul>
-                        )}
-                    </div>
                 </div>
             </div>
-            {quickUpdate.isError && <div className="fixed bottom-6 right-6 bg-red-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
-                {errorMessage(quickUpdate.error)} <button onClick={() => quickUpdate.reset()} aria-label="Dismiss"><X className="w-4 h-4" /></button>
-            </div>}
         </div>
     );
 }
