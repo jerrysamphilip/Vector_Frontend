@@ -1,48 +1,121 @@
-// Contacts & Accounts API Client
+// Contacts, companies, lists, views, tasks, imports and search (CRM, BRD v2.0 section 5.2)
 
 import { apiClient as api } from './http';
 
 function toParams(filters = {}) {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') params.append(key, value);
+        if (value === undefined || value === null || value === '') return;
+        params.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
     });
     return params;
 }
 
+const get = async (path, params) => (await api.get(params ? `${path}?${toParams(params)}` : path)).data;
+const post = async (path, body) => (await api.post(path, body)).data;
+const patch = async (path, body) => (await api.patch(path, body)).data;
+const del = async (path) => (await api.delete(path)).data;
+
+/** Trigger a browser download for an authenticated GET that returns a file. */
+export async function downloadFile(path, params, fallbackName) {
+    const response = await api.get(params ? `${path}?${toParams(params)}` : path, { responseType: 'blob' });
+    const disposition = response.headers['content-disposition'] || '';
+    const name = /filename="?([^"]+)"?/.exec(disposition)?.[1] || fallbackName;
+    const url = URL.createObjectURL(response.data);
+    const a = Object.assign(document.createElement('a'), { href: url, download: name });
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 export const contactsApi = {
-    list: async (filters) => (await api.get(`/contacts?${toParams(filters)}`)).data,
-    get: async (id) => (await api.get(`/contacts/${id}`)).data,
-    create: async (payload) => (await api.post('/contacts', payload)).data,
-    update: async (id, payload) => (await api.patch(`/contacts/${id}`, payload)).data,
-    remove: async (id) => (await api.delete(`/contacts/${id}`)).data,
+    meta: () => get('/contacts/meta'),
+    list: (filters) => get('/contacts', filters),
+    board: (filters) => get('/contacts/board', filters),
+    get: (id) => get(`/contacts/${id}`),
+    create: (payload) => post('/contacts', payload),
+    update: (id, payload) => patch(`/contacts/${id}`, payload),
+    remove: (id) => del(`/contacts/${id}`),
+    exportFile: (params) => downloadFile('/contacts/export', params, `contacts.${params?.format || 'csv'}`),
 
-    timeline: async (id, types) => (await api.get(`/contacts/${id}/timeline?${toParams({ types })}`)).data,
-    logActivity: async (id, payload) => (await api.post(`/contacts/${id}/activities`, payload)).data,
-    updateActivity: async (activityId, payload) => (await api.patch(`/contacts/activities/${activityId}`, payload)).data,
-    deleteActivity: async (activityId) => (await api.delete(`/contacts/activities/${activityId}`)).data,
+    timeline: (id, params) => get(`/contacts/${id}/timeline`, params),
+    history: (id, field) => get(`/contacts/${id}/history`, { field }),
+    logActivity: (id, payload) => post(`/contacts/${id}/activities`, payload),
+    updateActivity: (activityId, payload) => patch(`/contacts/activities/${activityId}`, payload),
+    deleteActivity: (activityId) => del(`/contacts/activities/${activityId}`),
 
-    facets: async () => (await api.get('/contacts/facets')).data,
-    owners: async () => (await api.get('/contacts/owners')).data,
-    bulk: async (payload) => (await api.post('/contacts/bulk', payload)).data,
+    facets: () => get('/contacts/facets'),
+    owners: () => get('/contacts/owners'),
+    bulk: (payload) => post('/contacts/bulk', payload),
 
-    duplicates: async () => (await api.get('/contacts/duplicates')).data,
-    merge: async (primaryId, duplicateIds) =>
-        (await api.post('/contacts/merge', { primary_id: primaryId, duplicate_ids: duplicateIds })).data,
+    deleted: (params) => get('/contacts/deleted', params),
+    restore: (ids) => post('/contacts/restore', { prospect_ids: ids }),
 
-    fields: async () => (await api.get('/contacts/fields')).data,
-    createField: async (payload) => (await api.post('/contacts/fields', payload)).data,
-    updateField: async (id, payload) => (await api.patch(`/contacts/fields/${id}`, payload)).data,
-    deleteField: async (id) => (await api.delete(`/contacts/fields/${id}`)).data,
+    duplicates: () => get('/contacts/duplicates'),
+    merge: (primaryId, duplicateIds, choices = {}) =>
+        post('/contacts/merge', { primary_id: primaryId, duplicate_ids: duplicateIds, choices }),
+
+    fields: () => get('/contacts/fields'),
+    createField: (payload) => post('/contacts/fields', payload),
+    updateField: (id, payload) => patch(`/contacts/fields/${id}`, payload),
+    deleteField: (id) => del(`/contacts/fields/${id}`),
 };
 
 export const accountsApi = {
-    list: async (filters) => (await api.get(`/accounts?${toParams(filters)}`)).data,
-    get: async (id) => (await api.get(`/accounts/${id}`)).data,
-    create: async (payload) => (await api.post('/accounts', payload)).data,
-    update: async (id, payload) => (await api.patch(`/accounts/${id}`, payload)).data,
-    remove: async (id) => (await api.delete(`/accounts/${id}`)).data,
-    backfill: async () => (await api.post('/accounts/backfill')).data,
+    list: (filters) => get('/accounts', filters),
+    get: (id) => get(`/accounts/${id}`),
+    create: (payload) => post('/accounts', payload),
+    update: (id, payload) => patch(`/accounts/${id}`, payload),
+    remove: (id) => del(`/accounts/${id}`),
+    backfill: () => post('/accounts/backfill'),
+    deleted: () => get('/accounts/deleted'),
+    restore: (id) => post(`/accounts/${id}/restore`),
+};
+
+export const listsApi = {
+    list: (params) => get('/lists', params),
+    get: (id) => get(`/lists/${id}`),
+    create: (payload) => post('/lists', payload),
+    update: (id, payload) => patch(`/lists/${id}`, payload),
+    remove: (id) => del(`/lists/${id}`),
+    preview: (filters) => post('/lists/preview', { filters }),
+    addMembers: (id, ids) => post(`/lists/${id}/members`, { prospect_ids: ids }),
+    removeMembers: (id, ids) => post(`/lists/${id}/members/remove`, { prospect_ids: ids }),
+};
+
+export const viewsApi = {
+    list: (objectType = 'CONTACT') => get('/views', { object_type: objectType }),
+    create: (payload) => post('/views', payload),
+    update: (id, payload) => patch(`/views/${id}`, payload),
+    remove: (id) => del(`/views/${id}`),
+};
+
+export const tasksApi = {
+    list: (params) => get('/tasks', params),
+    create: (payload) => post('/tasks', payload),
+    update: (id, payload) => patch(`/tasks/${id}`, payload),
+    remove: (id) => del(`/tasks/${id}`),
+};
+
+export const importsApi = {
+    preview: async (file) => {
+        const form = new FormData();
+        form.append('file', file);
+        return (await api.post('/imports/preview', form, { headers: { 'Content-Type': 'multipart/form-data' } })).data;
+    },
+    run: async (file, mapping, options) => {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('mapping', JSON.stringify(mapping));
+        form.append('options', JSON.stringify(options || {}));
+        return (await api.post('/imports', form, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 300000 })).data;
+    },
+    history: (params) => get('/imports', params),
+    get: (id) => get(`/imports/${id}`),
+    downloadErrors: (id) => downloadFile(`/imports/${id}/errors.csv`, null, 'import-errors.csv'),
+};
+
+export const searchApi = {
+    search: (q) => get('/search', { q }),
 };
 
 // FastAPI errors come back as {detail: string | {message} | [{msg}]}

@@ -253,6 +253,14 @@ export default function CampaignDetails() {
                     </div>
                 </motion.header>
 
+                {campaign.status === 'PAUSED' && campaign.paused_reason && (
+                    <div className={`mt-4 px-4 py-3 rounded-xl border text-sm ${campaign.auto_paused ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+                        <span className="font-semibold">{campaign.auto_paused ? 'Paused automatically to protect your sending reputation. ' : 'Paused. '}</span>
+                        {campaign.paused_reason.replace(/^Paused automatically: /, '')}
+                        {campaign.auto_paused && <span className="block text-xs mt-1 opacity-80">Fix the cause (for example remove bad addresses), then resume. After resuming, the check counts only new sends.</span>}
+                    </div>
+                )}
+
                 {/* Main Content */}
                 <AnimatePresence mode="wait">
                     <motion.main

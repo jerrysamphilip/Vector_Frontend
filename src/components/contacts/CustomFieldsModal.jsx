@@ -4,7 +4,8 @@ import { Plus, Trash2, SlidersHorizontal } from 'lucide-react';
 import { contactsApi, errorMessage } from '../../api/contacts';
 import { ErrorNote, Field, inputClass, Modal, PrimaryButton, SecondaryButton } from './shared';
 
-const TYPE_LABELS = { TEXT: 'Text', NUMBER: 'Number', DATE: 'Date', URL: 'Link', SELECT: 'Choice' };
+const TYPE_LABELS = { TEXT: 'Text', NUMBER: 'Number', DATE: 'Date', SELECT: 'Dropdown', RADIO: 'Radio select', MULTI_CHECKBOX: 'Multiple checkboxes', PHONE: 'Phone number', URL: 'Link' };
+const CHOICE_TYPES = ['SELECT', 'RADIO', 'MULTI_CHECKBOX'];
 
 /** Define the extra fields every contact in the workspace can have. */
 export default function CustomFieldsModal({ onClose }) {
@@ -13,6 +14,8 @@ export default function CustomFieldsModal({ onClose }) {
     const [label, setLabel] = useState('');
     const [type, setType] = useState('TEXT');
     const [options, setOptions] = useState('');
+    const [group, setGroup] = useState('');
+    const [required, setRequired] = useState(false);
     const [error, setError] = useState(null);
 
     const refresh = () => queryClient.invalidateQueries({ queryKey: ['contact-fields'] });
@@ -21,15 +24,17 @@ export default function CustomFieldsModal({ onClose }) {
         mutationFn: () => contactsApi.createField({
             label: label.trim(),
             field_type: type,
-            options: type === 'SELECT' ? options.split(',').map(o => o.trim()).filter(Boolean) : undefined,
+            options: CHOICE_TYPES.includes(type) ? options.split(',').map(o => o.trim()).filter(Boolean) : undefined,
+            group_name: group.trim() || null,
+            required,
         }),
-        onSuccess: () => { setLabel(''); setOptions(''); setType('TEXT'); setError(null); refresh(); },
+        onSuccess: () => { setLabel(''); setOptions(''); setType('TEXT'); setRequired(false); setError(null); refresh(); },
         onError: err => setError(errorMessage(err)),
     });
     const remove = useMutation({ mutationFn: contactsApi.deleteField, onSuccess: refresh });
 
     return (
-        <Modal title="Custom fields" subtitle="Extra details you want to track on every contact" onClose={onClose}
+        <Modal title="Contact properties" subtitle="Extra details you want to track on every contact" onClose={onClose}
             footer={<SecondaryButton onClick={onClose} className="ml-auto">Done</SecondaryButton>}>
             <div className="space-y-4">
                 {fields.length === 0 ? (
@@ -44,7 +49,7 @@ export default function CustomFieldsModal({ onClose }) {
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold text-slate-800">{f.label}</p>
                                     <p className="text-xs text-slate-400">
-                                        {TYPE_LABELS[f.field_type]}{f.options.length ? ` · ${f.options.join(', ')}` : ''}
+                                        {f.group_name ? `${f.group_name} · ` : ''}{TYPE_LABELS[f.field_type] || f.field_type}{f.options.length ? ` · ${f.options.join(', ')}` : ''}{f.required ? ' · required' : ''}
                                     </p>
                                 </div>
                                 <button onClick={() => window.confirm(`Delete "${f.label}"? Values already saved on contacts will be hidden.`) && remove.mutate(f.field_id)}
@@ -66,7 +71,12 @@ export default function CustomFieldsModal({ onClose }) {
                             </select>
                         </Field>
                     </div>
-                    {type === 'SELECT' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+                        <Field label="Group" hint="e.g. Sales, Compliance (optional)"><input className={inputClass} value={group} onChange={e => setGroup(e.target.value)} list="field-groups" /></Field>
+                        <datalist id="field-groups">{[...new Set(fields.map(f => f.group_name).filter(Boolean))].map(g => <option key={g} value={g} />)}</datalist>
+                        <label className="flex items-center gap-2 text-sm text-slate-700 h-10"><input type="checkbox" className="accent-indigo-600" checked={required} onChange={e => setRequired(e.target.checked)} /> Required on create</label>
+                    </div>
+                    {CHOICE_TYPES.includes(type) && (
                         <Field label="Choices" hint="Separate with commas">
                             <input className={inputClass} value={options} onChange={e => setOptions(e.target.value)} placeholder="Lead, MQL, SQL, Customer" />
                         </Field>

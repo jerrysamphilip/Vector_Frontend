@@ -52,6 +52,7 @@ import PageTransition from '../components/layout/PageTransition';
 import ProspectTable from '../components/prospects/ProspectTable';
 import Loading from '../components/common/Loading';
 import ErrorBoundary from '../components/common/ErrorBoundary';
+import EnrollmentResultModal from '../components/campaigns/EnrollmentResultModal';
 
 const INITIAL_FORM_DATA = {
     campaign_name: '',
@@ -418,6 +419,7 @@ function CreateCampaignContent() {
     const [currentStep, setCurrentStep] = useState(1);
     const [campaignId, setCampaignId] = useState(null);
     const [selectedLists, setSelectedLists] = useState([]);
+    const [enrollReport, setEnrollReport] = useState(null); // {enrolled, rejected, launched}
     // Contacts deselected from the currently-selected existing list (exclusion set —
     // empty means "use the whole list", matching prior behavior).
     const [excludedProspectIds, setExcludedProspectIds] = useState([]);
@@ -1145,42 +1147,60 @@ function CreateCampaignContent() {
         }
     });
 
-    // Step 5: Launch
+    // Step 5: Launch — enroll every selected list, then launch only if anyone was enrolled
     const launchMutation = useMutation({
         mutationFn: async () => {
-            // 1. Enroll prospects first
-            const listId = selectedLists[0]; // Assuming single list selection for now
-            console.log('[LAUNCH] Starting enrollment. campaignId:', campaignId, 'listId:', listId, 'selectedLists:', selectedLists);
-            if (!listId) {
+            if (!selectedLists.length) {
                 throw new Error('No prospect list selected. Please go back to Step 3 and select a list.');
             }
-            const enrollResult = await campaignWizardApi.enrollProspects(
-                campaignId,
-                listId,
-                null, // Enroll all personas detected
-                true, // Exclude personal emails default
-                0,    // No cool-off filter — user explicitly chose to enroll
-                formData.daily_batch_size || null,
-                excludedProspectIds.length > 0 ? excludedProspectIds : null,
-            );
-            console.log('[LAUNCH] Enrollment result:', enrollResult);
-
-            // 2. Activate Campaign
-            return campaignApi.launch(campaignId);
+            let enrolled = 0;
+            const rejected = [];
+            const seen = new Set();
+            for (const [index, listId] of selectedLists.entries()) {
+                const result = await campaignWizardApi.enrollProspects(
+                    campaignId,
+                    listId,
+                    null, // Enroll all personas detected
+                    true, // Exclude personal emails default
+                    0,    // No cool-off filter — user explicitly chose to enroll
+                    formData.daily_batch_size || null,
+                    excludedProspectIds.length > 0 ? excludedProspectIds : null,
+                );
+                enrolled += result.enrolled_count || 0;
+                for (const r of result.rejected || []) {
+                    // A contact on several selected lists is enrolled once; don't report the repeats
+                    if (index > 0 && r.reason_code === 'already_enrolled') continue;
+                    if (seen.has(r.prospect_id)) continue;
+                    seen.add(r.prospect_id);
+                    rejected.push(r);
+                }
+            }
+            if (enrolled === 0) {
+                const error = new Error('No contacts could be enrolled, so the campaign was not launched.');
+                error.report = { enrolled, rejected, launched: false };
+                throw error;
+            }
+            await campaignApi.launch(campaignId);
+            return { enrolled, rejected, launched: true };
         },
-        onSuccess: async () => {
+        onSuccess: async (report) => {
             // Clear draft after successful launch
             try {
                 await campaignDraftsApi.clearAllDrafts();
-                console.log('[DRAFT] Cleared after successful launch');
             } catch (err) {
                 console.error('[DRAFT] Failed to clear after launch:', err);
             }
-            // queryClient.invalidateQueries(['campaigns']);
             queryClient.invalidateQueries({ queryKey: ['campaigns'] });
-            navigate('/app/campaigns');
+            if (report.rejected.length) {
+                setEnrollReport(report); // navigate when the user closes it
+            } else {
+                navigate('/app/campaigns');
+            }
         },
-        onError: (err) => setErrors({ launch: 'Failed to launch campaign: ' + (err.response?.data?.detail || err.message) })
+        onError: (err) => {
+            if (err.report) setEnrollReport(err.report);
+            setErrors({ launch: err.report ? err.message : 'Failed to launch campaign: ' + (err.response?.data?.detail || err.message) });
+        }
     });
 
     // --- Handlers ---
@@ -1421,6 +1441,22 @@ function CreateCampaignContent() {
 
     return (
         <PageTransition>
+            {enrollReport && (
+                <EnrollmentResultModal
+                    title={enrollReport.launched ? 'Campaign launched' : 'Campaign not launched'}
+                    enrolled={enrollReport.enrolled}
+                    rejected={enrollReport.rejected}
+                    note={enrollReport.launched
+                        ? 'These contacts were not added to the campaign:'
+                        : 'None of the selected contacts could be enrolled. Fix or remove them, then launch again.'}
+                    closeLabel={enrollReport.launched ? 'Go to campaigns' : 'Close'}
+                    onClose={() => {
+                        const launched = enrollReport.launched;
+                        setEnrollReport(null);
+                        if (launched) navigate('/app/campaigns');
+                    }}
+                />
+            )}
             <div className="min-h-screen pb-12" style={{ background: 'var(--canvas-bg, #F6F4EE)' }}>
                 {/* Header */}
                 <motion.header

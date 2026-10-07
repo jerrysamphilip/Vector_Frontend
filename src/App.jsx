@@ -20,6 +20,10 @@ import Contacts from './pages/Contacts';
 import ContactDetail from './pages/ContactDetail';
 import Accounts from './pages/Accounts';
 import AccountDetail from './pages/AccountDetail';
+import Lists from './pages/Lists';
+import ImportContacts from './pages/ImportContacts';
+import Tasks from './pages/Tasks';
+import RecentlyDeleted from './pages/RecentlyDeleted';
 import Reports from './pages/Reports';
 import DomainHealth from './pages/DomainHealth';
 import EmailAccounts from './pages/EmailAccounts';
@@ -111,6 +115,10 @@ function App() {
                         <Route path="contacts/:id" element={<ContactDetail />} />
                         <Route path="accounts" element={<Accounts />} />
                         <Route path="accounts/:id" element={<AccountDetail />} />
+                        <Route path="lists" element={<Lists />} />
+                        <Route path="tasks" element={<Tasks />} />
+                        <Route path="import" element={<PermissionRoute permission="manage_prospects"><ImportContacts /></PermissionRoute>} />
+                        <Route path="recently-deleted" element={<PermissionRoute permission="manage_prospects"><RecentlyDeleted /></PermissionRoute>} />
                         <Route path="analytics" element={<Dashboard />} />
                         <Route
                             path="reports"

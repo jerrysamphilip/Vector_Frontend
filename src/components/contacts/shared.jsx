@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { X, Loader2, AlertTriangle } from 'lucide-react';
+import { contactsApi } from '../../api/contacts';
 
 export const BRAND_GRADIENT = 'linear-gradient(135deg, #2d6bbf, #73C8D2)';
 
@@ -131,7 +133,7 @@ export function OwnerSelect({ owners = [], value, onChange, allowUnassigned = tr
     );
 }
 
-/** Input for one tenant-defined custom field. */
+/** Input for one tenant-defined custom property. */
 export function CustomFieldInput({ field, value, onChange }) {
     if (field.field_type === 'SELECT') {
         return (
@@ -141,8 +143,73 @@ export function CustomFieldInput({ field, value, onChange }) {
             </select>
         );
     }
-    const type = { NUMBER: 'number', DATE: 'date', URL: 'url' }[field.field_type] || 'text';
+    if (field.field_type === 'RADIO') {
+        return (
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 py-1">
+                {field.options.map(o => (
+                    <label key={o} className="flex items-center gap-1.5 text-sm text-slate-700">
+                        <input type="radio" className="accent-indigo-600" checked={value === o} onChange={() => onChange(o)} /> {o}
+                    </label>
+                ))}
+                {value && <button type="button" onClick={() => onChange('')} className="text-xs text-slate-400 hover:text-slate-600">clear</button>}
+            </div>
+        );
+    }
+    if (field.field_type === 'MULTI_CHECKBOX') {
+        const selected = Array.isArray(value) ? value : [];
+        return (
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 py-1">
+                {field.options.map(o => (
+                    <label key={o} className="flex items-center gap-1.5 text-sm text-slate-700">
+                        <input type="checkbox" className="accent-indigo-600" checked={selected.includes(o)}
+                            onChange={() => onChange(selected.includes(o) ? selected.filter(x => x !== o) : [...selected, o])} /> {o}
+                    </label>
+                ))}
+            </div>
+        );
+    }
+    const type = { NUMBER: 'number', DATE: 'date', URL: 'url', PHONE: 'tel' }[field.field_type] || 'text';
     return <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)} className={inputClass} />;
+}
+
+export function formatCustomValue(field, value) {
+    if (value === undefined || value === null || value === '' || (Array.isArray(value) && !value.length)) return null;
+    if (Array.isArray(value)) return value.join(', ');
+    if (field?.field_type === 'NUMBER' && typeof value === 'number') return value.toLocaleString();
+    return String(value);
+}
+
+/** Picklists, columns and permissions from /contacts/meta (cached). */
+export function useCrmMeta() {
+    const { data } = useQuery({ queryKey: ['contact-meta'], queryFn: contactsApi.meta, staleTime: 300000 });
+    const labels = (list = []) => Object.fromEntries(list.map(o => [o.value, o.label]));
+    return {
+        meta: data,
+        stageLabel: labels(data?.lifecycle_stages),
+        statusLabel: labels(data?.lead_statuses),
+        basisLabel: labels(data?.legal_bases),
+    };
+}
+
+const STAGE_COLORS = {
+    SUBSCRIBER: 'bg-slate-100 text-slate-700', LEAD: 'bg-sky-100 text-sky-800', MQL: 'bg-indigo-100 text-indigo-800',
+    SQL: 'bg-violet-100 text-violet-800', OPPORTUNITY: 'bg-amber-100 text-amber-800', CUSTOMER: 'bg-emerald-100 text-emerald-800',
+    EVANGELIST: 'bg-pink-100 text-pink-800', OTHER: 'bg-slate-100 text-slate-600',
+};
+const STATUS_COLORS = {
+    NEW: 'bg-sky-50 text-sky-700', OPEN: 'bg-blue-50 text-blue-700', IN_PROGRESS: 'bg-indigo-50 text-indigo-700',
+    ATTEMPTED_TO_CONTACT: 'bg-amber-50 text-amber-700', CONNECTED: 'bg-emerald-50 text-emerald-700',
+    OPEN_DEAL: 'bg-violet-50 text-violet-700', BAD_TIMING: 'bg-orange-50 text-orange-700', UNQUALIFIED: 'bg-slate-100 text-slate-500',
+};
+
+export function StageBadge({ value, label }) {
+    if (!value) return <span className="text-slate-300">—</span>;
+    return <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${STAGE_COLORS[value] || STAGE_COLORS.OTHER}`}>{label || value}</span>;
+}
+
+export function StatusBadge({ value, label }) {
+    if (!value) return <span className="text-slate-300">—</span>;
+    return <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap ${STATUS_COLORS[value] || 'bg-slate-100 text-slate-600'}`}>{label || value}</span>;
 }
 
 export function ErrorNote({ message }) {

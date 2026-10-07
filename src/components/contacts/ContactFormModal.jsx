@@ -5,7 +5,7 @@ import { contactsApi, errorMessage } from '../../api/contacts';
 import { getStoredUser } from '../../lib/authStorage';
 import {
     CustomFieldInput, ErrorNote, Field, inputClass, Modal, OwnerSelect,
-    PrimaryButton, SecondaryButton, TagInput,
+    PrimaryButton, SecondaryButton, TagInput, useCrmMeta,
 } from './shared';
 
 /** Manually add one contact. Company name links (or creates) the matching account. */
@@ -15,7 +15,9 @@ export default function ContactFormModal({
 }) {
     const navigate = useNavigate();
     const me = getStoredUser();
+    const { meta } = useCrmMeta();
     const [form, setForm] = useState({
+        lifecycle_stage: 'LEAD', lead_status: 'NEW', lead_source: '', legal_basis: '',
         first_name: '', last_name: '', email: '', phone: '', mobile_phone: '', designation: '',
         company_name: '', linkedin_url: '', poc_city: '', poc_state: '', poc_country: '',
         owner_id: me?.user_id || null, list_id: '', tags: [], custom_fields: {},
@@ -35,7 +37,7 @@ export default function ContactFormModal({
             Object.entries(form).filter(([k, v]) => !(typeof v === 'string' && !v.trim()) || k === 'owner_id')
         );
         if (!canAssign) delete payload.owner_id;
-        const custom = Object.fromEntries(Object.entries(form.custom_fields).filter(([, v]) => v !== '' && v != null));
+        const custom = Object.fromEntries(Object.entries(form.custom_fields).filter(([, v]) => v !== '' && v != null && !(Array.isArray(v) && !v.length)));
         if (Object.keys(custom).length) payload.custom_fields = custom; else delete payload.custom_fields;
         try {
             const contact = await contactsApi.create(payload);
@@ -82,6 +84,23 @@ export default function ContactFormModal({
                     {canAssign && (
                         <Field label="Owner"><OwnerSelect owners={owners} value={form.owner_id} onChange={set('owner_id')} /></Field>
                     )}
+                    <Field label="Lifecycle stage">
+                        <select className={inputClass} value={form.lifecycle_stage} onChange={set('lifecycle_stage')}>
+                            {(meta?.lifecycle_stages || []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                    </Field>
+                    <Field label="Lead status">
+                        <select className={inputClass} value={form.lead_status} onChange={set('lead_status')}>
+                            {(meta?.lead_statuses || []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                    </Field>
+                    <Field label="Lead source"><input className={inputClass} value={form.lead_source} onChange={set('lead_source')} placeholder="e.g. Trade show" /></Field>
+                    <Field label="Legal basis">
+                        <select className={inputClass} value={form.legal_basis} onChange={set('legal_basis')}>
+                            <option value="">Not recorded</option>
+                            {(meta?.legal_bases || []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                    </Field>
                     {lists.length > 0 && (
                         <Field label="Add to list">
                             <select className={inputClass} value={form.list_id} onChange={set('list_id')}>
@@ -92,16 +111,22 @@ export default function ContactFormModal({
                     )}
                 </div>
                 <Field label="Tags"><TagInput value={form.tags} onChange={set('tags')} suggestions={tagSuggestions} /></Field>
-                {fields.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                        {fields.map(f => (
-                            <Field key={f.field_id} label={f.label}>
-                                <CustomFieldInput field={f} value={form.custom_fields[f.field_key]}
-                                    onChange={v => setForm(s => ({ ...s, custom_fields: { ...s.custom_fields, [f.field_key]: v } }))} />
-                            </Field>
-                        ))}
+                {Object.entries(fields.reduce((groups, f) => {
+                    (groups[f.group_name || 'Other properties'] ||= []).push(f);
+                    return groups;
+                }, {})).map(([group, groupFields]) => (
+                    <div key={group} className="pt-1">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">{group}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {groupFields.map(f => (
+                                <Field key={f.field_id} label={`${f.label}${f.required ? ' *' : ''}`}>
+                                    <CustomFieldInput field={f} value={form.custom_fields[f.field_key]}
+                                        onChange={v => setForm(s => ({ ...s, custom_fields: { ...s.custom_fields, [f.field_key]: v } }))} />
+                                </Field>
+                            ))}
+                        </div>
                     </div>
-                )}
+                ))}
                 <ErrorNote message={error} />
                 {existingId && (
                     <button type="button" onClick={() => navigate(`/app/contacts/${existingId}`)}

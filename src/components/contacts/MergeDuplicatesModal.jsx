@@ -1,17 +1,68 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { GitMerge, CheckCircle2, Loader2 } from 'lucide-react';
 import { contactsApi, errorMessage } from '../../api/contacts';
 import { Avatar, ErrorNote, Modal, PrimaryButton, SecondaryButton, TagChips, relativeDate } from './shared';
 
+// Properties the API lets you pick per record (BR-CM-33)
+const CHOOSABLE = [
+    ['email', 'Email'], ['phone', 'Phone'], ['mobile_phone', 'Mobile'], ['first_name', 'First name'], ['last_name', 'Last name'],
+    ['designation', 'Job title'], ['company_name', 'Company'], ['owner_id', 'Owner', 'owner_name'], ['lifecycle_stage', 'Lifecycle stage'],
+    ['lead_status', 'Lead status'], ['lead_source', 'Lead source'], ['industry', 'Industry'], ['linkedin_url', 'LinkedIn'],
+    ['poc_city', 'City'], ['poc_state', 'State'], ['poc_country', 'Country'], ['legal_basis', 'Legal basis'],
+];
+
+function PropertyChooser({ contacts, merging, primaryId, choices, setChoices }) {
+    const rows = useMemo(() => CHOOSABLE.filter(([key]) => {
+        const values = new Set(contacts.filter(c => merging.includes(c.prospect_id)).map(c => c[key] || ''));
+        values.delete('');
+        return values.size > 1;
+    }), [contacts, merging]);
+    if (!rows.length) return <p className="text-xs text-slate-500 px-4 py-2">No conflicting values: blanks on the kept record are filled from the others.</p>;
+    const involved = contacts.filter(c => merging.includes(c.prospect_id));
+    return (
+        <div className="px-4 py-3 bg-slate-50/60 border-t border-slate-100">
+            <p className="text-xs font-semibold text-slate-500 mb-2">Choose the value to keep where the records differ</p>
+            <table className="w-full text-sm">
+                <tbody>
+                    {rows.map(([key, label, display]) => {
+                        const chosen = choices[key] || primaryId;
+                        return (
+                            <tr key={key} className="border-t border-slate-100 first:border-0">
+                                <td className="py-1.5 pr-3 text-xs font-semibold text-slate-500 w-28 align-top">{label}</td>
+                                {involved.map(c => (
+                                    <td key={c.prospect_id} className="py-1.5 pr-3 align-top">
+                                        {c[key] ? (
+                                            <label className="flex items-start gap-1.5 text-slate-700">
+                                                <input type="radio" className="accent-indigo-600 mt-1" name={`${key}-${involved[0].prospect_id}`} checked={chosen === c.prospect_id}
+                                                    onChange={() => setChoices(ch => ({ ...ch, [key]: c.prospect_id }))} />
+                                                <span className="break-all">{c[display || key]}</span>
+                                            </label>
+                                        ) : <span className="text-slate-300 pl-5">—</span>}
+                                    </td>
+                                ))}
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
 function DuplicateGroup({ group, onMerged }) {
     const contacts = group.contacts;
     const [primaryId, setPrimaryId] = useState(contacts[0].prospect_id);
     const [selected, setSelected] = useState(contacts.map(c => c.prospect_id));
+    const [choices, setChoices] = useState({});
     const [error, setError] = useState(null);
 
     const merge = useMutation({
-        mutationFn: () => contactsApi.merge(primaryId, selected.filter(id => id !== primaryId)),
+        mutationFn: () => {
+            const merging = selected.filter(id => id !== primaryId);
+            const picked = Object.fromEntries(Object.entries(choices).filter(([, id]) => id !== primaryId && merging.includes(id)));
+            return contactsApi.merge(primaryId, merging, picked);
+        },
         onSuccess: onMerged,
         onError: err => setError(errorMessage(err, 'Merge failed.')),
     });
@@ -57,10 +108,10 @@ function DuplicateGroup({ group, onMerged }) {
                     );
                 })}
             </div>
+            {toMerge.length > 0 && <PropertyChooser contacts={contacts} merging={[primaryId, ...toMerge]} primaryId={primaryId} choices={choices} setChoices={setChoices} />}
             <div className="px-4 py-3 flex items-center justify-between gap-3 bg-white">
                 <p className="text-xs text-slate-500">
-                    Lists, campaigns, emails and activity move to the kept record; its blank fields are filled in.
-                    The others are deleted.
+                    Lists, campaigns, emails, activity and tasks move to the kept record. The others are removed.
                 </p>
                 <PrimaryButton onClick={() => merge.mutate()} loading={merge.isPending} disabled={!toMerge.length} className="flex-shrink-0">
                     <GitMerge className="w-4 h-4" /> Merge {toMerge.length || ''}
@@ -83,7 +134,7 @@ export default function MergeDuplicatesModal({ onClose }) {
     };
 
     return (
-        <Modal title="Find duplicates" subtitle="Contacts with the same name at the same company, or the same phone number"
+        <Modal title="Find duplicates" subtitle="Same email (ignoring case and dots), similar name at the same company, or the same phone number"
             onClose={onClose} width="max-w-3xl"
             footer={<SecondaryButton onClick={onClose} className="ml-auto">Done</SecondaryButton>}>
             {isLoading ? (
