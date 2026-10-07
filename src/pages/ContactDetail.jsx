@@ -7,6 +7,9 @@ import {
     MailX, Megaphone, ListPlus, Check, X, Globe2, History, CheckSquare, Square, AlertTriangle, ListTodo, Plus,
 } from 'lucide-react';
 import { contactsApi, tasksApi, errorMessage } from '../api/contacts';
+import { dealsApi, leadsApi, moneyShort } from '../api/sales';
+import { NewLeadModal } from './Leads';
+import { DealStatusBadge, LeadStageBadge } from '../components/sales/shared';
 import {
     Avatar, TagInput, OwnerSelect, CustomFieldInput, Field, inputClass, ErrorNote,
     PrimaryButton, SecondaryButton, formatDateTime, relativeDate, parseDate, useCrmMeta,
@@ -422,6 +425,38 @@ function TasksCard({ contactId, onChanged }) {
     );
 }
 
+/** The contact's lead and deals (BRD v2.0 5.6, 5.7). */
+function SalesCard({ contact }) {
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const [creating, setCreating] = useState(false);
+    const id = contact.prospect_id;
+    const { data: leads } = useQuery({ queryKey: ['leads', 'contact', id], queryFn: () => leadsApi.list({ prospect_id: id, page_size: 10 }) });
+    const { data: deals } = useQuery({ queryKey: ['deals', 'contact', id], queryFn: () => dealsApi.list({ prospect_id: id, page_size: 10, sort_by: 'created_at', sort_order: 'desc' }) });
+    const leadItems = leads?.items || [];
+    const dealItems = deals?.items || [];
+    const hasOpenLead = leadItems.some(l => ['NEW', 'CONTACTED', 'ENGAGED', 'SQL'].includes(l.stage));
+    return (
+        <SideCard title="Sales" empty="No lead or opportunity yet."
+            action={!hasOpenLead && <button onClick={() => setCreating(true)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">+ Create lead</button>}>
+            {(leadItems.length > 0 || dealItems.length > 0) && (
+                <ul className="space-y-2">
+                    {leadItems.map(l => (
+                        <li key={l.lead_id}><Link to={`/app/leads/${l.lead_id}`} className="flex items-center justify-between gap-2 text-sm hover:text-indigo-700">
+                            <span className="truncate">Lead · {l.owner_name}</span><LeadStageBadge stage={l.stage} label={l.stage_label} /></Link></li>
+                    ))}
+                    {dealItems.map(d => (
+                        <li key={d.opportunity_id}><Link to={`/app/deals/${d.opportunity_id}`} className="flex items-center justify-between gap-2 text-sm hover:text-indigo-700">
+                            <span className="truncate">{d.name} · {moneyShort(d.amount)}</span><DealStatusBadge status={d.status} stageName={d.stage_name} /></Link></li>
+                    ))}
+                </ul>
+            )}
+            {creating && <NewLeadModal contact={contact} onClose={() => setCreating(false)}
+                onCreated={l => { setCreating(false); queryClient.invalidateQueries({ queryKey: ['leads'] }); navigate(`/app/leads/${l.lead_id}`); }} />}
+        </SideCard>
+    );
+}
+
 // ── Page ────────────────────────────────────────────────────────
 export default function ContactDetail() {
     const { id } = useParams();
@@ -580,6 +615,7 @@ export default function ContactDetail() {
                 </div>
 
                 <div className="space-y-5 lg:col-start-2 2xl:col-start-auto">
+                    <SalesCard contact={contact} />
                     <SideCard title="Company" empty="Not linked to a company.">
                         {contact.account && (
                             <div className="text-sm">

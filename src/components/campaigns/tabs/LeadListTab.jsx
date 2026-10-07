@@ -87,7 +87,7 @@ export default function LeadListTab({ campaignId }) {
             queryClient.invalidateQueries(['campaign-prospects', campaignId]);
             setShowAddModal(false);
             setSelectedListId('');
-            setEnrollReport({ enrolled: result?.enrolled_count || 0, rejected: result?.rejected || [], rejectedCount: result?.rejected_count });
+            setEnrollReport({ enrolled: result?.enrolled_count || 0, rejected: result?.rejected || [], rejectedCount: result?.rejected_count, limitNotice: result?.daily_limit_notice });
         },
     });
 
@@ -191,7 +191,7 @@ export default function LeadListTab({ campaignId }) {
         >
             {enrollReport && (
                 <EnrollmentResultModal title="Contacts added to campaign" enrolled={enrollReport.enrolled}
-                    rejected={enrollReport.rejected} rejectedCount={enrollReport.rejectedCount}
+                    rejected={enrollReport.rejected} rejectedCount={enrollReport.rejectedCount} limitNotice={enrollReport.limitNotice}
                     note={enrollReport.rejected.length ? 'These contacts were not added:' : null}
                     onClose={() => setEnrollReport(null)} />
             )}

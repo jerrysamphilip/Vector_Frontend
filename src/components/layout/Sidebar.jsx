@@ -23,6 +23,13 @@ import {
   Building2,
   ListChecks,
   CheckSquare,
+  Gauge,
+  Target,
+  Inbox as InboxIcon,
+  Briefcase,
+  TrendingUp,
+  PieChart,
+  Network,
 } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import { authApi } from '../../api/auth';
@@ -37,6 +44,14 @@ const baseNavigation = [
   { name: 'Lists',          href: '/app/lists',          icon: ListChecks,      permission: null },
   { name: 'Tasks',          href: '/app/tasks',          icon: CheckSquare,     permission: null },
   { name: 'Prospect Lists', href: '/app/prospects',      icon: Users,           permission: 'manage_prospects' },
+  // Sales (BRD v2.0 Phase 2)
+  { name: 'Sales Dashboard', href: '/app/sales',         icon: Gauge,           permission: null, section: 'Sales' },
+  { name: 'Leads',          href: '/app/leads',          icon: Target,          permission: null, section: 'Sales' },
+  { name: 'SQL Queue',      href: '/app/sql-queue',      icon: InboxIcon,       permission: null, section: 'Sales' },
+  { name: 'Opportunities',  href: '/app/deals',          icon: Briefcase,       permission: null, section: 'Sales' },
+  { name: 'Pipeline',       href: '/app/pipeline',       icon: TrendingUp,      permission: null, section: 'Sales' },
+  { name: 'Sales Reports',  href: '/app/sales-reports',  icon: PieChart,        permission: null, section: 'Sales' },
+  { name: 'Sales Team',     href: '/app/sales-team',     icon: Network,         permission: null, section: 'Sales' },
   { name: 'Domain Health',  href: '/app/domain-health',  icon: Activity,        permission: null },
   { name: 'Inbox',          href: '/app/inbox',          icon: MessageSquare,   permission: null },
   { name: 'Email Accounts', href: '/app/inboxes',        icon: Inbox,           permission: 'manage_inboxes' },
@@ -312,6 +327,8 @@ export default function Sidebar() {
           {navigation.map((item, index) => {
             const isActive = location.pathname === item.href ||
               (item.href !== '/' && location.pathname.startsWith(item.href + '/'));
+            const heading = item.section && navigation[index - 1]?.section !== item.section;
+            const endsSection = !item.section && navigation[index - 1]?.section;
             return (
               <motion.div
                 key={item.name}
@@ -319,9 +336,11 @@ export default function Sidebar() {
                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 20 }}
               >
+                {heading && <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">{item.section}</p>}
+                {endsSection && <div className="mx-3 my-3 border-t border-white/10" />}
                 <NavLink
                   to={item.href}
-                  className={`group flex items-center gap-3 px-3 py-4 rounded-xl text-sm font-medium transition-all duration-300 relative ${
+                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 relative ${
                     isActive
                       ? 'bg-blue-500/25 text-white border border-blue-400/30'
                       : 'text-slate-400 hover:bg-white/10 hover:text-white border border-transparent'

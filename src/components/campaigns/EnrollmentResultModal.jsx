@@ -6,7 +6,7 @@ import { CheckCircle2, AlertTriangle, Download, X } from 'lucide-react';
  * contact that wasn't, the reason (BR-DF-02). Rejections come from the API as
  * [{prospect_id, email, name, reason_code, reason}].
  */
-export default function EnrollmentResultModal({ title = 'Enrollment result', enrolled = 0, rejected = [], rejectedCount, note, onClose, closeLabel = 'Done' }) {
+export default function EnrollmentResultModal({ title = 'Enrollment result', enrolled = 0, rejected = [], rejectedCount, note, limitNotice, onClose, closeLabel = 'Done' }) {
     const total = rejectedCount ?? rejected.length;
     const byReason = useMemo(() => {
         const groups = {};
@@ -34,6 +34,7 @@ export default function EnrollmentResultModal({ title = 'Enrollment result', enr
                     <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl" aria-label="Close"><X className="w-4 h-4" /></button>
                 </div>
                 <div className="px-6 pb-4 overflow-y-auto space-y-4">
+                    {limitNotice && <p className="px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800">{limitNotice}</p>}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
                             <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Enrolled</p>

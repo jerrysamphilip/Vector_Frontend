@@ -388,7 +388,7 @@ export default function Contacts() {
         mutationFn: payload => contactsApi.bulk({ prospect_ids: selected, ...payload }),
         onSuccess: (res) => {
             setSelected([]); setBulkError(null);
-            if (res.action === 'enroll') setEnrollReport({ enrolled: res.enrolled_count, rejected: res.rejected || [], rejectedCount: res.rejected_count });
+            if (res.action === 'enroll') setEnrollReport({ enrolled: res.enrolled_count, rejected: res.rejected || [], rejectedCount: res.rejected_count, limitNotice: res.daily_limit_notice });
             else if (res.action === 'add_to_list') setNotice(`Added ${res.updated} to “${res.list_name}”${res.already_in_list ? ` (${res.already_in_list} already there)` : ''}.`);
             else if (res.skipped?.length) setNotice(`Updated ${res.updated}; ${res.skipped.length} skipped: ${res.skipped[0].reason}`);
             else if (res.action === 'delete') setNotice(`Deleted ${res.updated}. Restore them from Recently deleted within 90 days.`);
@@ -621,7 +621,7 @@ export default function Contacts() {
             )}
             {enrollReport && (
                 <EnrollmentResultModal title="Enrolled in campaign" enrolled={enrollReport.enrolled} rejected={enrollReport.rejected}
-                    rejectedCount={enrollReport.rejectedCount} note={enrollReport.rejected.length ? 'These contacts were not enrolled:' : null}
+                    rejectedCount={enrollReport.rejectedCount} limitNotice={enrollReport.limitNotice} note={enrollReport.rejected.length ? 'These contacts were not enrolled:' : null}
                     onClose={() => setEnrollReport(null)} />
             )}
         </div>
