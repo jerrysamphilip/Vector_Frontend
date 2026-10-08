@@ -3,9 +3,12 @@ import Sidebar, { ProfileMenu } from './Sidebar';
 import GlobalSearch from './GlobalSearch';
 import NotificationBell from './NotificationBell';
 import NewMenu from './NewMenu';
+import { HelpProvider } from '../../help/HelpPanel';
+import HelpButton from '../../help/HelpButton';
 
 export default function Layout() {
     return (
+        <HelpProvider>
         <div className="min-h-screen bg-[#F7F9FC] font-sans text-slate-900">
             <Sidebar />
             <div className="ml-60 min-w-0 flex flex-col min-h-screen">
@@ -13,6 +16,7 @@ export default function Layout() {
                     <div className="flex-1 max-w-xl"><GlobalSearch /></div>
                     <div className="flex-1" />
                     <NewMenu />
+                    <HelpButton />
                     <NotificationBell />
                     <ProfileMenu />
                 </header>
@@ -23,5 +27,6 @@ export default function Layout() {
                 </main>
             </div>
         </div>
+        </HelpProvider>
     );
 }

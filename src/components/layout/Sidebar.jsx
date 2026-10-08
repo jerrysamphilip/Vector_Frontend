@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, Mail, Users, Activity, MessageSquare, Inbox, BarChart3, Shield, KeyRound, Eye, EyeOff, CheckCircle,
   LogOut, X, ArrowLeft, Contact, Building2, ListChecks, CheckSquare, Gauge, Target, Inbox as InboxIcon,
-  Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star,
+  Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star, LifeBuoy,
 } from 'lucide-react';
 import logoMark from '../../assets/logo-mark.png';
 import { authApi } from '../../api/auth';
@@ -344,6 +344,12 @@ export default function Sidebar() {
           );
         })}
       </nav>
+      <div className="shrink-0 px-3 py-2.5 border-t border-white/10">
+        <NavLink to="/app/help" className={({ isActive }) => `flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-[13px] font-medium ${isActive || location.pathname.startsWith('/app/help') ? 'bg-blue-500/25 text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}>
+          <LifeBuoy className="w-4 h-4 text-[#73C8D2]" /> Help Center
+          <span className="ml-auto text-[10px] font-semibold px-1.5 rounded border border-white/20 text-slate-300">?</span>
+        </NavLink>
+      </div>
     </aside>
   );
 }

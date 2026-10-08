@@ -300,7 +300,7 @@ function buildDashboardAlerts(deliverabilityAlerts = [], inboxes = [], campaigns
                 title: 'Suspended Alerts (Email)',
                 message: `${inbox.email_address} is paused and will not send campaign emails until resumed.`,
                 createdAt: inbox.last_sent_at || inbox.last_sync_at || new Date().toISOString(),
-                route: '/app/email-accounts',
+                route: '/app/inboxes',
                 actionLabel: 'Open Email Accounts',
             });
         }
@@ -315,7 +315,7 @@ function buildDashboardAlerts(deliverabilityAlerts = [], inboxes = [], campaigns
                     title: 'Inbox sync is stale',
                     message: `${inbox.email_address} has not synced replies for ${Math.floor(staleHours)} hours.`,
                     createdAt: inbox.last_sync_at,
-                    route: '/app/email-accounts',
+                    route: '/app/inboxes',
                     actionLabel: 'Review inbox sync',
                 });
             }
