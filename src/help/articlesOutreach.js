@@ -118,7 +118,6 @@ export const OUTREACH_ARTICLES = [
         id: 'email-accounts', category: 'Outreach', title: 'Email accounts and warmup', routes: ['/app/inboxes'],
         summary: 'Connect the mailboxes you send from, warm them up, and keep an eye on their health.',
         keywords: ['mailbox', 'inbox', 'smtp', 'imap', 'password', 'credentials', 'edit', 'test connection', 'warmup', 'microsoft 365', 'outlook', 'google', 'reputation', 'daily limit'],
-        keywords: ['mailbox', 'inbox', 'smtp', 'imap', 'warmup', 'microsoft 365', 'outlook', 'google', 'reputation', 'daily limit'],
         body: [
             { h: 'Connecting a mailbox' },
             { steps: [
