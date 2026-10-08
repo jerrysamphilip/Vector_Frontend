@@ -5,6 +5,7 @@ import AdminLayout from './components/layout/AdminLayout';
 import { ProtectedRoute, PublicRoute, PlatformAdminRoute, PermissionRoute } from './components/auth/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
+import HelpCenter from './pages/HelpCenter';
 import PlatformAdmin from './pages/PlatformAdmin';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
@@ -145,6 +146,8 @@ function App() {
                         <Route path="sales-targets" element={<SalesTargets />} />
                         <Route path="templates" element={<TemplateLibrary />} />
                         <Route path="connections" element={<Connections />} />
+                        <Route path="help" element={<HelpCenter />} />
+                        <Route path="help/:articleId" element={<HelpCenter />} />
                         <Route path="recently-deleted" element={<PermissionRoute permission="manage_prospects"><RecentlyDeleted /></PermissionRoute>} />
                         <Route path="analytics" element={<Dashboard />} />
                         <Route
