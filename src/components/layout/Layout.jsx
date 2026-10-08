@@ -1,6 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import PageErrorBoundary from '../common/PageErrorBoundary';
-import { Outlet } from 'react-router-dom';
 import Sidebar, { ProfileMenu } from './Sidebar';
 import GlobalSearch from './GlobalSearch';
 import NotificationBell from './NotificationBell';
@@ -26,7 +25,6 @@ export default function Layout() {
                 <main className="flex-1 min-w-0">
                     <div className="max-w-[1600px] mx-auto px-7 py-6">
                         <PageErrorBoundary key={pathname}><Outlet /></PageErrorBoundary>
-                        <Outlet />
                     </div>
                 </main>
             </div>
