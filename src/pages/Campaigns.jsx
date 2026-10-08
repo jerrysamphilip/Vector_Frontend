@@ -188,7 +188,7 @@ const Campaigns = () => {
         <PageTransition>
             <motion.div variants={containerVariants} className="flex flex-col h-full">
                 {/* 1. Header Section - Sticky */}
-                <div className="sticky top-14 z-20 bg-slate-50 pt-1 pb-4 -mx-7 px-7 mb-2">
+                <div className="sticky top-14 z-20 bg-[#F7F9FC] pt-1 pb-4 -mx-7 px-7 mb-2">
                     <div className="flex flex-col gap-6">
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                             <div className="flex flex-col gap-2">
@@ -207,7 +207,7 @@ const Campaigns = () => {
                                     />
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Button onClick={() => navigate('/app/campaigns/new?fresh=true')} className="text-white w-full sm:w-auto font-semibold shadow-sm hover:shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: '#4f46e5' }}>
+                                    <Button onClick={() => navigate('/app/campaigns/new?fresh=true')} className="text-white w-full sm:w-auto font-semibold shadow-sm hover:shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                                         <Plus className="w-4 h-4 mr-2" />
                                         Create New Campaign
                                     </Button>

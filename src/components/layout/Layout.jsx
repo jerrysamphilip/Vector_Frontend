@@ -6,7 +6,7 @@ import NewMenu from './NewMenu';
 
 export default function Layout() {
     return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+        <div className="min-h-screen bg-[#F7F9FC] font-sans text-slate-900">
             <Sidebar />
             <div className="ml-60 min-w-0 flex flex-col min-h-screen">
                 <header className="sticky top-0 z-30 h-14 bg-white/90 backdrop-blur border-b border-slate-200 flex items-center gap-3 px-7">

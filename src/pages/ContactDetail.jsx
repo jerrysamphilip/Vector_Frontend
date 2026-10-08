@@ -523,7 +523,7 @@ export default function ContactDetail() {
 
             {/* Header */}
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden" style={cardShadow}>
-                <div className="h-1.5" style={{ background: '#4f46e5' }} />
+                <div className="h-1.5" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }} />
                 <div className="p-6 flex flex-col lg:flex-row lg:items-start gap-5">
                     <Avatar first={contact.first_name} last={contact.last_name} seed={contact.email} size="lg" />
                     <div className="flex-1 min-w-0">

@@ -7,6 +7,7 @@ import {
     ListPlus, Megaphone, PencilLine, Archive, AlertCircle,
 } from 'lucide-react';
 import { contactsApi, accountsApi, viewsApi, errorMessage } from '../api/contacts';
+import { BUILT_IN_VIEWS } from '../lib/contactViews';
 import { getStoredUser } from '../lib/authStorage';
 import ContactFormModal from '../components/contacts/ContactFormModal';
 import MergeDuplicatesModal from '../components/contacts/MergeDuplicatesModal';
@@ -21,12 +22,6 @@ import {
 const PAGE_SIZE = 25;
 const DEFAULT_COLUMNS = ['full_name', 'email', 'company_name', 'owner_name', 'lifecycle_stage', 'lead_status', 'tags', 'last_activity_at', 'created_at'];
 const SORTABLE = { full_name: 'name', email: 'email', company_name: 'company', lifecycle_stage: 'lifecycle_stage', lead_status: 'lead_status', created_at: 'created_at', updated_at: 'updated_at' };
-const BUILT_IN_VIEWS = [
-    { id: 'all', name: 'All contacts', owner: '' },
-    { id: 'mine', name: 'My contacts', owner: 'me' },
-    { id: 'unassigned', name: 'Unassigned', owner: 'unassigned', manageOnly: true },
-    { id: 'recent', name: 'Recently created', filters: { op: 'AND', conditions: [{ field: 'created_at', operator: 'in_last_days', value: 30 }] } },
-];
 const COLUMNS_KEY = 'contacts.columns';
 const selectClass = 'h-9 pl-3 pr-8 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-indigo-400';
 
@@ -355,6 +350,14 @@ export default function Contacts() {
         setSelected([]);
     };
 
+    // The sidebar links to ?view=<id>&apply=1; apply that view's filters, sort and columns once it is loaded
+    useEffect(() => {
+        if (!params.get('apply')) return;
+        const v = BUILT_IN_VIEWS.find(b => b.id === viewId) || savedViews.find(sv => sv.view_id === viewId);
+        if (v) applyView(v);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [params, savedViews]);
+
     useEffect(() => {
         if ((params.get('q') || '') !== debouncedSearch) update({ q: debouncedSearch });
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -459,32 +462,12 @@ export default function Contacts() {
             {notice && <div className="flex items-center justify-between px-4 py-3 bg-emerald-50 border border-emerald-100 rounded-xl text-sm text-emerald-800">{notice}<button onClick={() => setNotice(null)} aria-label="Dismiss"><X className="w-4 h-4" /></button></div>}
 
             <div className="flex gap-5 items-start">
-                {/* Views */}
-                <aside className="w-52 flex-shrink-0 hidden xl:block">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide px-3 mb-1.5">Views</p>
-                    <nav className="space-y-0.5">
-                        {views.map(v => (
-                            <button key={v.id} onClick={() => applyView(v)}
-                                className={`w-full text-left px-3 py-2 rounded-xl text-sm flex items-center gap-2 ${viewId === v.id ? 'bg-white shadow-sm font-semibold text-indigo-700' : 'text-slate-600 hover:bg-white/60'}`}>
-                                {v.view_id ? (v.shared ? <Share2 className="w-3.5 h-3.5 flex-shrink-0" /> : <Star className="w-3.5 h-3.5 flex-shrink-0" />) : <Users className="w-3.5 h-3.5 flex-shrink-0" />}
-                                <span className="truncate">{v.name}</span>
-                            </button>
-                        ))}
-                    </nav>
-                    <button onClick={() => setSaveView({ view: null })} className="mt-2 w-full text-left px-3 py-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5"><Plus className="w-3.5 h-3.5" /> Save current view</button>
-                    {savedView?.can_edit && (
-                        <button onClick={() => window.confirm(`Delete view “${savedView.name}”?`) && viewsApi.remove(savedView.view_id).then(() => { queryClient.invalidateQueries({ queryKey: ['views'] }); applyView(BUILT_IN_VIEWS[0]); })}
-                            className="w-full text-left px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-red-600">Delete this view</button>
-                    )}
-                </aside>
 
                 <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                     {/* Toolbar */}
                     <div className="px-5 py-4 space-y-3 rounded-t-2xl" style={{ background: 'linear-gradient(90deg, rgba(45,107,191,0.06), rgba(115,200,210,0.06))' }}>
                         <div className="flex items-center gap-3 flex-wrap">
-                            <select className={`${selectClass} xl:hidden`} value={viewId} onChange={e => applyView(views.find(v => v.id === e.target.value))}>
-                                {views.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-                            </select>
+                            <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">{views.find(v => v.id === viewId)?.name || 'All contacts'}</span>
                             <div className="relative flex-1 min-w-[220px] max-w-md">
                                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, company or phone…"
@@ -503,8 +486,14 @@ export default function Contacts() {
                                 <button onClick={() => update({ mode: '' }, false)} className={`h-8 px-2.5 rounded-lg ${mode === 'table' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`} aria-label="Table view"><Table2 className="w-4 h-4" /></button>
                                 <button onClick={() => update({ mode: 'board' }, false)} className={`h-8 px-2.5 rounded-lg ${mode === 'board' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`} aria-label="Board view"><LayoutGrid className="w-4 h-4" /></button>
                             </div>
-                            {(viewDirty || (!savedView && nFilters > 0)) && (
+                            {(viewDirty || (!savedView && nFilters > 0)) ? (
                                 <button onClick={() => setSaveView({ view: savedView || null })} className="h-9 px-3 text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5"><Save className="w-4 h-4" /> Save view</button>
+                            ) : (
+                                <button onClick={() => setSaveView({ view: null })} className="h-9 px-3 text-sm font-medium text-slate-500 hover:text-indigo-700 flex items-center gap-1.5" title="Save the current filters, sort and columns as a view in the sidebar"><Plus className="w-4 h-4" /> Save as view</button>
+                            )}
+                            {savedView?.can_edit && (
+                                <button onClick={() => window.confirm(`Delete view “${savedView.name}”?`) && viewsApi.remove(savedView.view_id).then(() => { queryClient.invalidateQueries({ queryKey: ['views'] }); applyView(BUILT_IN_VIEWS[0]); })}
+                                    className="h-9 px-2 text-sm text-slate-400 hover:text-red-600" title="Delete this view">Delete view</button>
                             )}
                             <span className="ml-auto text-sm text-slate-500 flex items-center gap-2">
                                 {isFetching && <Loader2 className="w-3.5 h-3.5 animate-spin" />}

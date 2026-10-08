@@ -45,7 +45,7 @@ function DomainCard({ domain, expanded, onToggle, onScan, onDelete, scanning }) 
 
             {/* Gradient top strip */}
             <div className="h-1 w-full"
-                style={{ background: '#4f46e5' }} />
+                style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }} />
 
             <div className="p-5">
                 {/* Header row */}
@@ -159,7 +159,7 @@ function DomainCard({ domain, expanded, onToggle, onScan, onDelete, scanning }) 
                                         onClick={() => onScan(domain.domain_name)}
                                         disabled={scanning === domain.domain_name}
                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                                        style={{ background: '#4f46e5' }}>
+                                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                                         <RefreshCcw className={`w-3.5 h-3.5 ${scanning === domain.domain_name ? 'animate-spin' : ''}`} />
                                         Run Diagnostics
                                     </button>

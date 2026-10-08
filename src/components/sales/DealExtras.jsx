@@ -159,7 +159,7 @@ export function StageHistory({ rows = [] }) {
                         title={`${r.stage}: ${r.days} days, from ${formatDateTime(r.entered_at)}${r.left_at ? ` to ${formatDateTime(r.left_at)}` : ' (current)'}`}>
                         <span className="truncate text-slate-700">{r.stage}{!r.left_at && <span className="text-[10px] text-indigo-600 font-semibold ml-1">NOW</span>}</span>
                         <span className="h-2.5 rounded bg-slate-100 overflow-hidden">
-                            <span className="block h-full rounded-r" style={{ width: `${Math.max(2, ((r.days || 0) / max) * 100)}%`, background: r.left_at ? '#a5b4fc' : '#4f46e5' }} />
+                            <span className="block h-full rounded-r" style={{ width: `${Math.max(2, ((r.days || 0) / max) * 100)}%`, background: r.left_at ? '#a5b4fc' : '#2d6bbf' }} />
                         </span>
                         <span className="text-xs font-semibold text-slate-700 tabular-nums whitespace-nowrap">{r.days} d</span>
                     </li>

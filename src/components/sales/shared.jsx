@@ -46,7 +46,7 @@ export function Seg({ options, value, onChange }) {
         <div className="flex bg-slate-100 rounded-lg p-0.5">
             {options.map(([v, label]) => (
                 <button key={typeof label === 'string' ? label : v} onClick={() => onChange(v)}
-                    className={`px-3 h-8 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${value === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>{label}</button>
+                    className={`px-3 h-8 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${value === v ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>{label}</button>
             ))}
         </div>
     );
@@ -131,7 +131,7 @@ export function DealStatusBadge({ status, stageName }) {
  * Horizontal magnitude bar: one hue, 4px rounded data end, recessive track.
  * The value and label are text, not colour; hovering shows the exact figure.
  */
-export function HBar({ label, value, max, display, sub, tone = '#4f46e5', onClick }) {
+export function HBar({ label, value, max, display, sub, tone = '#2d6bbf', onClick }) {
     const width = max > 0 ? Math.max(value > 0 ? 1.5 : 0, (value / max) * 100) : 0;
     const Tag = onClick ? 'button' : 'div';
     return (

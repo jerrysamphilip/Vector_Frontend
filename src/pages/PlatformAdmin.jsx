@@ -132,7 +132,7 @@ function TenantDetailModal({ tenantId, onClose }) {
                 >
                     <div
                         className="flex items-start justify-between px-7 py-6 text-white"
-                        style={{ background: '#4f46e5' }}
+                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
                     >
                         <div>
                             <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
@@ -262,7 +262,7 @@ function CreateTenantModal({ onClose, onCreated }) {
                 >
                     {/* Header */}
                     <div className="flex items-start justify-between px-7 py-6 text-white"
-                        style={{ background: '#4f46e5' }}>
+                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                         <div>
                             <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
                                 <Building2 className="h-3.5 w-3.5" />
@@ -309,7 +309,7 @@ function CreateTenantModal({ onClose, onCreated }) {
                                 <button
                                     onClick={() => { onCreated?.(); onClose(); }}
                                     className="w-full rounded-2xl py-3 text-sm font-semibold text-white transition hover:opacity-90"
-                                    style={{ background: '#4f46e5' }}
+                                    style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
                                 >
                                     Done
                                 </button>
@@ -390,7 +390,7 @@ function CreateTenantModal({ onClose, onCreated }) {
                                         type="submit"
                                         disabled={mutation.isPending}
                                         className="flex-1 rounded-2xl py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                                        style={{ background: '#4f46e5' }}
+                                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
                                     >
                                         {mutation.isPending ? 'Creating…' : 'Create Tenant'}
                                     </button>
@@ -483,7 +483,7 @@ export default function PlatformAdmin() {
                         <button
                             onClick={() => setShowCreateModal(true)}
                             className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
-                            style={{ background: '#4f46e5' }}
+                            style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
                         >
                             <Plus className="h-4 w-4" />
                             Add Tenant
