@@ -277,7 +277,7 @@ export default function SubsequenceTab({ campaignId }) {
                     </button>
                     <button
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-all hover:shadow-md"
-                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
+                        style={{ background: '#4f46e5' }}
                         onClick={() => setEditingSequence(editingSequence ? null : 'all')}
                     >
                         {editingSequence ? 'Done Editing' : 'Edit Sequence'}

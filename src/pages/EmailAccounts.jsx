@@ -245,6 +245,7 @@ function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete, onToggleWarmu
                     <KeyRound size={13}/>
                 </button>
                 <button onClick={() => onEdit(inbox)} title="Edit sending & receiving settings" aria-label="Edit sending and receiving settings"
+                <button onClick={() => onEdit(inbox)}
                     className="rounded-lg p-1.5 text-gray-400 transition hover:bg-[#eff3ff] hover:text-[#0046FF]">
                     <Pencil size={13}/>
                 </button>
