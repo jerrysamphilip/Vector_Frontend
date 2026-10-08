@@ -502,7 +502,7 @@ function TopCampaignsTable({ campaigns, loading, onExport, exporting }) {
                 </div>
                 <button onClick={onExport} disabled={exporting}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-xl disabled:opacity-50 transition-all hover:opacity-90 shadow-sm"
-                    style={{ background: '#4f46e5' }}>
+                    style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                     <Download className="w-3.5 h-3.5" />
                     {exporting ? 'Exporting…' : 'Export CSV'}
                 </button>
@@ -563,7 +563,7 @@ function MailboxHealthTable({ mailboxHealth, loading, onExport, exporting }) {
                 </div>
                 <button onClick={onExport} disabled={exporting}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-xl disabled:opacity-50 transition-all hover:opacity-90 shadow-sm"
-                    style={{ background: '#4f46e5' }}>
+                    style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                     <Download className="w-3.5 h-3.5" />
                     {exporting ? 'Exporting…' : 'Export CSV'}
                 </button>
@@ -654,7 +654,7 @@ function TeamPerformanceTable({ users, loading }) {
                                     <td className="px-4 py-3.5">
                                         <div className="flex items-center gap-2.5">
                                             <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-                                                style={{ background: '#4f46e5' }}>
+                                                style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                                                 {u.first_name?.[0]}{u.last_name?.[0]}
                                             </div>
                                             <div>
@@ -826,7 +826,7 @@ export default function Reports() {
                             <button key={r.days} onClick={() => setRange(r.days)} disabled={isFetching}
                                 className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
                                 style={range === r.days
-                                    ? { background: '#4f46e5', color: '#ffffff' }
+                                    ? { background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)', color: '#ffffff' }
                                     : { color: '#9ca3af' }
                                 }
                             >{r.label}</button>
@@ -840,7 +840,7 @@ export default function Reports() {
                     {/* Export CSV */}
                     <button onClick={handleExportGlobal} disabled={exportingGlobal}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-xl disabled:opacity-50 transition-all hover:opacity-90 shadow-sm"
-                        style={{ background: '#4f46e5' }}>
+                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                         <Download className="w-3.5 h-3.5" />
                         {exportingGlobal ? 'Exporting…' : 'Export CSV'}
                     </button>

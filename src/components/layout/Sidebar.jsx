@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, Mail, Users, Activity, MessageSquare, Inbox, BarChart3, Shield, KeyRound, Eye, EyeOff, CheckCircle,
   LogOut, X, ArrowLeft, Contact, Building2, ListChecks, CheckSquare, Gauge, Target, Inbox as InboxIcon,
-  Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles,
+  Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star,
 } from 'lucide-react';
 import logoMark from '../../assets/logo-mark.png';
 import { authApi } from '../../api/auth';
-import { tasksApi } from '../../api/contacts';
+import { tasksApi, viewsApi } from '../../api/contacts';
+import { BUILT_IN_VIEWS, contactViewHref } from '../../lib/contactViews';
 import { clearAuthSession, getStoredUser, hasPermission, setAuthSession } from '../../lib/authStorage';
 
 // Grouped navigation. permission: null = everyone; admin: admins only.
@@ -43,7 +44,7 @@ const NAV = [
     { name: 'Sales reports', href: '/app/sales-reports', icon: PieChart },
     { name: 'Targets', href: '/app/sales-targets', icon: Crosshair },
   ] },
-  { title: 'Workspace', collapsible: true, items: [
+  { title: 'Workspace', items: [
     { name: 'Team', href: '/app/team', icon: Shield, permission: 'manage_team', admin: true },
     { name: 'Sales team', href: '/app/sales-team', icon: Network },
     { name: 'Sales settings', href: '/app/sales-settings', icon: Settings2, admin: true },
@@ -236,28 +237,60 @@ function ChangePasswordModal({ currentUser, onClose }) {
 
 export function getUserInitials(user) { return getInitials(user); }
 
-function NavItem({ item, badge }) {
+const isActiveHref = (pathname, href) => pathname === href || (href !== '/app/dashboard' && pathname.startsWith(href + '/'));
+
+function NavItem({ item, badge, children }) {
   return (
-    <NavLink to={item.href} end={item.href === '/app/dashboard'}
-      className={({ isActive }) => `flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-[13px] font-medium transition-colors ${
-        isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
-      {({ isActive }) => (<>
-        <item.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
-        <span className="truncate">{item.name}</span>
-        {badge > 0 && <span className="ml-auto text-[11px] font-semibold tabular-nums px-1.5 rounded-md bg-slate-100 text-slate-600">{badge}</span>}
-      </>)}
-    </NavLink>
+    <>
+      <NavLink to={item.href} end={item.href === '/app/dashboard'}
+        className={({ isActive }) => `relative flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-[13px] font-medium transition-colors border ${
+          isActive ? 'bg-blue-500/25 text-white border-blue-400/30' : 'text-slate-300 border-transparent hover:bg-white/10 hover:text-white'}`}>
+        {({ isActive }) => (<>
+          {isActive && <span className="absolute -left-1 top-1.5 bottom-1.5 w-1 rounded-full bg-[#73C8D2]" />}
+          <item.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#73C8D2]' : 'text-slate-400'}`} />
+          <span className="truncate">{item.name}</span>
+          {badge > 0 && <span className="ml-auto text-[11px] font-semibold tabular-nums px-1.5 rounded-md bg-white/10 text-slate-100">{badge}</span>}
+        </>)}
+      </NavLink>
+      {children}
+    </>
+  );
+}
+
+/** Contacts' views (built-in and saved) as sub-items under Contacts. */
+function ContactViews({ isAdmin }) {
+  const location = useLocation();
+  const [showAll, setShowAll] = useState(false);
+  const { data: saved = [] } = useQuery({ queryKey: ['views', 'CONTACT'], queryFn: () => viewsApi.list('CONTACT'), staleTime: 60000 });
+  const params = new URLSearchParams(location.search);
+  const current = location.pathname === '/app/contacts' ? (params.get('view') || 'all') : null;
+  const canManage = isAdmin || hasPermission('manage_prospects');
+  const views = [...BUILT_IN_VIEWS.filter(v => !v.manageOnly || canManage).map(v => ({ id: v.id, name: v.name })),
+    ...saved.map(v => ({ id: v.view_id, name: v.name, saved: true }))];
+  const shown = showAll ? views : views.slice(0, 7);
+  return (
+    <div className="ml-[18px] pl-3 border-l border-white/10 my-0.5 space-y-0.5">
+      {shown.map(v => (
+        <Link key={v.id} to={contactViewHref(v.id)}
+          className={`flex items-center gap-1.5 px-2 h-7 rounded-md text-[12.5px] truncate ${current === v.id ? 'text-white bg-white/10 font-medium' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+          {v.saved && <Star className="w-3 h-3 shrink-0 opacity-70" />}<span className="truncate">{v.name}</span>
+        </Link>
+      ))}
+      {views.length > 7 && (
+        <button onClick={() => setShowAll(v => !v)} className="px-2 h-6 text-[11.5px] font-medium text-slate-400 hover:text-white">
+          {showAll ? 'Show fewer' : `${views.length - 7} more views`}
+        </button>
+      )}
+    </div>
   );
 }
 
 // ── Sidebar ────────────────────────────────────────────────
 export default function Sidebar() {
+  const location = useLocation();
   const [currentUser, setCurrentUser] = useState(() => getStoredUser());
   const role = currentUser?.role || '';
   const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(role);
-  const [workspaceOpen, setWorkspaceOpen] = useState(() => {
-    try { return localStorage.getItem('nav-workspace-open') === '1'; } catch { return false; }
-  });
   const { data: dueTasks } = useQuery({ queryKey: ['tasks', 'nav-due'], queryFn: () => tasksApi.list({ due: 'today', page_size: 1 }), refetchInterval: 120000 });
   const badges = { tasks: dueTasks?.total || 0 };
 
@@ -270,29 +303,43 @@ export default function Sidebar() {
 
   const groups = NAV.map(g => ({ ...g, items: g.items.filter(i => (!i.permission || hasPermission(i.permission)) && (!i.admin || isAdmin)) }))
     .filter(g => g.items.length);
-  const toggleWorkspace = () => setWorkspaceOpen(v => { try { localStorage.setItem('nav-workspace-open', v ? '0' : '1'); } catch { /* ignore */ } return !v; });
+  // One section open at a time (the one you are in), so the menu fits without scrolling
+  const activeGroup = groups.find(g => g.title && g.items.some(i => isActiveHref(location.pathname, i.href)))?.title || null;
+  const [open, setOpen] = useState(activeGroup);
+  useEffect(() => { if (activeGroup) setOpen(activeGroup); }, [activeGroup]);
 
   return (
-    <aside className="fixed top-0 left-0 w-60 h-screen z-40 flex flex-col bg-white border-r border-slate-200">
-      <div className="h-14 flex items-center gap-2.5 px-4 shrink-0">
+    <aside className="fixed top-0 left-0 w-60 h-screen z-40 flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-blue-600 text-white">
+      <div className="h-14 flex items-center gap-2.5 px-4 shrink-0 border-b border-white/10">
         <img src={logoMark} alt="" className="w-7 h-7" />
-        <span className="text-[15px] font-bold tracking-tight text-slate-900">OUTREACH360<span className="text-indigo-600">.AI</span></span>
+        <span className="text-[15px] font-bold tracking-tight text-white">OUTREACH360<span className="text-[#73C8D2]">.AI</span></span>
       </div>
-      <div className="mx-3 mb-2 px-3 py-2 rounded-lg border border-slate-200">
-        <p className="text-[13px] font-semibold text-slate-800 truncate">{currentUser?.tenant_name || 'Workspace'}</p>
-        <p className="text-[11px] text-slate-500">{ROLE_LABELS[role] || role}</p>
+      <div className="mx-3 mt-3 mb-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+        <p className="text-[13px] font-semibold text-white truncate">{currentUser?.tenant_name || 'Workspace'}</p>
+        <p className="text-[11px] text-slate-400">{ROLE_LABELS[role] || role}</p>
       </div>
       <nav className="flex-1 overflow-y-auto px-3 pb-4">
         {groups.map((g, gi) => {
-          const open = !g.collapsible || workspaceOpen;
+          const isOpen = !g.title || open === g.title;
+          const hasActive = g.title === activeGroup;
           return (
-            <div key={g.title || gi} className={gi ? 'mt-4' : 'mt-1'}>
-              {g.title && (g.collapsible ? (
-                <button onClick={toggleWorkspace} className="w-full flex items-center justify-between px-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-600">
-                  {g.title}<ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? '' : '-rotate-90'}`} />
+            <div key={g.title || gi} className={gi ? 'mt-2' : 'mt-1'}>
+              {g.title && (
+                <button onClick={() => setOpen(o => (o === g.title ? null : g.title))} aria-expanded={isOpen}
+                  className={`w-full flex items-center justify-between px-2.5 h-7 rounded-md text-[10.5px] font-semibold uppercase tracking-wider ${hasActive ? 'text-slate-200' : 'text-slate-400'} hover:text-white hover:bg-white/5`}>
+                  <span className="flex items-center gap-1.5">{g.title}{!isOpen && hasActive && <span className="w-1.5 h-1.5 rounded-full bg-[#73C8D2]" />}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? '' : '-rotate-90'}`} />
                 </button>
-              ) : <p className="px-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-slate-400">{g.title}</p>)}
-              {open && <div className="space-y-0.5">{g.items.map(i => <NavItem key={i.href} item={i} badge={badges[i.badge]} />)}</div>}
+              )}
+              {isOpen && (
+                <div className="space-y-0.5 mt-0.5">
+                  {g.items.map(i => (
+                    <NavItem key={i.href} item={i} badge={badges[i.badge]}>
+                      {i.href === '/app/contacts' && location.pathname.startsWith('/app/contacts') && <ContactViews isAdmin={isAdmin} />}
+                    </NavItem>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
@@ -321,7 +368,7 @@ export function ProfileMenu() {
   };
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen(v => !v)} aria-label="Account" className="w-9 h-9 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center hover:ring-4 hover:ring-indigo-100">
+      <button onClick={() => setOpen(v => !v)} aria-label="Account" className="w-9 h-9 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center hover:ring-4 hover:ring-blue-100">
         {getInitials(currentUser)}
       </button>
       {open && (

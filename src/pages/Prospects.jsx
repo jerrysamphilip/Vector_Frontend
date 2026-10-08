@@ -120,7 +120,7 @@ function UploadModal({ onClose }) {
                 onClick={e => e.stopPropagation()}>
 
                 {/* Gradient top bar */}
-                <div className="h-1.5 w-full" style={{ background: '#4f46e5' }} />
+                <div className="h-1.5 w-full" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }} />
 
                 <div className="px-6 pt-5 pb-2 flex items-start justify-between">
                     <div>
@@ -169,7 +169,7 @@ function UploadModal({ onClose }) {
                     </button>
                     <button onClick={handleSubmit} disabled={loading}
                         className="flex-1 h-11 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
-                        style={{ background: '#4f46e5' }}>
+                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                         {loading
                             ? <><Loader2 className="w-4 h-4 animate-spin" />Validating…</>
                             : <><Upload className="w-4 h-4" />Validate & Continue</>}
@@ -292,7 +292,7 @@ export default function Prospects() {
                     <button
                         onClick={() => setShowUpload(true)}
                         className="flex items-center gap-2 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
-                        style={{ background: '#4f46e5' }}>
+                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                         <Plus className="w-4 h-4" />
                         New List
                     </button>

@@ -28,7 +28,7 @@ export default function EnrollmentResultModal({ title = 'Enrollment result', enr
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
             <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" role="dialog" aria-label={title}>
-                <div className="h-1.5 w-full flex-shrink-0" style={{ background: '#4f46e5' }} />
+                <div className="h-1.5 w-full flex-shrink-0" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }} />
                 <div className="px-6 pt-5 pb-3 flex items-start justify-between">
                     <h2 className="text-lg font-bold text-gray-900">{title}</h2>
                     <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl" aria-label="Close"><X className="w-4 h-4" /></button>
@@ -82,7 +82,7 @@ export default function EnrollmentResultModal({ title = 'Enrollment result', enr
                             <Download className="w-4 h-4" /> Download list
                         </button>
                     )}
-                    <button onClick={onClose} className="ml-auto h-10 px-5 text-sm font-semibold text-white rounded-xl" style={{ background: '#4f46e5' }}>{closeLabel}</button>
+                    <button onClick={onClose} className="ml-auto h-10 px-5 text-sm font-semibold text-white rounded-xl" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>{closeLabel}</button>
                 </div>
             </div>
         </div>

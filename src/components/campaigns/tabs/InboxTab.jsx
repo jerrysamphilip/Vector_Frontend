@@ -204,7 +204,7 @@ function ImapSetupGuide({ onGoToAccounts }) {
                 ].map(({ n, text }) => (
                     <div key={n} className="flex items-start gap-3 mb-3">
                         <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white mt-0.5"
-                            style={{ background: '#4f46e5' }}>{n}</div>
+                            style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>{n}</div>
                         <p className="text-sm text-gray-600">{text}</p>
                     </div>
                 ))}
@@ -215,7 +215,7 @@ function ImapSetupGuide({ onGoToAccounts }) {
                 <button
                     onClick={() => onGoToAccounts('Sending Accounts')}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white mb-6 hover:scale-[1.02] active:scale-[0.98] transition-transform"
-                    style={{ background: '#4f46e5' }}>
+                    style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                     <Settings className="w-4 h-4" />
                     Go to Sending Accounts
                     <ChevronRight className="w-4 h-4" />
@@ -460,7 +460,7 @@ export default function InboxTab({ campaignId, inboxIds = [], onTabChange, class
                     <span className="text-sm font-semibold text-gray-700">Inbox</span>
                     {unreadCount > 0 && (
                         <span className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full"
-                            style={{ background: '#4f46e5' }}>
+                            style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                             {unreadCount}
                         </span>
                     )}
@@ -671,7 +671,7 @@ export default function InboxTab({ campaignId, inboxIds = [], onTabChange, class
                                             </div>
                                             {isOut && (
                                                 <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                                                    style={{ background: '#4f46e5' }}>
+                                                    style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                                                     <User className="w-3.5 h-3.5 text-white" />
                                                 </div>
                                             )}
@@ -699,7 +699,7 @@ export default function InboxTab({ campaignId, inboxIds = [], onTabChange, class
                                             </div>
                                             <button type="submit" disabled={!replyText.trim() || sending}
                                                 className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
-                                                style={{ background: '#4f46e5' }}>
+                                                style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                                                 {sending ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                                                 Send
                                             </button>

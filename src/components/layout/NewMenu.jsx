@@ -7,6 +7,7 @@ import { NewLeadModal } from '../../pages/Leads';
 import { DealFormModal } from '../../pages/Deals';
 import { NewTaskModal } from '../../pages/Tasks';
 import { useTeamOwners } from '../sales/shared';
+import { BRAND_GRADIENT } from '../contacts/shared';
 import { getStoredUser, hasPermission } from '../../lib/authStorage';
 
 /** One "+ New" button for the records people create most. */
@@ -39,7 +40,8 @@ export default function NewMenu() {
     const done = (keys, to) => { setModal(null); keys.forEach(k => qc.invalidateQueries({ queryKey: [k] })); if (to) navigate(to); };
     return (
         <div className="relative" ref={ref}>
-            <button onClick={() => setOpen(v => !v)} className="h-9 px-3.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold flex items-center gap-1.5">
+            <button onClick={() => setOpen(v => !v)} style={{ background: BRAND_GRADIENT }}
+                className="h-9 px-3.5 rounded-lg text-white text-sm font-semibold flex items-center gap-1.5 hover:shadow-md hover:brightness-105">
                 <Plus className="w-4 h-4" /> New
             </button>
             {open && (

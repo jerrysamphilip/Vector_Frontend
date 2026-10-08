@@ -8,7 +8,7 @@ import { Funnel } from './SalesDashboard';
 import CustomReports from '../components/sales/CustomReports';
 
 const WON = '#059669';
-const WEIGHTED = '#4f46e5';
+const WEIGHTED = '#2d6bbf';
 const Spinner = () => <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>;
 const th = 'px-3 py-2.5 text-right';
 const td = 'px-3 py-2.5 text-right tabular-nums';
@@ -203,7 +203,7 @@ function TeamTab({ member, period }) {
     );
 }
 
-const COMMIT = '#4f46e5';
+const COMMIT = '#2d6bbf';
 function AttainmentBar({ row, max }) {
     const w = v => (max > 0 ? Math.min(100, (v / max) * 100) : 0);
     return (

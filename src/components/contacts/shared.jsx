@@ -3,8 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { X, Loader2, AlertTriangle } from 'lucide-react';
 import { contactsApi } from '../../api/contacts';
 
-// Primary brand colour (solid indigo since the redesign; kept under the old name for existing callers)
-export const BRAND_GRADIENT = '#4f46e5';
+export const BRAND_GRADIENT = 'linear-gradient(135deg, #2d6bbf, #73C8D2)';
 
 const GRADIENTS = [
     'from-indigo-400 to-violet-500',
@@ -229,6 +228,7 @@ export function Modal({ title, subtitle, onClose, children, footer, width = 'max
             <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} />
             <div className={`relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${width} max-h-[90vh] flex flex-col overflow-hidden`}
                 onClick={e => e.stopPropagation()}>
+                <div className="h-1.5 w-full flex-shrink-0" style={{ background: BRAND_GRADIENT }} />
                 <div className="px-6 pt-5 pb-3 flex items-start justify-between flex-shrink-0">
                     <div>
                         <h2 className="text-lg font-bold text-gray-900">{title}</h2>
@@ -248,7 +248,8 @@ export function Modal({ title, subtitle, onClose, children, footer, width = 'max
 export function PrimaryButton({ children, loading, className = '', ...props }) {
     return (
         <button {...props} disabled={loading || props.disabled}
-            className={`h-9 px-4 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${className}`}>
+            className={`h-9 px-4 text-sm font-semibold text-white rounded-lg transition-all hover:shadow-md hover:brightness-105 disabled:opacity-60 flex items-center justify-center gap-2 ${className}`}
+            style={{ background: BRAND_GRADIENT }}>
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {children}
         </button>

@@ -52,7 +52,7 @@ export default function AccountDetail() {
             </button>
 
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                <div className="h-1.5" style={{ background: '#4f46e5' }} />
+                <div className="h-1.5" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }} />
                 <div className="p-6 flex flex-col lg:flex-row gap-5">
                     <Avatar first={account.name} last={account.name.split(/\s+/)[1]} seed={account.name} size="lg" square />
                     <div className="flex-1 min-w-0">

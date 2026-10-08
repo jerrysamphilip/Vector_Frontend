@@ -160,7 +160,7 @@ export default function Header({ actionSlot = null }) {
                     <button
                         onClick={() => navigate('/app/campaigns/new')}
                         className="flex items-center gap-2 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90 hover:scale-[1.02] active:scale-[0.98]"
-                        style={{ background: '#4f46e5' }}
+                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}
                     >
                         <Plus className="w-5 h-5" />
                         <span>Create New Campaign</span>

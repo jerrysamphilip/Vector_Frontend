@@ -157,7 +157,7 @@ function SplitView({ filters, stage, onStage, meta }) {
                     {!isLoading && !items.length && <Empty icon={Target} title="No leads here" />}
                     {items.map(l => (
                         <button key={l.lead_id} data-id={l.lead_id} onClick={() => select(l.lead_id)}
-                            className={`w-full text-left px-4 py-3 ${selected === l.lead_id ? 'bg-indigo-50 shadow-[inset_3px_0_0_#4f46e5]' : 'hover:bg-slate-50'}`}>
+                            className={`w-full text-left px-4 py-3 ${selected === l.lead_id ? 'bg-indigo-50 shadow-[inset_3px_0_0_#2d6bbf]' : 'hover:bg-slate-50'}`}>
                             <div className="flex items-center justify-between gap-2">
                                 <span className="text-sm font-semibold text-slate-800 truncate">{l.contact_name}</span>
                                 <LeadStageBadge stage={l.stage} label={l.stage_label} />
