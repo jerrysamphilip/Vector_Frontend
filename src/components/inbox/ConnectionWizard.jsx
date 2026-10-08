@@ -4,6 +4,11 @@ import { ArrowRight, CheckCircle2, Loader2, AlertTriangle, X, Shield, Activity }
 import { Button } from '../ui/Button';
 import { Input, FormGroup, Label } from '../ui/Input';
 
+const PROVIDER_PRESETS = {
+    Google:  { smtp_host: 'smtp.gmail.com',     smtp_port: 587, imap_host: 'imap.gmail.com',         imap_port: 993 },
+    Outlook: { smtp_host: 'smtp.office365.com', smtp_port: 587, imap_host: 'outlook.office365.com', imap_port: 993 },
+};
+
 const STEPS = {
     PROVIDER: 1,
     CREDENTIALS: 2,
@@ -22,6 +27,7 @@ export default function ConnectionWizard({ isOpen, onClose, onSubmit, isSubmitti
         smtp_password: '',
         smtp_use_ssl: false,
         imap_host: '',
+        imap_port: 993,
         imap_username: '',
         imap_password: '',
         warmup_enabled: false
@@ -32,9 +38,19 @@ export default function ConnectionWizard({ isOpen, onClose, onSubmit, isSubmitti
         if (isOpen) {
             if (initialData) {
                 setFormData({
-                    ...initialData,
-                    smtp_password: '', // Don't show password on edit
-                    imap_password: ''  // Don't show password on edit
+                    provider: initialData.provider || 'SMTP',
+                    email_address: initialData.email_address || '',
+                    daily_limit: initialData.daily_limit ?? 500,
+                    smtp_host: initialData.smtp_host || '',
+                    smtp_port: initialData.smtp_port || 587,
+                    smtp_username: initialData.smtp_username || '',
+                    smtp_password: '', // never shown; blank keeps the saved one
+                    smtp_use_ssl: Boolean(initialData.smtp_use_ssl),
+                    imap_host: initialData.imap_host || '',
+                    imap_port: initialData.imap_port || 993,
+                    imap_username: initialData.imap_username || '',
+                    imap_password: '',
+                    warmup_enabled: Boolean(initialData.warmup_enabled),
                 });
                 setStep(STEPS.CREDENTIALS);
             } else {
@@ -48,6 +64,7 @@ export default function ConnectionWizard({ isOpen, onClose, onSubmit, isSubmitti
                     smtp_password: '',
                     smtp_use_ssl: false,
                     imap_host: '',
+                    imap_port: 993,
                     imap_username: '',
                     imap_password: '',
                     warmup_enabled: false
@@ -58,19 +75,39 @@ export default function ConnectionWizard({ isOpen, onClose, onSubmit, isSubmitti
     }, [isOpen, initialData]);
 
     const handleProviderSelect = (provider) => {
-        setFormData({ ...formData, provider });
+        // Pre-fill the well-known server names; the user can still change them.
+        const preset = PROVIDER_PRESETS[provider] || {};
+        setFormData(f => ({
+            ...f,
+            provider,
+            smtp_host: f.smtp_host || preset.smtp_host || '',
+            smtp_port: preset.smtp_port || f.smtp_port,
+            imap_host: f.imap_host || preset.imap_host || '',
+            imap_port: preset.imap_port || f.imap_port,
+        }));
         setStep(STEPS.CREDENTIALS);
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const payload = { ...formData };
-        // Do not clear existing stored IMAP password on edit when left blank.
-        if (initialData && !payload.imap_password) {
-            delete payload.imap_password;
+        const payload = {
+            ...formData,
+            smtp_port: Number(formData.smtp_port) || 587,
+            imap_port: Number(formData.imap_port) || 993,
+        };
+        if (initialData) {
+            // The address identifies the inbox and cannot change; blank passwords keep the saved ones.
+            delete payload.email_address;
+            if (!payload.smtp_password) delete payload.smtp_password;
+            if (!payload.imap_password) delete payload.imap_password;
         }
         onSubmit(payload);
     };
+
+    const isOauth = initialData?.auth_type === 'OAUTH_MS365';
+    const passwordHint = (saved) => initialData
+        ? (saved ? 'Saved. Leave blank to keep it' : 'Not set yet')
+        : 'Password';
 
     if (!isOpen) return null;
 
@@ -85,7 +122,7 @@ export default function ConnectionWizard({ isOpen, onClose, onSubmit, isSubmitti
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <div>
                         <h2 className="text-xl font-bold text-slate-800">
-                            {initialData ? 'Edit Connection' : 'Connect Private Inbox'}
+                            {initialData ? 'Edit sending & receiving settings' : 'Connect Private Inbox'}
                         </h2>
                         <div className="flex items-center gap-2 mt-1 text-xs font-medium text-slate-500">
                             <span className={step >= 1 ? 'text-blue-600' : ''}>Provider</span>
@@ -150,10 +187,20 @@ export default function ConnectionWizard({ isOpen, onClose, onSubmit, isSubmitti
                                     <div className="flex items-center gap-2 mb-4 p-3 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-100">
                                         <CheckCircle2 className="w-4 h-4" />
                                         <span>Connecting via <strong>{formData.provider}</strong></span>
-                                        {!initialData && (
+                                        {initialData ? (
+                                            <select aria-label="Provider" value={formData.provider} onChange={e => setFormData({ ...formData, provider: e.target.value })}
+                                                className="ml-auto text-xs bg-white border border-blue-200 rounded-md px-2 py-1">
+                                                {['Google', 'Outlook', 'SMTP'].map(p => <option key={p} value={p}>{p}</option>)}
+                                            </select>
+                                        ) : (
                                             <button type="button" onClick={() => setStep(STEPS.PROVIDER)} className="ml-auto text-xs underline hover:text-blue-900">Change</button>
                                         )}
                                     </div>
+                                    {isOauth && (
+                                        <p className="p-3 bg-sky-50 text-sky-800 rounded-lg text-xs border border-sky-100">
+                                            This mailbox signs in with Microsoft 365, so the passwords below are not used. Use <strong>Reconnect Microsoft 365</strong> on the inbox if sign-in stops working. You can still change hosts and ports here.
+                                        </p>
+                                    )}
 
                                     <FormGroup>
                                         <Label>Email Address</Label>
@@ -235,7 +282,7 @@ export default function ConnectionWizard({ isOpen, onClose, onSubmit, isSubmitti
                                         </FormGroup>
                                         <FormGroup>
                                             <Label>SMTP Password / App Password</Label>
-                                            <Input type="password" value={formData.smtp_password} onChange={e => setFormData({ ...formData, smtp_password: e.target.value })} placeholder={initialData ? "Leave blank to keep unchanged" : "Password"} />
+                                            <Input type="password" autoComplete="new-password" value={formData.smtp_password} onChange={e => setFormData({ ...formData, smtp_password: e.target.value })} placeholder={passwordHint(initialData?.has_smtp_password)} />
                                         </FormGroup>
                                         <div className="flex items-center gap-3">
                                             <button
@@ -261,20 +308,24 @@ export default function ConnectionWizard({ isOpen, onClose, onSubmit, isSubmitti
                                                 <Input value={formData.imap_host} onChange={e => setFormData({ ...formData, imap_host: e.target.value })} placeholder="imap.gmail.com" />
                                             </FormGroup>
                                             <FormGroup>
-                                                <Label>IMAP Username</Label>
-                                                <Input value={formData.imap_username} onChange={e => setFormData({ ...formData, imap_username: e.target.value })} placeholder="Usually email address" />
+                                                <Label>IMAP Port</Label>
+                                                <Input type="number" value={formData.imap_port} onChange={e => setFormData({ ...formData, imap_port: parseInt(e.target.value) || 993 })} placeholder="993" />
                                             </FormGroup>
                                         </div>
                                         <FormGroup>
+                                            <Label>IMAP Username</Label>
+                                            <Input value={formData.imap_username} onChange={e => setFormData({ ...formData, imap_username: e.target.value })} placeholder="Usually your email address" />
+                                        </FormGroup>
+                                        <FormGroup>
                                             <Label>IMAP Password / App Password</Label>
-                                            <Input type="password" value={formData.imap_password} onChange={e => setFormData({ ...formData, imap_password: e.target.value })} placeholder={initialData ? "Leave blank to keep unchanged" : "Password"} />
+                                            <Input type="password" autoComplete="new-password" value={formData.imap_password} onChange={e => setFormData({ ...formData, imap_password: e.target.value })} placeholder={passwordHint(initialData?.has_imap_password)} />
                                         </FormGroup>
                                     </div>
 
                                     {error && (
                                         <div className="p-3 bg-rose-50 text-rose-600 text-sm rounded-lg flex items-center gap-2">
                                             <AlertTriangle className="w-4 h-4" />
-                                            {error}
+                                            {typeof error === 'string' ? error : 'Could not save. Check the fields and try again.'}
                                         </div>
                                     )}
                                 </form>

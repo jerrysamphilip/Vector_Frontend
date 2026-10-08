@@ -25,8 +25,11 @@
     "@tiptap/starter-kit": "^3.29.2",
     "@vitejs/plugin-react": "^5.1.2",
     "axios": "^1.13.2",
+    "dompurify": "3.2.6",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.562.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-router-dom": "^7.11.0",
     "recharts": "^3.6.0"
   }

@@ -1,4 +1,5 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import PageErrorBoundary from '../common/PageErrorBoundary';
 import Sidebar, { ProfileMenu } from './Sidebar';
 import GlobalSearch from './GlobalSearch';
 import NotificationBell from './NotificationBell';
@@ -7,6 +8,7 @@ import { HelpProvider } from '../../help/HelpPanel';
 import HelpButton from '../../help/HelpButton';
 
 export default function Layout() {
+    const { pathname } = useLocation();
     return (
         <HelpProvider>
         <div className="min-h-screen bg-[#F7F9FC] font-sans text-slate-900">
@@ -22,7 +24,7 @@ export default function Layout() {
                 </header>
                 <main className="flex-1 min-w-0">
                     <div className="max-w-[1600px] mx-auto px-7 py-6">
-                        <Outlet />
+                        <PageErrorBoundary key={pathname}><Outlet /></PageErrorBoundary>
                     </div>
                 </main>
             </div>

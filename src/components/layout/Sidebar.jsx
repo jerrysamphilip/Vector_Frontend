@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -367,9 +367,11 @@ export function ProfileMenu() {
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, []);
+  const queryClient = useQueryClient();
   const handleLogout = async () => {
     try { await authApi.logout(); } catch { /* ignore */ }
     clearAuthSession();
+    queryClient.clear(); // don't leave this user's data cached for the next sign-in
     navigate('/login', { replace: true });
   };
   return (

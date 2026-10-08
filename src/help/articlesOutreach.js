@@ -117,7 +117,7 @@ export const OUTREACH_ARTICLES = [
     {
         id: 'email-accounts', category: 'Outreach', title: 'Email accounts and warmup', routes: ['/app/inboxes'],
         summary: 'Connect the mailboxes you send from, warm them up, and keep an eye on their health.',
-        keywords: ['mailbox', 'inbox', 'smtp', 'imap', 'warmup', 'microsoft 365', 'outlook', 'google', 'reputation', 'daily limit'],
+        keywords: ['mailbox', 'inbox', 'smtp', 'imap', 'password', 'credentials', 'edit', 'test connection', 'warmup', 'microsoft 365', 'outlook', 'google', 'reputation', 'daily limit'],
         body: [
             { h: 'Connecting a mailbox' },
             { steps: [
@@ -126,6 +126,12 @@ export const OUTREACH_ARTICLES = [
                 'If asked, add the DNS records shown under **Verify Domain Ownership**.',
             ] },
             { p: 'Microsoft 365 mailboxes can connect with **Connect with Microsoft 365 (OAuth)** instead of a password. Replies start syncing within a few minutes.' },
+            { h: 'Changing sending or receiving settings' },
+            { steps: [
+                'Click the mailbox row and open the **Connection** tab. It shows the SMTP (sending) and IMAP (receiving) server, username, and whether a password is saved.',
+                'Click **Edit sending & receiving settings** (or the pencil on the row). Change hosts, ports, usernames or passwords. Leave a password blank to keep the saved one.',
+                'Save, then use **Test sending sign-in** and **Test receiving sign-in** to check the new settings. Tests sign in only; nothing is sent.',
+            ] },
             { h: 'Warmup' },
             { p: 'Warmup gradually builds a new mailbox\'s reputation. Turn it on per mailbox; open a mailbox for its reputation score, today\'s targets, a 14-day trend and settings such as daily volume and reply rate. **Run Warmup** starts a cycle now.' },
             { h: 'Health' },
