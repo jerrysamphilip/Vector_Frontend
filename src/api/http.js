@@ -58,6 +58,11 @@ function attachAuthInterceptors(client) {
         async (error) => {
             const originalRequest = error?.config;
             const status = error?.response?.status;
+            // FastAPI validation errors arrive as a list; screens render detail as text.
+            const data = error?.response?.data;
+            if (data && Array.isArray(data.detail)) {
+                data.detail = data.detail.map(d => (d?.loc ? `${d.loc.filter(l => l !== 'body').join('.')}: ${d.msg}` : d?.msg || String(d))).join('; ');
+            }
 
             if (!originalRequest || originalRequest.skipAuth || status !== 401 || originalRequest._retry) {
                 return Promise.reject(error);

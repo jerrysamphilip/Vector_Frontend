@@ -53,6 +53,7 @@ import ProspectTable from '../components/prospects/ProspectTable';
 import Loading from '../components/common/Loading';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import EnrollmentResultModal from '../components/campaigns/EnrollmentResultModal';
+import { sanitizeHtml } from '../lib/sanitizeHtml';
 
 const INITIAL_FORM_DATA = {
     campaign_name: '',
@@ -3351,9 +3352,9 @@ function CreateCampaignContent() {
                                                                     <div
                                                                         className="text-sm text-gray-700 bg-gray-50 p-6 rounded-xl border border-gray-100 prose prose-sm max-w-none text-left"
                                                                         dangerouslySetInnerHTML={{
-                                                                            __html: showPreview && previewProspect
+                                                                            __html: sanitizeHtml(showPreview && previewProspect
                                                                                 ? formatEmailBodyForPreview(getSelectedEmailFromSequence()?.body, previewProspect)
-                                                                                : formatEmailBodyForPreview(getSelectedEmailFromSequence()?.body)
+                                                                                : formatEmailBodyForPreview(getSelectedEmailFromSequence()?.body))
                                                                         }}
                                                                     />
                                                                 )}

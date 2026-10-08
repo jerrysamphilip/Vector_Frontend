@@ -7,6 +7,7 @@ import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import Loading from '../../common/Loading';
 import RichTextEditor from '../../common/RichTextEditor';
 import AttachmentManager from '../../common/AttachmentManager';
+import { sanitizeHtml, htmlToText } from '../../../lib/sanitizeHtml';
 
 export default function SubsequenceTab({ campaignId }) {
     const queryClient = useQueryClient();
@@ -160,9 +161,7 @@ export default function SubsequenceTab({ campaignId }) {
     const stripHtml = (html) => {
         if (!html) return '';
 
-        const temp = document.createElement('div');
-        temp.innerHTML = html;
-        return temp.textContent || temp.innerText || '';
+        return htmlToText(html);
     };
 
     const hasHtmlTags = (value) => /<[^>]+>/.test(value || '');
@@ -463,7 +462,7 @@ export default function SubsequenceTab({ campaignId }) {
                                                     <div
                                                         className="text-sm text-slate-700 leading-relaxed"
                                                         dangerouslySetInnerHTML={{
-                                                            __html: step.template.body?.replace(/\n/g, '<br />')
+                                                            __html: sanitizeHtml(step.template.body?.replace(/\n/g, '<br />'))
                                                         }}
                                                     />
                                                 </div>

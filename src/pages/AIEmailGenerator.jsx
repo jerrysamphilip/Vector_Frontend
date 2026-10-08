@@ -92,7 +92,7 @@ export default function AIEmailGenerator() {
             email_2: {
                 subject: `Following up, {{first_name}}`,
                 body: `Hi there,\n\nWanted to circle back on my previous note.\n\n` +
-                    `Teams using ${productName} report 40% faster results.\n\nDid this land on your radar?\n\nBest,\n[Your name]`,
+                    `Happy to share how ${productName} could help.\n\nDid this land on your radar?\n\nBest,\n[Your name]`,
                 cta: 'Did this land on your radar?'
             },
             email_3: {

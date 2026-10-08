@@ -1,8 +1,53 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/layout/Layout';
 import AdminLayout from './components/layout/AdminLayout';
 import { ProtectedRoute, PublicRoute, PlatformAdminRoute, PermissionRoute } from './components/auth/ProtectedRoute';
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Home = lazy(() => import('./pages/Home'));
+const HelpCenter = lazy(() => import('./pages/HelpCenter'));
+const PlatformAdmin = lazy(() => import('./pages/PlatformAdmin'));
+import Login from './pages/Login';
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const AcceptInvite = lazy(() => import('./pages/AcceptInvite'));
+const MagicLogin = lazy(() => import('./pages/MagicLogin'));
+const Campaigns = lazy(() => import('./pages/Campaigns'));
+const CreateCampaign = lazy(() => import('./pages/CreateCampaign'));
+const CampaignDetails = lazy(() => import('./pages/CampaignDetails'));
+const AIEmailGenerator = lazy(() => import('./pages/AIEmailGenerator'));
+const Prospects = lazy(() => import('./pages/Prospects'));
+const ProspectValidate = lazy(() => import('./pages/ProspectValidate'));
+const Contacts = lazy(() => import('./pages/Contacts'));
+const ContactDetail = lazy(() => import('./pages/ContactDetail'));
+const Accounts = lazy(() => import('./pages/Accounts'));
+const AccountDetail = lazy(() => import('./pages/AccountDetail'));
+const Lists = lazy(() => import('./pages/Lists'));
+const ImportContacts = lazy(() => import('./pages/ImportContacts'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const RecentlyDeleted = lazy(() => import('./pages/RecentlyDeleted'));
+const SalesDashboard = lazy(() => import('./pages/SalesDashboard'));
+const Leads = lazy(() => import('./pages/Leads'));
+const LeadDetail = lazy(() => import('./pages/LeadDetail'));
+const SqlQueue = lazy(() => import('./pages/SqlQueue'));
+const Deals = lazy(() => import('./pages/Deals'));
+const DealDetail = lazy(() => import('./pages/DealDetail'));
+const Pipeline = lazy(() => import('./pages/Pipeline'));
+const SalesReports = lazy(() => import('./pages/SalesReports'));
+const SalesTeam = lazy(() => import('./pages/SalesTeam'));
+const SalesSettings = lazy(() => import('./pages/SalesSettings'));
+const SalesTargets = lazy(() => import('./pages/SalesTargets'));
+const TemplateLibrary = lazy(() => import('./pages/TemplateLibrary'));
+const Connections = lazy(() => import('./pages/Connections'));
+const Reports = lazy(() => import('./pages/Reports'));
+const DomainHealth = lazy(() => import('./pages/DomainHealth'));
+const EmailAccounts = lazy(() => import('./pages/EmailAccounts'));
+const Inbox = lazy(() => import('./pages/Inbox'));
+const AutomationRules = lazy(() => import('./pages/AutomationRules'));
+const TestAutomation = lazy(() => import('./pages/TestAutomation'));
+const TeamManagement = lazy(() => import('./pages/TeamManagement'));
+const SetPassword = lazy(() => import('./pages/SetPassword'));
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
 import HelpCenter from './pages/HelpCenter';
@@ -64,6 +109,7 @@ function App() {
     return (
         <QueryClientProvider client={queryClient}>
             <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+                <Suspense fallback={<div className="p-8 text-sm text-slate-400">Loading…</div>}>
                 <Routes>
                     {/* Add redirect from / to /app/dashboard */}
                     <Route path="/" element={<Navigate to="/login" replace />} />
@@ -166,7 +212,7 @@ function App() {
                         <Route path="inbox" element={<Inbox />} />
                         <Route path="automation" element={<AutomationRules />} />
                         <Route path="team" element={<PermissionRoute permission="manage_team"><TeamManagement /></PermissionRoute>} />
-                        <Route path="test-automation" element={<TestAutomation />} />
+                        {import.meta.env.DEV && <Route path="test-automation" element={<TestAutomation />} />}
                         <Route path="settings" element={<Dashboard />} />
                     </Route>
 
@@ -187,6 +233,7 @@ function App() {
                     {/* Catch all route - redirect to /app/dashboard */}
                     <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
                 </Routes>
+                </Suspense>
             </BrowserRouter>
         </QueryClientProvider>
     );

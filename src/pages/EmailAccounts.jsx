@@ -22,6 +22,8 @@ const getWarmupDetail  = async (id)   => (await api.get(`/inboxes/${id}/warmup`)
 const createInbox      = async (d)    => (await api.post('/inboxes', d)).data;
 const updateInbox      = async ({id, data}) => (await api.put(`/inboxes/${id}`, data)).data;
 const deleteInbox      = async (id)   => api.delete(`/inboxes/${id}`);
+const testSmtp         = async (id)   => (await api.post(`/inboxes/${id}/test-smtp`)).data;
+const testImap         = async (id)   => (await api.get(`/inboxes/${id}/test-imap`)).data;
 const runWarmupCycle   = async ()     => (await api.post('/inboxes/warmup/run')).data;
 // Microsoft 365 blocks password sign-in; connect with OAuth instead (BR-DF-05)
 const startMs365       = async (id)   => (await api.post(`/inboxes/${id}/oauth/microsoft/start`)).data;
@@ -242,6 +244,7 @@ function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete, onToggleWarmu
                     className="rounded-lg p-1.5 text-gray-400 transition hover:bg-sky-50 hover:text-sky-700">
                     <KeyRound size={13}/>
                 </button>
+                <button onClick={() => onEdit(inbox)} title="Edit sending & receiving settings" aria-label="Edit sending and receiving settings"
                 <button onClick={() => onEdit(inbox)}
                     className="rounded-lg p-1.5 text-gray-400 transition hover:bg-[#eff3ff] hover:text-[#0046FF]">
                     <Pencil size={13}/>
@@ -256,7 +259,96 @@ function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete, onToggleWarmu
 }
 
 // ─── Detail panel tabs ────────────────────────────────────────────────────────
-const TABS = ['Overview', 'Settings', 'Activity'];
+const TABS = ['Overview', 'Connection', 'Settings', 'Activity'];
+
+const errorText = (err, fallback) => {
+    const d = err?.response?.data?.detail;
+    if (typeof d === 'string') return d;
+    if (Array.isArray(d)) return d.map(x => x.msg).filter(Boolean).join('; ') || fallback;
+    return fallback;
+};
+
+// Sending (SMTP) and receiving (IMAP) settings for one inbox, with edit and live sign-in tests.
+function ConnectionPanel({ inbox, onEdit }) {
+    const [results, setResults] = useState({});
+    const [testing, setTesting] = useState(null);
+    useEffect(() => { setResults({}); }, [inbox?.inbox_id]);
+    if (!inbox) return null;
+    const oauth = inbox.auth_type === 'OAUTH_MS365';
+
+    const runTest = async (kind) => {
+        setTesting(kind);
+        try {
+            const r = kind === 'smtp' ? await testSmtp(inbox.inbox_id) : await testImap(inbox.inbox_id);
+            setResults(p => ({ ...p, [kind]: r }));
+        } catch (err) {
+            setResults(p => ({ ...p, [kind]: { status: 'error', error: errorText(err, 'Test failed') } }));
+        } finally {
+            setTesting(null);
+        }
+    };
+
+    const Section = ({ kind, title, sub, host, port, user, hasPassword, extra }) => {
+        const r = results[kind];
+        const ok = r?.status === 'connected';
+        const configured = Boolean(host) && (hasPassword || oauth);
+        return (
+            <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                    <div>
+                        <p className="text-sm font-semibold text-gray-900">{title}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${configured ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                        {configured ? 'Configured' : 'Incomplete'}
+                    </span>
+                </div>
+                <dl className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1.5 text-xs">
+                    <dt className="text-gray-400">Server</dt>
+                    <dd className="font-medium text-gray-800 break-all">{host ? `${host}:${port}` : <span className="text-amber-700">Not set</span>}</dd>
+                    <dt className="text-gray-400">Username</dt>
+                    <dd className="font-medium text-gray-800 break-all">{user || inbox.email_address}</dd>
+                    <dt className="text-gray-400">Sign-in</dt>
+                    <dd className="font-medium text-gray-800">{oauth ? 'Microsoft 365 (OAuth)' : hasPassword ? 'Password saved' : <span className="text-amber-700">No password</span>}</dd>
+                    {extra}
+                </dl>
+                <button type="button" onClick={() => runTest(kind)} disabled={testing !== null || !host}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:border-[#0046FF] hover:text-[#0046FF] disabled:opacity-50">
+                    {testing === kind ? <Loader2 size={13} className="animate-spin"/> : <Zap size={13}/>}
+                    Test {kind === 'smtp' ? 'sending' : 'receiving'} sign-in
+                </button>
+                {r && (
+                    <p role="status" className={`rounded-lg px-3 py-2 text-xs font-medium ${ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
+                        {ok
+                            ? (kind === 'smtp' ? 'Signed in to the SMTP server. Sending credentials work.' : `Signed in to the mailbox. ${r.inbox_message_count_last_7d ?? 0} emails in the inbox from the last 7 days.`)
+                            : (r.error || 'Could not connect.')}
+                    </p>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <div className="p-5 space-y-4">
+            <button type="button" onClick={() => onEdit(inbox)}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm"
+                style={{ background: 'linear-gradient(135deg,#0046FF,#73C8D2)' }}>
+                <Pencil size={15}/> Edit sending &amp; receiving settings
+            </button>
+            <Section kind="smtp" title="Sending (SMTP)" sub="Used for warmup emails from this mailbox. Campaign emails go through Amazon SES."
+                host={inbox.smtp_host} port={inbox.smtp_port || 587} user={inbox.smtp_username} hasPassword={inbox.has_smtp_password}
+                extra={<><dt className="text-gray-400">Security</dt><dd className="font-medium text-gray-800">{inbox.smtp_use_ssl ? 'SSL' : 'STARTTLS'}</dd></>}/>
+            <Section kind="imap" title="Receiving (IMAP)" sub="Used to find replies and for warmup engagement."
+                host={inbox.imap_host} port={inbox.imap_port || 993} user={inbox.imap_username} hasPassword={inbox.has_imap_password}
+                extra={<>
+                    <dt className="text-gray-400">Last sync</dt>
+                    <dd className="font-medium text-gray-800">{inbox.last_sync_at ? new Date(inbox.last_sync_at).toLocaleString() : 'Never'}</dd>
+                    {inbox.imap_last_error && <><dt className="text-gray-400">Last error</dt><dd className="font-medium text-red-600 break-words">{inbox.imap_last_error}</dd></>}
+                </>}/>
+            <p className="text-[11px] text-gray-400">Tests sign in with the saved settings and send nothing. Save your changes first, then test.</p>
+        </div>
+    );
+}
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function EmailAccounts() {
@@ -340,7 +432,7 @@ export default function EmailAccounts() {
             setIsModalOpen(false);
             if (data.domain_verification?.dns_records?.length > 0) setVerificationData(data.domain_verification);
         },
-        onError: (err) => setFormError(err.response?.data?.detail || 'Failed to add inbox'),
+        onError: (err) => setFormError(errorText(err, 'Failed to add inbox')),
     });
 
     const updateMutation = useMutation({
@@ -354,7 +446,7 @@ export default function EmailAccounts() {
             clearTimeout(saveTimer.current);
             saveTimer.current = setTimeout(() => setSaveSuccess(false), 2500);
         },
-        onError: (err) => setFormError(err.response?.data?.detail || 'Failed to update inbox'),
+        onError: (err) => setFormError(errorText(err, 'Failed to update inbox')),
     });
 
     const deleteMutation = useMutation({
@@ -608,7 +700,7 @@ export default function EmailAccounts() {
                                                 inbox={inbox}
                                                 isSelected={selectedInboxId === inbox.inbox_id}
                                                 onSelect={id => { setSelectedInboxId(id); setDetailTab('Overview'); }}
-                                                onEdit={inbox => { setSelectedInbox(inbox); setIsEditMode(true); setIsModalOpen(true); }}
+                                                onEdit={inbox => { setFormError(''); setSelectedInbox(inbox); setIsEditMode(true); setIsModalOpen(true); }}
                                                 onDelete={setInboxToDelete}
                                                 onToggleWarmup={inbox => updateMutation.mutate({
                                                     id: inbox.inbox_id,
@@ -659,7 +751,7 @@ export default function EmailAccounts() {
                                     </div>
                                     <h4 className="mt-5 text-base font-semibold text-gray-900">Select a mailbox</h4>
                                     <p className="mt-2 max-w-[240px] text-xs text-gray-400">
-                                        Click any inbox row to see its reputation, warmup activity, and settings.
+                                        Click any inbox row to see its reputation, connection settings (sending &amp; receiving), warmup activity and settings.
                                     </p>
                                 </div>
                             ) : detailLoading ? (
@@ -753,6 +845,13 @@ export default function EmailAccounts() {
                                                     )}
                                                 </div>
                                             </div>
+                                        )}
+
+                                        {/* Connection */}
+                                        {detailTab === 'Connection' && (
+                                            <ConnectionPanel
+                                                inbox={inboxes.find(i => i.inbox_id === selectedInboxId)}
+                                                onEdit={inbox => { setFormError(''); setSelectedInbox(inbox); setIsEditMode(true); setIsModalOpen(true); }}/>
                                         )}
 
                                         {/* Settings */}
@@ -866,8 +965,9 @@ export default function EmailAccounts() {
                 onSubmit={(formData) => {
                     setFormError('');
                     if (isEditMode && selectedInbox?.inbox_id) {
-                        updateMutation.mutate({ id: selectedInbox.inbox_id, data: formData });
-                        setIsModalOpen(false);
+                        updateMutation.mutate({ id: selectedInbox.inbox_id, data: formData }, {
+                            onSuccess: () => { setIsModalOpen(false); setIsEditMode(false); setSelectedInbox(null); },
+                        });
                         return;
                     }
                     createMutation.mutate(formData);
