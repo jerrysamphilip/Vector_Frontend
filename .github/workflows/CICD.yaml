@@ -12,8 +12,13 @@ env:
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
 
 jobs:
+  # Same build check as pull requests: nothing deploys unless it passes
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   build-and-deploy:
     name: Build, Push Docker Image, and Deploy to EKS
+    needs: ci
     runs-on: ubuntu-latest
 
     steps:

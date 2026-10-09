@@ -10,6 +10,7 @@ import {
 import PageTransition from '../components/layout/PageTransition';
 import ConnectionWizard from '../components/inbox/ConnectionWizard';
 import AlertPreferencesModal from '../components/inbox/AlertPreferencesModal';
+import SenderIdentityCard from '../components/inbox/SenderIdentityCard';
 import Loading from '../components/common/Loading';
 import { apiClient as api } from '../api/http';
 import deliverabilityApi from '../api/deliverability';
@@ -581,6 +582,8 @@ export default function EmailAccounts() {
                 </header>
 
                 {/* ── Row 1: Gradient KPI cards (Dashboard-style) ─────────────── */}
+                <SenderIdentityCard/>
+
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
                     <GradientKpi label="Accounts"      value={overview.total_accounts}
                         from="#0046FF" to="#73C8D2" chart="bar" animDelay="0ms"

@@ -23,3 +23,14 @@ export async function deleteCompanyProfile(profileId) {
     const response = await apiV1Client.delete(`${API_BASE}/${profileId}`);
     return response.data;
 }
+
+// Sender identity printed in every email footer (company name + postal address, required by CAN-SPAM)
+export async function getSenderIdentity() {
+    const response = await apiV1Client.get(`${API_BASE}/sender-identity`);
+    return response.data;
+}
+
+export async function saveSenderIdentity(data) {
+    const response = await apiV1Client.put(`${API_BASE}/sender-identity`, data);
+    return response.data;
+}
