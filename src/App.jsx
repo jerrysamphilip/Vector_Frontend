@@ -48,6 +48,7 @@ const AutomationRules = lazy(() => import('./pages/AutomationRules'));
 const TestAutomation = lazy(() => import('./pages/TestAutomation'));
 const TeamManagement = lazy(() => import('./pages/TeamManagement'));
 const SetPassword = lazy(() => import('./pages/SetPassword'));
+const AccountSecurity = lazy(() => import('./pages/AccountSecurity'));
 import ErrorBoundary from './components/common/ErrorBoundary';
 import './index.css';
 
@@ -148,6 +149,7 @@ function App() {
                         <Route path="sales-targets" element={<SalesTargets />} />
                         <Route path="templates" element={<TemplateLibrary />} />
                         <Route path="connections" element={<Connections />} />
+                        <Route path="account/security" element={<AccountSecurity />} />
                         <Route path="help" element={<HelpCenter />} />
                         <Route path="help/:articleId" element={<HelpCenter />} />
                         <Route path="recently-deleted" element={<PermissionRoute permission="manage_prospects"><RecentlyDeleted /></PermissionRoute>} />
@@ -184,6 +186,7 @@ function App() {
                         <Route index element={<PlatformAdmin />} />
                         <Route path="tenants" element={<PlatformAdmin />} />
                         <Route path="users" element={<PlatformAdmin />} />
+                        <Route path="security" element={<div className="p-8"><AccountSecurity /></div>} />
                     </Route>
 
                     {/* Catch all route - redirect to /app/dashboard */}

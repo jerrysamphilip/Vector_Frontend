@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, Mail, Users, Activity, MessageSquare, Inbox, BarChart3, Shield, KeyRound, Eye, EyeOff, CheckCircle,
   LogOut, X, ArrowLeft, Contact, Building2, ListChecks, CheckSquare, Gauge, Target, Inbox as InboxIcon,
-  Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star, LifeBuoy,
+  Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star, LifeBuoy, ShieldCheck,
 } from 'lucide-react';
 import logoMark from '../../assets/logo-mark.png';
 import { authApi } from '../../api/auth';
@@ -392,6 +392,10 @@ export function ProfileMenu() {
                 <KeyRound className="w-4 h-4 text-slate-400" /> Change password
               </button>
             )}
+            <button onClick={() => { setOpen(false); navigate('/app/account/security'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+              <ShieldCheck className="w-4 h-4 text-slate-400" /> Security (two-factor)
+              {currentUser?.mfa_enabled && <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">On</span>}
+            </button>
             <button onClick={() => { setOpen(false); navigate('/app/connections'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
               <CalendarSync className="w-4 h-4 text-slate-400" /> Calendar and email sync
             </button>

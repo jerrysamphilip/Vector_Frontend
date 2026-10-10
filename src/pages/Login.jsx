@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Mail, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { authApi } from "../api/auth";
-import { isAuthenticated, consumeFirstLogin } from "../lib/authStorage";
+import { isAuthenticated, consumeFirstLogin, getStoredUser } from "../lib/authStorage";
+import MfaChallenge from "../components/auth/MfaChallenge";
 
 import bg from "../assets/bg.png";
 import logo from "../assets/logo.png";
@@ -20,6 +21,7 @@ const LoginPage = () => {
     const [remember, setRemember] = useState(false);
     const [error, setError] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [mfaToken, setMfaToken] = useState("");
 
     /* Load remembered email */
     useEffect(() => {
@@ -34,6 +36,16 @@ const LoginPage = () => {
             setRemember(true);
         }
     }, [navigate]);
+
+    const finishSignIn = () => {
+        const isFirst = consumeFirstLogin();
+        const user = getStoredUser();
+        if (user?.mfa_setup_required) {
+            navigate("/app/account/security", { replace: true });
+            return;
+        }
+        navigate(isFirst ? '/set-password' : fromPath, { replace: true });
+    };
 
     const handleLogin = async () => {
         setError("");
@@ -53,13 +65,13 @@ const LoginPage = () => {
                 localStorage.removeItem("rememberedEmail");
             }
 
-            const userFirstName = response?.user?.first_name;
-            if (userFirstName) {
-                localStorage.setItem("user_name", userFirstName);
+            if (response?.mfa_required) {
+                // Password OK; the session is issued after the second step
+                setPassword("");
+                setMfaToken(response.mfa_token);
+                return;
             }
-
-            const isFirst = consumeFirstLogin();
-            navigate(isFirst ? '/set-password' : fromPath, { replace: true });
+            finishSignIn();
         } catch (err) {
             setError(err?.response?.data?.detail || "Invalid email or password");
         } finally {
@@ -105,6 +117,13 @@ const LoginPage = () => {
                     </div>
                 </div>
 
+                {mfaToken ? (
+                    <MfaChallenge
+                        mfaToken={mfaToken}
+                        onSuccess={finishSignIn}
+                        onCancel={() => { setMfaToken(""); setError(""); }}
+                    />
+                ) : (<>
                 {/* ERROR */}
                 {error && (
                     <p className="text-red-400 text-sm text-center mb-4">
@@ -176,6 +195,7 @@ const LoginPage = () => {
                         {submitting ? "Signing in..." : "Login"}
                     </button>
                 </form>
+                </>)}
 
                 {/* FOOTER */}
                 <div className="mt-5 text-center">

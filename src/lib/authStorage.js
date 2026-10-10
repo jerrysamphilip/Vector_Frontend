@@ -1,13 +1,24 @@
-export const ACCESS_TOKEN_KEY = 'access_token';
-export const REFRESH_TOKEN_KEY = 'refresh_token';
+// Signed-in user info (name, role, permissions, two-factor state) for the UI. The session itself
+// lives in httpOnly cookies set by the API; no token is ever readable by or stored from JavaScript.
 export const USER_KEY = 'user';
+const CSRF_COOKIE = 'csrf_token';
+const LEGACY_TOKEN_KEYS = ['access_token', 'refresh_token'];
 
-export function getAccessToken() {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
-}
+// One-time cleanup: earlier builds kept tokens in web storage.
+(function removeLegacyTokens() {
+    try {
+        LEGACY_TOKEN_KEYS.forEach((k) => {
+            localStorage.removeItem(k);
+            sessionStorage.removeItem(k);
+        });
+    } catch { /* storage unavailable */ }
+})();
 
-export function getRefreshToken() {
-    return localStorage.getItem(REFRESH_TOKEN_KEY);
+/** The readable CSRF cookie, echoed in X-CSRF-Token on state-changing requests. */
+export function getCsrfToken() {
+    if (typeof document === 'undefined') return '';
+    const match = document.cookie.split('; ').find((c) => c.startsWith(`${CSRF_COOKIE}=`));
+    return match ? decodeURIComponent(match.slice(CSRF_COOKIE.length + 1)) : '';
 }
 
 export function getStoredUser() {
@@ -26,24 +37,28 @@ export function getDisplayName() {
     return localStorage.getItem('user_name') || 'User';
 }
 
+/** Store the user from a sign-in / session response. Token fields, if any, are ignored. */
 export function setAuthSession(payload) {
-    if (payload?.access_token) {
-        localStorage.setItem(ACCESS_TOKEN_KEY, payload.access_token);
-    }
-    if (payload?.refresh_token) {
-        localStorage.setItem(REFRESH_TOKEN_KEY, payload.refresh_token);
-    }
     if (payload?.user) {
         localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
         if (payload.user.first_name) {
             localStorage.setItem('user_name', payload.user.first_name);
         }
     }
-    if (payload?.first_login) {
-        localStorage.setItem('first_login', '1');
-    } else {
-        localStorage.removeItem('first_login');
+    if (payload && 'first_login' in payload) {
+        if (payload.first_login) localStorage.setItem('first_login', '1');
+        else localStorage.removeItem('first_login');
     }
+}
+
+/** Merge fields into the stored user (e.g. two-factor state after enabling it). */
+export function updateStoredUser(patch) {
+    const user = getStoredUser();
+    if (!user) return null;
+    const next = { ...user, ...patch };
+    localStorage.setItem(USER_KEY, JSON.stringify(next));
+    window.dispatchEvent(new Event('auth-user-changed'));
+    return next;
 }
 
 export function consumeFirstLogin() {
@@ -53,14 +68,21 @@ export function consumeFirstLogin() {
 }
 
 export function clearAuthSession() {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem('user_name');
+    localStorage.removeItem('first_login');
+    LEGACY_TOKEN_KEYS.forEach((k) => localStorage.removeItem(k));
 }
 
+/** The UI's view of "signed in": user info is present. The API cookie decides for real; a dead
+ *  session turns into a 401, a failed refresh, clearAuthSession() and the login page. */
 export function isAuthenticated() {
-    return Boolean(getAccessToken());
+    return Boolean(getStoredUser());
+}
+
+/** The workspace requires two-factor and this user has not set it up yet. */
+export function mfaSetupRequired() {
+    return Boolean(getStoredUser()?.mfa_setup_required);
 }
 
 /**

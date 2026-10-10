@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { NavLink, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Building2, Users, LogOut,
-    ChevronUp, KeyRound, Eye, EyeOff, X, CheckCircle, Shield,
+    ChevronUp, KeyRound, Eye, EyeOff, X, CheckCircle, Shield, ShieldCheck,
 } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import { authApi } from '../../api/auth';
@@ -167,9 +167,11 @@ export default function AdminLayout() {
     const [profileOpen, setProfileOpen] = useState(false);
     const [changePwOpen, setChangePwOpen] = useState(false);
 
+    const queryClient = useQueryClient();
     const handleLogout = async () => {
         try { await authApi.logout(); } catch {}
         clearAuthSession();
+        queryClient.clear();
         navigate('/login', { replace: true });
     };
 
@@ -287,6 +289,10 @@ export default function AdminLayout() {
                                         <KeyRound className="w-4 h-4 text-slate-400" /> Change Password
                                     </button>
                                 )}
+                                <button onClick={() => { setProfileOpen(false); navigate('/admin/security'); }}
+                                    className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+                                    <ShieldCheck className="w-4 h-4 text-slate-400" /> Security (two-factor)
+                                </button>
                                 <button onClick={handleLogout}
                                     className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors">
                                     <LogOut className="w-4 h-4" /> Sign out

@@ -140,7 +140,7 @@ export default function DeliverabilityTrendsChart({ domains = [] }) {
                             onChange={(e) => setSelectedDomain(e.target.value)}
                             className="appearance-none rounded-xl border border-slate-200 bg-slate-50 py-2 pl-4 pr-10 text-sm font-medium text-slate-700 outline-none transition-all hover:bg-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                         >
-                            <option value="ALL">Global (All Domains)</option>
+                            <option value="ALL">All domains (this workspace)</option>
                             {domains.map(d => (
                                 <option key={d.domain_name} value={d.domain_name}>
                                     {d.domain_name}
