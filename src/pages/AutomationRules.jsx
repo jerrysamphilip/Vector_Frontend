@@ -433,7 +433,7 @@ export default function AutomationRules() {
                                             onChange={(e) => setFormData({ ...formData, action_type: e.target.value })}
                                         >
                                             <option value="SEND_EMAIL">Send AI Template</option>
-                                            <option value="PAUSE_CAMPAIGN">Pause Campaign</option>
+                                            <option value="PAUSE_PROSPECT">Pause this contact</option>
                                         </select>
                                     </div>
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -405,9 +406,10 @@ export function ProfileMenu() {
           </div>
         </div>
       )}
-      <AnimatePresence>
-        {changePwOpen && <ChangePasswordModal currentUser={currentUser} onClose={() => setChangePwOpen(false)} />}
-      </AnimatePresence>
+      {createPortal(
+        <AnimatePresence>
+          {changePwOpen && <ChangePasswordModal currentUser={currentUser} onClose={() => setChangePwOpen(false)} />}
+        </AnimatePresence>, document.body)}
     </div>
   );
 }
