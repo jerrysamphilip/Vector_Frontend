@@ -62,6 +62,7 @@ function normalizeError(error) {
     if (Array.isArray(data.detail)) {
         data.detail = data.detail.map(d => (d?.loc ? `${d.loc.filter(l => l !== 'body').join('.')}: ${d.msg}` : d?.msg || String(d))).join('; ');
     } else if (data.detail && typeof data.detail === 'object') {
+        data.detail_data = data.detail; // keep the structured detail (e.g. {prospect_id}, {lead_id}) for callers
         data.code = data.detail.code;
         data.detail = data.detail.message || data.detail.code || 'Request failed';
     }

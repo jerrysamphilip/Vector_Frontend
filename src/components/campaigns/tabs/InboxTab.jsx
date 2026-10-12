@@ -276,7 +276,8 @@ export default function InboxTab({ campaignId, inboxIds = [], onTabChange, class
             navigate(`/app/leads/${lead.lead_id}`);
         } catch (err) {
             const detail = err?.response?.data?.detail;
-            if (err?.response?.status === 409 && detail?.lead_id) navigate(`/app/leads/${detail.lead_id}`);
+            const info = err?.response?.data?.detail_data;
+            if (err?.response?.status === 409 && info?.lead_id) navigate(`/app/leads/${info.lead_id}`);
             else setLeadError(typeof detail === 'string' ? detail : 'Could not create the lead');
         } finally { setLeadBusy(null); }
     };

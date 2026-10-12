@@ -21,7 +21,7 @@ export function NewLeadModal({ onClose, onCreated, contact }) {
         mutationFn: () => leadsApi.create({ prospect_id: picked.prospect_id, source: source || undefined }),
         onSuccess: onCreated,
         onError: err => {
-            const id = err?.response?.data?.detail?.lead_id;
+            const id = err?.response?.data?.detail_data?.lead_id;
             setError(id ? <>This contact already has an open lead. <Link className="font-semibold underline" to={`/app/leads/${id}`}>Open it</Link></> : errorMessage(err));
         },
     });
@@ -82,7 +82,7 @@ function ReplySuggestions() {
         mutationFn: (messageId) => leadsApi.fromMessage(messageId),
         onSuccess: (lead) => { queryClient.invalidateQueries({ queryKey: ['leads'] }); queryClient.invalidateQueries({ queryKey: ['reply-suggestions'] }); navigate(`/app/leads/${lead.lead_id}`); },
         onError: (e) => {
-            const detail = e?.response?.data?.detail;
+            const detail = e?.response?.data?.detail_data;
             if (e?.response?.status === 409 && detail?.lead_id) navigate(`/app/leads/${detail.lead_id}`);
             else setError(errorMessage(e));
         },
