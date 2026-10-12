@@ -27,7 +27,7 @@ export function AccountFormModal({ account, onClose, onSaved }) {
     const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }));
     const save = useMutation({
         mutationFn: () => {
-            const payload = { ...form, annual_revenue: form.annual_revenue === '' ? null : form.annual_revenue, lifecycle_stage: form.lifecycle_stage || null };
+            const payload = { ...form, annual_revenue: form.annual_revenue === '' || form.annual_revenue == null ? null : String(form.annual_revenue), lifecycle_stage: form.lifecycle_stage || null };
             return account ? accountsApi.update(account.account_id, payload) : accountsApi.create(payload);
         },
         onSuccess: onSaved,

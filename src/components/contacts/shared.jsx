@@ -169,7 +169,7 @@ export function CustomFieldInput({ field, value, onChange }) {
         );
     }
     const type = { NUMBER: 'number', DATE: 'date', URL: 'url', PHONE: 'tel' }[field.field_type] || 'text';
-    return <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)} className={inputClass} />;
+    return <input type={type} value={value ?? ''} onChange={e => onChange(type === 'number' && e.target.value !== '' && !Number.isNaN(Number(e.target.value)) ? Number(e.target.value) : e.target.value)} className={inputClass} />;
 }
 
 export function formatCustomValue(field, value) {
