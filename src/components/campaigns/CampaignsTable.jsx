@@ -116,7 +116,7 @@ export function ColumnPicker({ visible, onChange, onClose }) {
 export default function CampaignsTable({
     campaigns, isLoading, onAction, performingActionId,
     selectedIds = [], onToggleSelect, onToggleAll,
-    visibleCols = []
+    visibleCols = [], searchTerm = ''
 }) {
     const navigate = useNavigate();
 
@@ -140,9 +140,9 @@ export default function CampaignsTable({
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0046FF] to-[#73C8D2] flex items-center justify-center mb-4 shadow-lg">
                     <Mail className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-slate-900 font-semibold text-lg">No campaigns yet</h3>
+                <h3 className="text-slate-900 font-semibold text-lg">{searchTerm ? 'No campaigns match your search' : 'No campaigns yet'}</h3>
                 <p className="text-slate-400 text-sm mt-1 max-w-sm">
-                    Create your first campaign to start reaching out to prospects.
+                    {searchTerm ? 'Try a different name, or clear the search.' : 'Create your first campaign to start reaching out to prospects.'}
                 </p>
             </div>
         );

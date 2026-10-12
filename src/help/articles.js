@@ -158,13 +158,15 @@ const CRM = [
     {
         id: 'contact-record', category: 'CRM', title: 'A contact\'s page', routes: ['/app/contacts/:id'],
         summary: 'Everything about one person: details, activity, tasks, lists, deals and history.',
-        keywords: ['contact detail', 'timeline', 'notes', 'activity', 'lifecycle', 'subscription'],
+        keywords: ['contact detail', 'timeline', 'notes', 'activity', 'lifecycle', 'subscription', 'mention', 'associated companies', 'association label'],
         body: [
             { list: [
                 { term: 'Left', text: 'the contact\'s details and properties. Click a value to edit it; changes are saved and recorded in history.' },
                 { term: 'Middle', text: 'the activity timeline: notes, calls, meetings and emails you log, campaign emails sent and received, and changes. Log something with the composer at the top.' },
-                { term: 'Right', text: 'company, open tasks, lists, leads and deals for this contact.' },
+                { term: 'Right', text: 'companies, open tasks, lists, leads and deals for this contact.' },
             ] },
+            { p: '**Companies**: a contact can be associated with several companies, each with a label such as *Decision maker* or *Billing*. One is the **primary** company (the one shown in the Company field); use the star to make another company primary. To remove the primary company, choose which one takes its place.' },
+            { p: '**@mentions**: in a note, type **@** and pick a colleague (arrow keys and Enter work). They get a notification in the bell that links to the record, and an email too if they turned email notifications on.' },
             { p: '**Create lead** starts qualifying this contact as a sales lead. Lifecycle stage moves on its own as the lead and deal progress (Lead → MQL → SQL → Opportunity → Customer).' },
             { p: 'Subscription status shows whether the contact can receive campaign emails. Unsubscribed contacts are never emailed.' },
         ],
@@ -342,7 +344,7 @@ const SALES = [
     {
         id: 'forecasting', category: 'Sales', title: 'Forecasts and targets explained',
         summary: 'How weighted pipeline, forecast categories and targets fit together.',
-        keywords: ['forecast', 'commit', 'best case', 'weighted', 'quarter', 'financial year', 'target', 'attainment'],
+        keywords: ['forecast', 'commit', 'best case', 'weighted', 'quarter', 'financial year', 'target', 'attainment', 'forecast accuracy', 'sql to win'],
         body: [
             { list: [
                 { term: 'Weighted', text: 'amount × stage probability. A $100K deal at Proposal (50%) counts $50K.' },
@@ -353,6 +355,8 @@ const SALES = [
             ] },
             { p: 'Forecast categories are set from the stage probability (70% and above: Commit; 40% and above: Best case; otherwise Pipeline). Reps can override a deal\'s category on the deal page.' },
             { p: 'The financial year starts in April: Q1 is April–June.' },
+            { p: '**Forecast accuracy** (Sales reports → Forecast): at the start of every month and quarter the forecast is stored automatically; when the period ends it is compared with revenue actually won: accuracy = 1 − |actual − forecast| ÷ forecast. Admins can store it by hand with **Take snapshot now**.' },
+            { p: '**SQL to win** (Sales reports → Leads & SQLs): of the leads that reached SQL in the period, the share whose deal was won.' },
         ],
         related: ['sales-reports', 'targets', 'deal-page'],
     },

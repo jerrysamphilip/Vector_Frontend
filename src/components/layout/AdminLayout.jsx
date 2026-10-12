@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { NavLink, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -45,6 +45,13 @@ function ChangePasswordModal({ currentUser, onClose }) {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [forgotMsg, setForgotMsg] = useState('');
+
+    // Escape closes the dialog, like the other overlays
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
 
     const forgotPwMutation = useMutation({
         mutationFn: () => authApi.forgotPassword(currentUser?.email),

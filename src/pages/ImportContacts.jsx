@@ -161,6 +161,8 @@ export default function ImportContacts() {
     const mapped = Object.values(mapping);
     const hasEmail = mapped.includes('contact.email');
     const hasCompany = mapped.some(t => ['company.name', 'company.domain', 'company.website'].includes(t));
+    // Contact properties (and custom properties) are matched on email: without an Email column they can't be imported
+    const contactColumnsWithoutEmail = hasEmail ? [] : Object.keys(mapping).filter(h => /^(contact\.|custom\.|new:)/.test(mapping[h] || ''));
     const duplicateTargets = mapped.filter(t => t !== 'skip' && !t.startsWith('new:')).filter((t, i, all) => all.indexOf(t) !== i);
 
     return (
@@ -196,6 +198,7 @@ export default function ImportContacts() {
                             </tbody>
                         </table>
                         {!hasEmail && !hasCompany && <p className="text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-2.5 mt-3">Map an Email column or a Company name/domain column.</p>}
+                        {contactColumnsWithoutEmail.length > 0 && <p className="text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-2.5 mt-3">Contact properties need an Email column to match contacts. Map an Email column, or set {contactColumnsWithoutEmail.map(h => `“${h}”`).join(', ')} to a Company field or Skip.</p>}
                         {duplicateTargets.length > 0 && <p className="text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-2.5 mt-3">More than one column maps to the same property; the last one wins.</p>}
                     </div>
 
@@ -237,7 +240,7 @@ export default function ImportContacts() {
                 {preview && (
                     <div className="flex gap-2">
                         <PrimaryButton onClick={() => doImport.mutate()} loading={doImport.isPending}
-                            disabled={(!hasEmail && !hasCompany) || (options.list_mode === 'existing' && !options.list_id)}>
+                            disabled={(!hasEmail && !hasCompany) || contactColumnsWithoutEmail.length > 0 || (options.list_mode === 'existing' && !options.list_id)}>
                             <Upload className="w-4 h-4" /> Import {preview.row_count.toLocaleString()} rows
                         </PrimaryButton>
                         <SecondaryButton onClick={reset}>Cancel</SecondaryButton>

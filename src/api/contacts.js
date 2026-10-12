@@ -43,12 +43,22 @@ export const contactsApi = {
     updateActivity: (activityId, payload) => patch(`/contacts/activities/${activityId}`, payload),
     deleteActivity: (activityId) => del(`/contacts/activities/${activityId}`),
 
+    // Companies the contact is associated with, with labels (CM-014)
+    companies: (id) => get(`/contacts/${id}/companies`),
+    addCompany: (id, payload) => post(`/contacts/${id}/companies`, payload),
+    updateCompany: (id, accountId, payload) => patch(`/contacts/${id}/companies/${accountId}`, payload),
+    removeCompany: (id, accountId, newPrimaryId) =>
+        del(`/contacts/${id}/companies/${accountId}${newPrimaryId ? `?new_primary_id=${encodeURIComponent(newPrimaryId)}` : ''}`),
+    // Colleagues for the @mention picker in notes (BR-CM-16)
+    mentionableUsers: (q) => get('/contacts/mentionable-users', { q }),
+
     facets: () => get('/contacts/facets'),
     owners: () => get('/contacts/owners'),
     bulk: (payload) => post('/contacts/bulk', payload),
 
     deleted: (params) => get('/contacts/deleted', params),
     restore: (ids) => post('/contacts/restore', { prospect_ids: ids }),
+    purge: (ids) => post('/contacts/purge', { prospect_ids: ids }),
 
     duplicates: () => get('/contacts/duplicates'),
     merge: (primaryId, duplicateIds, choices = {}) =>

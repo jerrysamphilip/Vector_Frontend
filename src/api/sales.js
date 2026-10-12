@@ -71,6 +71,10 @@ export const salesReportsApi = {
     targets: (params) => get('/sales-reports/targets', params),
     leaderboard: (params) => get('/sales-reports/leaderboard', params),
     campaignRoi: (params) => get('/sales-reports/campaign-roi', params),
+    // KPI reports (BRD v2.0 section 8)
+    sqlToWin: (params) => get('/sales-reports/sql-to-win', params),
+    forecastAccuracy: (params) => get('/sales-reports/forecast-accuracy', params),
+    takeForecastSnapshot: (payload) => post('/sales-reports/forecast-snapshots', payload),
 };
 
 export const notificationsApi = {
@@ -146,4 +150,7 @@ const currency = new Intl.NumberFormat('en', { style: 'currency', currency: CURR
 const compact = new Intl.NumberFormat('en', { style: 'currency', currency: CURRENCY, notation: 'compact', maximumFractionDigits: 1 });
 export const money = (v) => (v == null ? '—' : currency.format(v));
 export const moneyShort = (v) => (v == null ? '—' : compact.format(v));
+// Prices, quote lines and quote totals keep their cents ($49.50, not $50)
+const exact = new Intl.NumberFormat('en', { style: 'currency', currency: CURRENCY, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const moneyExact = (v) => (v == null || v === '' || Number.isNaN(Number(v)) ? '—' : exact.format(Number(v)));
 export const pct = (v) => (v == null ? '—' : `${v}%`);

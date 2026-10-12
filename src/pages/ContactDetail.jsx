@@ -9,12 +9,15 @@ import {
 import { contactsApi, tasksApi, errorMessage } from '../api/contacts';
 import { dealsApi, leadsApi, moneyShort } from '../api/sales';
 import { NewLeadModal } from './Leads';
+import { DealFormModal } from './Deals';
 import { DealStatusBadge, LeadStageBadge } from '../components/sales/shared';
 import {
     Avatar, TagInput, OwnerSelect, CustomFieldInput, Field, inputClass, ErrorNote,
     PrimaryButton, SecondaryButton, formatDateTime, relativeDate, parseDate, useCrmMeta,
     StageBadge, StatusBadge, formatCustomValue,
 } from '../components/contacts/shared';
+import MentionTextarea, { MentionText, activeMentions } from '../components/contacts/MentionTextarea';
+import ContactCompaniesCard from '../components/contacts/ContactCompaniesCard';
 
 const CALL_OUTCOMES = ['Connected', 'Left voicemail', 'No answer', 'Wrong number', 'Busy'];
 
@@ -55,6 +58,7 @@ function Composer({ contactId, owners, onLogged }) {
     const [type, setType] = useState('NOTE');
     const blank = { subject: '', body: '', outcome: 'Connected', duration_minutes: '', occurred_at: toLocalInput(), due_at: '', priority: 'MEDIUM', owner_id: '' };
     const [form, setForm] = useState(blank);
+    const [mentions, setMentions] = useState([]);
     const [error, setError] = useState(null);
     const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }));
 
@@ -67,8 +71,9 @@ function Composer({ contactId, owners, onLogged }) {
                 outcome: type === 'CALL' ? form.outcome : undefined,
                 duration_minutes: ['CALL', 'MEETING'].includes(type) && form.duration_minutes ? Number(form.duration_minutes) : undefined,
                 occurred_at: type !== 'NOTE' && form.occurred_at ? new Date(form.occurred_at).toISOString() : undefined,
+                mentioned_user_ids: type === 'NOTE' ? activeMentions(form.body, mentions).map(m => m.user_id) : undefined,
             }),
-        onSuccess: () => { setForm(blank); setError(null); onLogged(); },
+        onSuccess: () => { setForm(blank); setMentions([]); setError(null); onLogged(); },
         onError: err => setError(errorMessage(err)),
     });
 
@@ -105,9 +110,16 @@ function Composer({ contactId, owners, onLogged }) {
                         </>}
                     </div>
                 )}
-                <textarea rows={type === 'NOTE' ? 3 : 2} value={form.body} onChange={set('body')}
-                    placeholder={{ NOTE: 'Write a note about this contact…', TASK: 'Notes (optional)', EMAIL: 'What did the email say?' }[type] || 'What was discussed?'}
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 resize-y" />
+                {type === 'NOTE' ? (
+                    <MentionTextarea rows={3} value={form.body} onChange={body => setForm(f => ({ ...f, body }))}
+                        mentions={mentions} onMentionsChange={setMentions} aria-label="Note"
+                        placeholder="Write a note about this contact… Type @ to mention a colleague"
+                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 resize-y" />
+                ) : (
+                    <textarea rows={2} value={form.body} onChange={set('body')}
+                        placeholder={{ TASK: 'Notes (optional)', EMAIL: 'What did the email say?' }[type] || 'What was discussed?'}
+                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 resize-y" />
+                )}
                 <ErrorNote message={error} />
                 <div className="flex justify-end">
                     <PrimaryButton onClick={() => save.mutate()} loading={save.isPending} disabled={!canSave}>
@@ -124,7 +136,13 @@ function ActivityBody({ item, onChanged }) {
     const a = item.activity;
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState({ subject: a.subject || '', body: a.body || '', outcome: a.outcome || '' });
-    const save = useMutation({ mutationFn: () => contactsApi.updateActivity(a.activity_id, draft), onSuccess: () => { setEditing(false); onChanged(); } });
+    const [draftMentions, setDraftMentions] = useState(a.mentions || []);
+    const isNote = a.activity_type === 'NOTE';
+    const save = useMutation({
+        mutationFn: () => contactsApi.updateActivity(a.activity_id, isNote
+            ? { ...draft, mentioned_user_ids: activeMentions(draft.body, draftMentions).map(m => m.user_id) } : draft),
+        onSuccess: () => { setEditing(false); onChanged(); },
+    });
     const remove = useMutation({ mutationFn: () => contactsApi.deleteActivity(a.activity_id), onSuccess: onChanged });
 
     if (editing) {
@@ -134,7 +152,10 @@ function ActivityBody({ item, onChanged }) {
                 {a.activity_type === 'CALL' && (
                     <select className={inputClass} value={draft.outcome} onChange={e => setDraft(d => ({ ...d, outcome: e.target.value }))}>{CALL_OUTCOMES.map(o => <option key={o}>{o}</option>)}</select>
                 )}
-                <textarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm" value={draft.body} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} />
+                {isNote
+                    ? <MentionTextarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm" value={draft.body}
+                        onChange={body => setDraft(d => ({ ...d, body }))} mentions={draftMentions} onMentionsChange={setDraftMentions} aria-label="Note" />
+                    : <textarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm" value={draft.body} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} />}
                 <div className="flex gap-2">
                     <PrimaryButton onClick={() => save.mutate()} loading={save.isPending} className="h-8 px-3 text-xs"><Check className="w-3.5 h-3.5" /> Save</PrimaryButton>
                     <SecondaryButton onClick={() => setEditing(false)} className="h-8 px-3 text-xs">Cancel</SecondaryButton>
@@ -146,7 +167,7 @@ function ActivityBody({ item, onChanged }) {
         <div>
             {a.subject && (a.activity_type !== 'NOTE' || !a.body) && <p className={`text-sm ${a.activity_type === 'NOTE' ? 'text-slate-700' : 'font-semibold text-slate-800'}`}>{a.subject}</p>}
             {(a.outcome || a.duration_minutes) && <p className="text-xs text-slate-500 mt-0.5">{[a.outcome, a.duration_minutes ? `${a.duration_minutes} min` : null].filter(Boolean).join(' · ')}</p>}
-            {a.body && <p className="text-sm text-slate-700 whitespace-pre-wrap mt-1">{a.body}</p>}
+            {a.body && <p className="text-sm text-slate-700 whitespace-pre-wrap mt-1"><MentionText text={a.body} mentions={a.mentions} /></p>}
             <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
                 <span>{a.created_by_name ? `by ${a.created_by_name}` : ''}</span>
                 {item.can_edit && <>
@@ -245,7 +266,9 @@ function CrmCard({ contact, meta, onUpdate, error }) {
                         {(meta?.lead_statuses || []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                 </Field>
-                <Field label="Email subscription">
+                {/* Not a <Field>/<label>: a button inside a label takes the whole label as its accessible name */}
+                <div role="group" aria-labelledby="email-subscription-label">
+                    <span id="email-subscription-label" className="block text-xs font-medium text-slate-600 mb-1.5">Email subscription</span>
                     <div className="flex items-center justify-between gap-2">
                         <span className={`text-sm font-semibold ${unsub ? 'text-red-600' : 'text-emerald-700'}`}>{unsub ? 'Unsubscribed' : 'Subscribed'}</span>
                         <button onClick={() => window.confirm(unsub
@@ -253,7 +276,7 @@ function CrmCard({ contact, meta, onUpdate, error }) {
                             : 'Unsubscribe this contact? They are added to the global unsubscribe list and queued emails are cancelled.') && onUpdate({ consent_status: unsub ? 'OPT_IN' : 'UNSUBSCRIBED' })}
                             className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">{unsub ? 'Resubscribe' : 'Unsubscribe'}</button>
                     </div>
-                </Field>
+                </div>
                 <Field label="Legal basis for processing">
                     <select className={inputClass} value={contact.legal_basis || ''} onChange={e => onUpdate({ legal_basis: e.target.value || null })}>
                         <option value="">Not recorded</option>
@@ -430,6 +453,7 @@ function SalesCard({ contact }) {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [creating, setCreating] = useState(false);
+    const [creatingDeal, setCreatingDeal] = useState(false);
     const id = contact.prospect_id;
     const { data: leads } = useQuery({ queryKey: ['leads', 'contact', id], queryFn: () => leadsApi.list({ prospect_id: id, page_size: 10 }) });
     const { data: deals } = useQuery({ queryKey: ['deals', 'contact', id], queryFn: () => dealsApi.list({ prospect_id: id, page_size: 10, sort_by: 'created_at', sort_order: 'desc' }) });
@@ -438,7 +462,10 @@ function SalesCard({ contact }) {
     const hasOpenLead = leadItems.some(l => ['NEW', 'CONTACTED', 'ENGAGED', 'SQL'].includes(l.stage));
     return (
         <SideCard title="Sales" empty="No lead or opportunity yet."
-            action={!hasOpenLead && <button onClick={() => setCreating(true)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">+ Create lead</button>}>
+            action={<div className="flex items-center gap-3">
+                {!hasOpenLead && <button onClick={() => setCreating(true)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">+ Create lead</button>}
+                <button onClick={() => setCreatingDeal(true)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">+ Create deal</button>
+            </div>}>
             {(leadItems.length > 0 || dealItems.length > 0) && (
                 <ul className="space-y-2">
                     {leadItems.map(l => (
@@ -453,6 +480,8 @@ function SalesCard({ contact }) {
             )}
             {creating && <NewLeadModal contact={contact} onClose={() => setCreating(false)}
                 onCreated={l => { setCreating(false); queryClient.invalidateQueries({ queryKey: ['leads'] }); navigate(`/app/leads/${l.lead_id}`); }} />}
+            {creatingDeal && <DealFormModal defaults={{ prospect_id: id, account_id: contact.account?.account_id || '' }} defaultAccountName={contact.account?.name} onClose={() => setCreatingDeal(false)}
+                onSaved={d => { setCreatingDeal(false); queryClient.invalidateQueries({ queryKey: ['deals'] }); navigate(`/app/deals/${d.opportunity_id}`); }} />}
         </SideCard>
     );
 }
@@ -616,15 +645,7 @@ export default function ContactDetail() {
 
                 <div className="space-y-5 lg:col-start-2 2xl:col-start-auto">
                     <SalesCard contact={contact} />
-                    <SideCard title="Company" empty="Not linked to a company.">
-                        {contact.account && (
-                            <div className="text-sm">
-                                <Link to={`/app/accounts/${contact.account.account_id}`} className="font-semibold text-indigo-600 hover:text-indigo-800">{contact.account.name}</Link>
-                                <p className="text-xs text-slate-500 mt-0.5">{[contact.account.domain, contact.account.industry].filter(Boolean).join(' · ')}</p>
-                                <p className="text-xs text-slate-500 mt-1">{contact.account.contact_count} contact{contact.account.contact_count === 1 ? '' : 's'}{contact.account.lifecycle_stage ? ` · ${stageLabel[contact.account.lifecycle_stage] || contact.account.lifecycle_stage}` : ''}</p>
-                            </div>
-                        )}
-                    </SideCard>
+                    <ContactCompaniesCard contact={contact} onChanged={refresh} card={card} cardShadow={cardShadow} />
                     <TasksCard contactId={id} onChanged={refresh} />
                     <SideCard title="Lists" empty="Not on any list.">
                         {contact.lists.length > 0 && (

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { Link } from 'react-router-dom';
 import { ArrowLeft, RotateCcw, Search, Loader2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { accountsApi, contactsApi, errorMessage } from '../api/contacts';
-import { Avatar, ErrorNote, PrimaryButton, formatDateTime, parseDate, relativeDate } from '../components/contacts/shared';
+import { Avatar, ErrorNote, Modal, PrimaryButton, SecondaryButton, formatDateTime, parseDate, relativeDate } from '../components/contacts/shared';
 
 const PAGE_SIZE = 25;
 const daysLeft = (purgeAt) => Math.max(0, Math.ceil((parseDate(purgeAt) - Date.now()) / 86400000));
@@ -14,6 +14,7 @@ function DeletedContacts({ setNotice, setError }) {
     const [q, setQ] = useState('');
     const [page, setPage] = useState(1);
     const [selected, setSelected] = useState([]);
+    const [confirmPurge, setConfirmPurge] = useState(false);
     useEffect(() => { const t = setTimeout(() => { setQ(search); setPage(1); }, 300); return () => clearTimeout(t); }, [search]);
 
     const { data, isLoading } = useQuery({
@@ -27,6 +28,16 @@ function DeletedContacts({ setNotice, setError }) {
             ['contacts-deleted', 'contacts', 'accounts', 'contact-facets'].forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
         },
         onError: err => setError(errorMessage(err)),
+    });
+    const purge = useMutation({
+        mutationFn: ids => contactsApi.purge(ids),
+        onSuccess: res => {
+            setNotice(`Permanently deleted ${res.purged} contact${res.purged !== 1 ? 's' : ''}.`);
+            setSelected([]);
+            setConfirmPurge(false);
+            ['contacts-deleted', 'contacts', 'accounts', 'contact-facets'].forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
+        },
+        onError: err => { setConfirmPurge(false); setError(errorMessage(err)); },
     });
 
     const items = data?.items || [];
@@ -46,6 +57,12 @@ function DeletedContacts({ setNotice, setError }) {
                     <PrimaryButton onClick={() => restore.mutate(selected)} loading={restore.isPending}>
                         <RotateCcw className="w-4 h-4" /> Restore {selected.length}
                     </PrimaryButton>
+                )}
+                {selected.length > 0 && (
+                    <button onClick={() => setConfirmPurge(true)} disabled={purge.isPending}
+                        className="h-9 px-3.5 text-sm font-semibold text-red-600 bg-white border border-red-200 hover:bg-red-50 rounded-lg flex items-center gap-2 disabled:opacity-60">
+                        <Trash2 className="w-4 h-4" /> Delete forever
+                    </button>
                 )}
                 <span className="ml-auto text-sm text-slate-500">{total.toLocaleString()} deleted contact{total !== 1 ? 's' : ''}</span>
             </div>
@@ -86,6 +103,18 @@ function DeletedContacts({ setNotice, setError }) {
                         ))}
                     </tbody>
                 </table>
+            )}
+            {confirmPurge && (
+                <Modal title={`Delete ${selected.length} contact${selected.length !== 1 ? 's' : ''} forever?`} onClose={() => !purge.isPending && setConfirmPurge(false)}
+                    footer={<>
+                        <SecondaryButton onClick={() => setConfirmPurge(false)} disabled={purge.isPending}>Cancel</SecondaryButton>
+                        <button onClick={() => purge.mutate(selected)} disabled={purge.isPending}
+                            className="h-9 px-4 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg flex items-center gap-2 disabled:opacity-60">
+                            {purge.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Delete forever
+                        </button>
+                    </>}>
+                    <p className="text-sm text-slate-600">The selected contacts and their emails, activity, list memberships and leads are removed permanently. This cannot be undone.</p>
+                </Modal>
             )}
             {total > PAGE_SIZE && (
                 <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100">

@@ -87,6 +87,13 @@ function ChangePasswordModal({ currentUser, onClose }) {
   const [success, setSuccess] = useState(false);
   const [forgotMsg, setForgotMsg] = useState('');
 
+  // Escape closes the dialog, like the other overlays
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const forgotPwMutation = useMutation({
     mutationFn: () => authApi.forgotPassword(currentUser?.email),
     onSuccess: () => {

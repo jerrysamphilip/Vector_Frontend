@@ -6,6 +6,7 @@ import { money, moneyShort, pct, salesReportsApi } from '../api/sales';
 import { ClientTypeFilter, HBar, MemberFilter, PERIODS, PageHeader, PeriodFilter, Seg, StatTile, card, cardShadow, periodRange, selectSm } from '../components/sales/shared';
 import { Funnel } from './SalesDashboard';
 import CustomReports from '../components/sales/CustomReports';
+import { ForecastAccuracyCard, SqlToWinCard } from '../components/sales/KpiCards';
 
 const WON = '#059669';
 const WEIGHTED = '#2d6bbf';
@@ -27,6 +28,7 @@ function LeadsTab({ member, period }) {
                 <StatTile label="Lead → SQL" value={pct(data.lead_to_sql_rate)} />
                 <StatTile label="Average days to SQL" value={data.average_days_to_sql ?? '—'} />
             </div>
+            <SqlToWinCard member={member} range={range} />
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                 <div className={`${card} p-5`} style={cardShadow}>
                     <h2 className="text-sm font-bold text-slate-800 mb-3">Funnel</h2>
@@ -169,6 +171,7 @@ function ForecastTab({ member }) {
                     ))}
                 </div>
             </div>
+            <ForecastAccuracyCard member={member} />
         </div>
     );
 }

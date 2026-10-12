@@ -49,6 +49,7 @@ const TestAutomation = lazy(() => import('./pages/TestAutomation'));
 const TeamManagement = lazy(() => import('./pages/TeamManagement'));
 const SetPassword = lazy(() => import('./pages/SetPassword'));
 const AccountSecurity = lazy(() => import('./pages/AccountSecurity'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 import ErrorBoundary from './components/common/ErrorBoundary';
 import './index.css';
 
@@ -172,6 +173,7 @@ function App() {
                         <Route path="team" element={<PermissionRoute permission="manage_team"><TeamManagement /></PermissionRoute>} />
                         {import.meta.env.DEV && <Route path="test-automation" element={<TestAutomation />} />}
                         <Route path="settings" element={<Dashboard />} />
+                        <Route path="*" element={<NotFound />} />
                     </Route>
 
                     {/* Platform Admin routes — separate layout */}

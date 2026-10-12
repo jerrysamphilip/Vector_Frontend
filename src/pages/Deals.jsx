@@ -9,7 +9,7 @@ import { ErrorNote, Field, Modal, OwnerSelect, PrimaryButton, SecondaryButton, i
 import { ClientTypeBadge, ClientTypeFilter, DealStatusBadge, Empty, OwnerFilter, PageHeader, Seg, card, cardShadow, selectSm, useLeadsMeta, useTeamOwners } from '../components/sales/shared';
 import CloseReasonModal from '../components/sales/CloseReasonModal';
 
-export function DealFormModal({ onClose, onSaved, defaults = {} }) {
+export function DealFormModal({ onClose, onSaved, defaults = {}, defaultAccountName }) {
     const owners = useTeamOwners();
     const me = getStoredUser();
     const meta = useLeadsMeta();
@@ -32,6 +32,9 @@ export function DealFormModal({ onClose, onSaved, defaults = {} }) {
                 <Field label="Company" className="sm:col-span-2">
                     <select className={inputClass} value={form.account_id} onChange={set('account_id')}>
                         <option value="">No company</option>
+                        {/* A pre-filled company may be outside the picker's first page */}
+                        {defaults.account_id && defaultAccountName && !(companies?.items || []).some(a => a.account_id === defaults.account_id)
+                            && <option value={defaults.account_id}>{defaultAccountName}</option>}
                         {(companies?.items || []).map(a => <option key={a.account_id} value={a.account_id}>{a.name}</option>)}
                     </select>
                 </Field>
