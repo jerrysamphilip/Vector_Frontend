@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { campaignApi } from '../../../api/campaigns';
 import { prospectsApi } from '../../../api/prospects';
+import { reportsApi } from '../../../api/reports';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import Loading from '../../common/Loading';
 
@@ -270,7 +271,8 @@ export default function LeadListTab({ campaignId }) {
                         </button>
 
                         {/* Export Button */}
-                        <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-all">
+                        <button onClick={() => reportsApi.exportProspectsCsv(campaignId).catch(e => window.alert(e?.response?.status === 403 ? 'You do not have permission to export data.' : 'Export failed'))}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-all">
                             <Download className="w-3.5 h-3.5" />
                             Export
                         </button>

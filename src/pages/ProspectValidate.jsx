@@ -13,9 +13,11 @@ import {
 } from 'lucide-react';
 import PageTransition from '../components/layout/PageTransition';
 import { apiClient as api } from '../api/http';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function ProspectValidate() {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const location = useLocation();
     const [data, setData] = useState(null);
     const [records, setRecords] = useState([]);
@@ -110,6 +112,9 @@ export default function ProspectValidate() {
                     title: data.title,
                     records: records.filter(r => r.status === 'ACCEPTED'),
             });
+            queryClient.invalidateQueries({ queryKey: ['prospect-lists'] });
+            queryClient.invalidateQueries({ queryKey: ['prospect-stats'] });
+            queryClient.invalidateQueries({ queryKey: ['campaign-lists'] });
             navigate('/app/prospects', { replace: true });
         } catch (err) {
             setError(err.response?.data?.detail || err.message);

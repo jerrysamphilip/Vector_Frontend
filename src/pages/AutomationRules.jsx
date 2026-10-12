@@ -85,7 +85,7 @@ export default function AutomationRules() {
         if (!campaignId) return;
         try {
             const data = await campaignApi.getTemplates(campaignId);
-            setTemplates(data || []);
+            setTemplates(Array.isArray(data) ? data : (data?.templates || []));
         } catch (error) {
             console.error('Error fetching templates:', error);
         }

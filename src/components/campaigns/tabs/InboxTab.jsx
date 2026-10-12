@@ -1,3 +1,4 @@
+import { getStoredUser } from '../../../lib/authStorage';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
     Search, Send, RefreshCw, Mail, User,
@@ -298,6 +299,8 @@ export default function InboxTab({ campaignId, inboxIds = [], onTabChange, class
 
     // Check if any inbox has IMAP configured
     useEffect(() => {
+        // GET /inboxes is admin-only; other roles would just collect a 403
+        if (!['SUPER_ADMIN', 'ADMIN'].includes(getStoredUser()?.role)) { setImapReady(true); return; }
         api.get('/inboxes')
             .then(res => {
                 const all = res.data.items || res.data || [];
@@ -429,7 +432,7 @@ export default function InboxTab({ campaignId, inboxIds = [], onTabChange, class
     const unreadCount = conversations.filter(c => c.is_unread).length;
 
     // Show IMAP setup guide when not configured
-    if (imapReady === false) {
+    if (imapReady === false && conversations.length === 0 && !loading) {
         return (
             <div className={`flex flex-col ${className} rounded-2xl overflow-hidden border border-amber-200 bg-white`}
                 style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>

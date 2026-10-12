@@ -153,7 +153,7 @@ function App() {
                         <Route path="help" element={<HelpCenter />} />
                         <Route path="help/:articleId" element={<HelpCenter />} />
                         <Route path="recently-deleted" element={<PermissionRoute permission="manage_prospects"><RecentlyDeleted /></PermissionRoute>} />
-                        <Route path="analytics" element={<Dashboard />} />
+                        <Route path="analytics" element={<PermissionRoute permission="view_analytics"><Dashboard /></PermissionRoute>} />
                         <Route
                             path="reports"
                             element={(

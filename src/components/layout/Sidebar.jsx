@@ -22,7 +22,7 @@ const NAV = [
   ] },
   { title: 'Outreach', items: [
     { name: 'Campaigns', href: '/app/campaigns', icon: Mail, permission: 'manage_campaigns' },
-    { name: 'Campaign analytics', href: '/app/analytics', icon: BarChart3 },
+    { name: 'Campaign analytics', href: '/app/analytics', icon: BarChart3, permission: 'view_analytics' },
     { name: 'Templates', href: '/app/templates', icon: FileText },
     { name: 'AI email writer', href: '/app/ai-email', icon: Sparkles },
     { name: 'Email accounts', href: '/app/inboxes', icon: Inbox, permission: 'manage_inboxes' },
