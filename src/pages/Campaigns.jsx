@@ -30,6 +30,8 @@ const Campaigns = () => {
     const [selectedIds, setSelectedIds] = useState([]);
     const [visibleCols, setVisibleCols] = useState(loadVisibleCols);
     const [pickerOpen, setPickerOpen] = useState(false);
+    const [actionError, setActionError] = useState('');
+    const showErr = (err) => { setPerformingActionId(null); setActionError(err?.response?.data?.detail || err?.message || 'Action failed'); };
 
     // Debounce: update debouncedSearch 300ms after user stops typing
     useEffect(() => {
@@ -65,19 +67,19 @@ const Campaigns = () => {
     const launchMutation = useMutation({
         mutationFn: (id) => campaignApi.launch(id),
         onSuccess: onMutationSettled,
-        onError: () => setPerformingActionId(null)
+        onError: showErr
     });
 
     const pauseMutation = useMutation({
         mutationFn: (id) => campaignApi.pause(id),
         onSuccess: onMutationSettled,
-        onError: () => setPerformingActionId(null)
+        onError: showErr
     });
 
     const resumeMutation = useMutation({
         mutationFn: (id) => campaignApi.resume(id),
         onSuccess: onMutationSettled,
-        onError: () => setPerformingActionId(null)
+        onError: showErr
     });
 
     // const deleteMutation = useMutation({
@@ -111,6 +113,7 @@ const Campaigns = () => {
         },
 
         onError: (err, id, context) => {
+            showErr(err);
             queryClient.setQueryData(['campaigns', debouncedSearch], context.previousData);
         },
 
@@ -172,11 +175,14 @@ const Campaigns = () => {
         // For now, we'll just loop and execute sequentially to be safe.
         // ideally backend supports bulk ops.
 
-        for (const id of selectedIds) {
-            if (action === 'pause') pauseMutation.mutate(id);
-            if (action === 'resume') resumeMutation.mutate(id);
-            if (action === 'delete') deleteMutation.mutate(id);
-        }
+        // One useMutation observer only tracks its latest mutate() call, so a loop of mutate() sent a single
+        // request; call the API directly for every selected campaign.
+        const fn = { pause: campaignApi.pause, resume: campaignApi.resume, delete: campaignApi.delete }[action];
+        if (!fn) return;
+        const results = await Promise.allSettled(selectedIds.map(id => fn(id)));
+        const failed = results.filter(r => r.status === 'rejected');
+        if (failed.length) showErr(failed[0].reason);
+        queryClient.invalidateQueries({ queryKey: ['campaigns'], exact: false });
         setSelectedIds([]);
     };
 
@@ -245,6 +251,12 @@ const Campaigns = () => {
                     </div>
                 </div>
 
+                {actionError && (
+                    <div role="alert" className="mb-3 flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+                        <span>{typeof actionError === 'string' ? actionError : 'Action failed'}</span>
+                        <button onClick={() => setActionError('')} aria-label="Dismiss" className="text-red-500 hover:text-red-700">x</button>
+                    </div>
+                )}
                 {/* 2. Campaign List Section */}
                 <motion.div variants={itemVariants} className="flex-1 min-h-0 pt-2 pb-0">
                     {/* Campaigns List */}

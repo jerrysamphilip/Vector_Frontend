@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, Mail, Users, Activity, MessageSquare, Inbox, BarChart3, Shield, KeyRound, Eye, EyeOff, CheckCircle,
   LogOut, X, ArrowLeft, Contact, Building2, ListChecks, CheckSquare, Gauge, Target, Inbox as InboxIcon,
-  Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star, LifeBuoy,
+  Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star, LifeBuoy, ShieldCheck,
 } from 'lucide-react';
 import logoMark from '../../assets/logo-mark.png';
 import { authApi } from '../../api/auth';
@@ -22,7 +23,7 @@ const NAV = [
   ] },
   { title: 'Outreach', items: [
     { name: 'Campaigns', href: '/app/campaigns', icon: Mail, permission: 'manage_campaigns' },
-    { name: 'Campaign analytics', href: '/app/analytics', icon: BarChart3 },
+    { name: 'Campaign analytics', href: '/app/analytics', icon: BarChart3, permission: 'view_analytics' },
     { name: 'Templates', href: '/app/templates', icon: FileText },
     { name: 'AI email writer', href: '/app/ai-email', icon: Sparkles },
     { name: 'Email accounts', href: '/app/inboxes', icon: Inbox, permission: 'manage_inboxes' },
@@ -392,6 +393,10 @@ export function ProfileMenu() {
                 <KeyRound className="w-4 h-4 text-slate-400" /> Change password
               </button>
             )}
+            <button onClick={() => { setOpen(false); navigate('/app/account/security'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+              <ShieldCheck className="w-4 h-4 text-slate-400" /> Security (two-factor)
+              {currentUser?.mfa_enabled && <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">On</span>}
+            </button>
             <button onClick={() => { setOpen(false); navigate('/app/connections'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
               <CalendarSync className="w-4 h-4 text-slate-400" /> Calendar and email sync
             </button>
@@ -401,9 +406,10 @@ export function ProfileMenu() {
           </div>
         </div>
       )}
-      <AnimatePresence>
-        {changePwOpen && <ChangePasswordModal currentUser={currentUser} onClose={() => setChangePwOpen(false)} />}
-      </AnimatePresence>
+      {createPortal(
+        <AnimatePresence>
+          {changePwOpen && <ChangePasswordModal currentUser={currentUser} onClose={() => setChangePwOpen(false)} />}
+        </AnimatePresence>, document.body)}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { apiClient as api } from './http';
 export const aiEmailApi = {
     // Test classification (no DB save)
     classifyTest: async (designation, companyName = null) => {
-        const response = await api.post('/ai-email/classify/test', {
+        const response = await api.post('/prospects/classifications/test', {
             designation,
             company_name: companyName,
         });
@@ -13,7 +13,7 @@ export const aiEmailApi = {
 
     // Classify batch of prospects
     classifyBatch: async (prospectIds) => {
-        const response = await api.post('/ai-email/classify/batch', {
+        const response = await api.post('/prospects/classifications/batch', {
             prospect_ids: prospectIds,
         });
         return response.data;
@@ -21,7 +21,7 @@ export const aiEmailApi = {
 
     // Generate email for prospect
     generateEmail: async (prospectId, productName = 'Our Product') => {
-        const response = await api.post('/ai-email/generate', {
+        const response = await api.post('/emails/generations', {
             prospect_id: prospectId,
             product_name: productName,
         });
@@ -30,7 +30,7 @@ export const aiEmailApi = {
 
     // Generate 3-email sequence for prospect
     generateSequence: async (prospectId, productName, productDescription = '', useLlm = true) => {
-        const response = await api.post('/ai-email/generate-sequence', {
+        const response = await api.post('/emails/sequences/generations', {
             prospect_id: prospectId,
             product_name: productName,
             product_description: productDescription,
@@ -41,7 +41,7 @@ export const aiEmailApi = {
 
     // Check content for spam/compliance
     checkCompliance: async (subject, body) => {
-        const response = await api.post('/ai-email/check-compliance', {
+        const response = await api.post('/emails/compliance-checks', {
             subject,
             body,
         });
@@ -50,7 +50,7 @@ export const aiEmailApi = {
 
     // Validate if email is business (not personal)
     validateEmail: async (email) => {
-        const response = await api.post('/ai-email/validate-email', {
+        const response = await api.post('/emails/validations', {
             email,
         });
         return response.data;
@@ -58,13 +58,13 @@ export const aiEmailApi = {
 
     // Get CTA options by purpose
     getCtaOptions: async (purpose) => {
-        const response = await api.get(`/ai-email/cta-options/${purpose}`);
+        const response = await api.get(`/emails/cta-options/${purpose}`);
         return response.data;
     },
 
     // List all blueprints
     getBlueprints: async (activeOnly = true) => {
-        const response = await api.get('/ai-email/blueprints', {
+        const response = await api.get('/persona-blueprints', {
             params: { active_only: activeOnly },
         });
         return response.data;
@@ -72,13 +72,13 @@ export const aiEmailApi = {
 
     // Get specific blueprint
     getBlueprint: async (personaType) => {
-        const response = await api.get(`/ai-email/blueprints/${personaType}`);
+        const response = await api.get(`/persona-blueprints/${personaType}`);
         return response.data;
     },
 
     // Create new blueprint
     createBlueprint: async (data) => {
-        const response = await api.post('/ai-email/blueprints', data);
+        const response = await api.post('/persona-blueprints', data);
         return response.data;
     },
 };

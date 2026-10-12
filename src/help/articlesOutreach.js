@@ -126,6 +126,8 @@ export const OUTREACH_ARTICLES = [
                 'If asked, add the DNS records shown under **Verify Domain Ownership**.',
             ] },
             { p: 'Microsoft 365 mailboxes can connect with **Connect with Microsoft 365 (OAuth)** instead of a password. Replies start syncing within a few minutes.' },
+            { h: 'Sender identity' },
+            { p: 'Anti-spam law requires your company name and postal address in every email. Set them once in the **Sender identity** card at the top of this page; they are added to the bottom of every email. Campaigns can\'t launch until both are set.' },
             { h: 'Changing sending or receiving settings' },
             { steps: [
                 'Click the mailbox row and open the **Connection** tab. It shows the SMTP (sending) and IMAP (receiving) server, username, and whether a password is saved.',

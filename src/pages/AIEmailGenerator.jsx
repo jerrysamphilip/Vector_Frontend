@@ -262,6 +262,11 @@ export default function AIEmailGenerator() {
                                     )}
                                     Classify Persona
                                 </motion.button>
+                                {classifyMutation.isError && (
+                                    <p role="alert" className="mt-3 text-sm text-red-600">
+                                        {typeof classifyMutation.error?.response?.data?.detail === 'string' ? classifyMutation.error.response.data.detail : 'Could not classify this prospect. Please try again.'}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Classification Result */}

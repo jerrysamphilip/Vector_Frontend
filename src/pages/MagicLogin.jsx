@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { authApi } from "../api/auth";
-import { clearAuthSession, consumeFirstLogin } from "../lib/authStorage";
+import { clearAuthSession, consumeFirstLogin, getStoredUser } from "../lib/authStorage";
+import MfaChallenge from "../components/auth/MfaChallenge";
 
 import bg from "../assets/bg.png";
 import logo from "../assets/logo.png";
@@ -11,6 +12,16 @@ export default function MagicLogin() {
     const [searchParams] = useSearchParams();
     const token = useMemo(() => searchParams.get("token") || "", [searchParams]);
     const [error, setError] = useState("");
+    const [mfaToken, setMfaToken] = useState("");
+
+    const finish = () => {
+        const isFirst = consumeFirstLogin();
+        if (getStoredUser()?.mfa_setup_required) {
+            navigate("/app/account/security", { replace: true });
+            return;
+        }
+        navigate(isFirst ? "/set-password" : "/app/dashboard", { replace: true });
+    };
 
     useEffect(() => {
         let mounted = true;
@@ -22,14 +33,17 @@ export default function MagicLogin() {
             }
 
             // Always clear any existing session — magic link is for a specific user
+            try { await authApi.logout(); } catch { /* not signed in */ }
             clearAuthSession();
 
             try {
-                await authApi.magicLogin(token);
-                if (mounted) {
-                    const isFirst = consumeFirstLogin();
-                    navigate(isFirst ? "/set-password" : "/app/dashboard", { replace: true });
+                const data = await authApi.magicLogin(token);
+                if (!mounted) return;
+                if (data?.mfa_required) {
+                    setMfaToken(data.mfa_token);
+                    return;
                 }
+                finish();
             } catch (err) {
                 if (mounted) {
                     setError(err?.response?.data?.detail || "Magic login failed");
@@ -41,7 +55,7 @@ export default function MagicLogin() {
         return () => {
             mounted = false;
         };
-    }, [token, navigate]);
+    }, [token, navigate]); // finish() only reads storage and navigate
 
     return (
         <div
@@ -57,7 +71,12 @@ export default function MagicLogin() {
                 }}
             >
                 <img src={logo} alt="Outreach360" className="max-w-[230px] h-auto object-contain mx-auto mb-4" />
-                {!error ? (
+                {mfaToken ? (
+                    <div className="text-left">
+                        <MfaChallenge mfaToken={mfaToken} onSuccess={finish}
+                            onCancel={() => navigate("/login", { replace: true })} />
+                    </div>
+                ) : !error ? (
                     <>
                         <h2 className="text-xl font-semibold mb-2">Signing you in...</h2>
                         <p className="text-white/80 text-sm">Please wait while we verify your secure login link.</p>

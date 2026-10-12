@@ -26,13 +26,14 @@ export default function ContactFormModal({
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [existingId, setExistingId] = useState(null);
+    const [existingDeleted, setExistingDeleted] = useState(false);
 
     const set = (key) => (e) => setForm(f => ({ ...f, [key]: e?.target ? e.target.value : e }));
 
     const submit = async (e) => {
         e?.preventDefault();
         if (!form.email.trim()) { setError('Email is required'); return; }
-        setSaving(true); setError(null); setExistingId(null);
+        setSaving(true); setError(null); setExistingId(null); setExistingDeleted(false);
         const payload = Object.fromEntries(
             Object.entries(form).filter(([k, v]) => !(typeof v === 'string' && !v.trim()) || k === 'owner_id')
         );
@@ -44,7 +45,8 @@ export default function ContactFormModal({
             onCreated?.(contact);
         } catch (err) {
             setError(errorMessage(err, 'Could not add the contact.'));
-            setExistingId(err?.response?.data?.detail?.prospect_id || null);
+            setExistingId(err?.response?.data?.detail_data?.prospect_id || null);
+            setExistingDeleted(!!err?.response?.data?.detail_data?.deleted);
         } finally {
             setSaving(false);
         }
@@ -129,9 +131,9 @@ export default function ContactFormModal({
                 ))}
                 <ErrorNote message={error} />
                 {existingId && (
-                    <button type="button" onClick={() => navigate(`/app/contacts/${existingId}`)}
+                    <button type="button" onClick={() => navigate(existingDeleted ? '/app/recently-deleted' : `/app/contacts/${existingId}`)}
                         className="text-sm font-semibold text-indigo-600 hover:text-indigo-800">
-                        Open the existing contact →
+                        {existingDeleted ? 'Open Recently deleted →' : 'Open the existing contact →'}
                     </button>
                 )}
                 <button type="submit" className="hidden" />

@@ -1,17 +1,32 @@
 import { apiV1Client } from './http';
-import { setAuthSession, getRefreshToken } from '../lib/authStorage';
+import { setAuthSession } from '../lib/authStorage';
+
+// Sign-in responses carry only the user: the API sets the session as httpOnly cookies.
+// When the account has two-factor on, they carry { mfa_required: true, mfa_token } instead and
+// the sign-in finishes with verifyMfa().
+function signedIn(data) {
+    if (!data?.mfa_required) setAuthSession(data);
+    return data;
+}
 
 export const authApi = {
     login: async (email, password) => {
         const response = await apiV1Client.post('/auth/login', { email, password }, { skipAuth: true });
-        setAuthSession(response.data);
-        return response.data;
+        return signedIn(response.data);
+    },
+
+    verifyMfa: async (mfaToken, { code, recoveryCode } = {}) => {
+        const response = await apiV1Client.post(
+            '/auth/mfa/verify',
+            { mfa_token: mfaToken, code: code || null, recovery_code: recoveryCode || null },
+            { skipAuth: true },
+        );
+        return signedIn(response.data);
     },
 
     register: async (payload) => {
         const response = await apiV1Client.post('/auth/register', payload, { skipAuth: true });
-        setAuthSession(response.data);
-        return response.data;
+        return signedIn(response.data);
     },
 
     me: async () => {
@@ -19,10 +34,15 @@ export const authApi = {
         return response.data;
     },
 
+    /** The current session (user + two-factor state); 401 when signed out. */
+    session: async () => {
+        const response = await apiV1Client.get('/auth/session');
+        if (response.data?.user) setAuthSession({ user: response.data.user });
+        return response.data;
+    },
+
     logout: async () => {
-        const refreshToken = getRefreshToken();
-        if (!refreshToken) return;
-        await apiV1Client.post('/auth/logout', { refresh_token: refreshToken });
+        await apiV1Client.post('/auth/logout', null, { skipAuth: true });
     },
 
     googleAuthUrl: async () => {
@@ -32,8 +52,7 @@ export const authApi = {
 
     googleCallback: async (credential) => {
         const response = await apiV1Client.post('/auth/google/callback', { credential }, { skipAuth: true });
-        setAuthSession(response.data);
-        return response.data;
+        return signedIn(response.data);
     },
 
     forgotPassword: async (email) => {
@@ -52,8 +71,7 @@ export const authApi = {
 
     magicLogin: async (token) => {
         const response = await apiV1Client.post('/auth/magic-login', { token }, { skipAuth: true });
-        setAuthSession(response.data);
-        return response.data;
+        return signedIn(response.data);
     },
 
     changePassword: async (currentPassword, newPassword) => {
@@ -68,6 +86,15 @@ export const authApi = {
         const response = await apiV1Client.put('/auth/me', payload);
         return response.data;
     },
+
+    // ── Two-factor ──
+    mfaSetup: async () => (await apiV1Client.post('/auth/mfa/setup')).data,
+    mfaEnable: async (code) => (await apiV1Client.post('/auth/mfa/enable', { code })).data,
+    mfaDisable: async ({ password, code, recoveryCode }) => (await apiV1Client.post('/auth/mfa/disable', {
+        password: password || null, code: code || null, recovery_code: recoveryCode || null,
+    })).data,
+    mfaRegenerateRecoveryCodes: async (code) => (await apiV1Client.post('/auth/mfa/recovery-codes', { code })).data,
+    mfaSetTenantPolicy: async (requireMfa) => (await apiV1Client.put('/auth/mfa/tenant-policy', { require_mfa: requireMfa })).data,
 };
 
 export default authApi;
