@@ -9,10 +9,11 @@ import {
 } from 'lucide-react';
 import { prospectsApi } from '../api/prospects';
 import { apiClient as api } from '../api/http';
-import { getStoredUser } from '../lib/authStorage';
+import { getStoredUser, hasPermission } from '../lib/authStorage';
 import Loading from '../components/common/Loading';
 import ProspectListsTable from '../components/prospects/ProspectListsTable';
 import ProspectListModal from '../components/prospects/ProspectListModal';
+import ListRenameModal from '../components/contacts/ListRenameModal';
 import BouncedRevalidationModal from '../components/prospects/BouncedRevalidationModal';
 import KpiTile from '../components/ui/KpiTile';
 
@@ -223,6 +224,7 @@ export default function Prospects() {
     const [selectedIds, setSelectedIds] = useState([]);
     const [viewList, setViewList]       = useState(null);
     const [deleteList, setDeleteList]   = useState(null);
+    const [renameList, setRenameList]   = useState(null);
     const [showBulkDelete, setShowBulkDelete] = useState(false);
     const [showUpload, setShowUpload]   = useState(false);
     const [showBouncedRevalidation, setShowBouncedRevalidation] = useState(false);
@@ -397,6 +399,7 @@ export default function Prospects() {
                     isLoading={listsLoading}
                     onView={setViewList}
                     onDelete={setDeleteList}
+                    onRename={hasPermission('manage_prospects') ? setRenameList : undefined}
                     sortBy={sortBy}
                     sortOrder={sortOrder}
                     onSort={(col, ord) => { setSortBy(col); setSortOrder(ord); setPage(1); }}
@@ -433,6 +436,10 @@ export default function Prospects() {
 
             {/* ── Modals ── */}
             {viewList && <ProspectListModal list={viewList} onClose={() => setViewList(null)} />}
+            {renameList && (
+                <ListRenameModal list={renameList} onClose={() => setRenameList(null)}
+                    onSaved={() => { setRenameList(null); ['prospect-lists', 'lists', 'list', 'contact-facets'].forEach(k => queryClient.invalidateQueries({ queryKey: [k] })); }} />
+            )}
 
             {deleteList && (
                 <DeleteModal

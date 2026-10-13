@@ -186,13 +186,15 @@ const CRM = [
     {
         id: 'lists', category: 'CRM', title: 'Lists', routes: ['/app/lists'],
         summary: 'Groups of contacts for campaigns and follow-up.',
-        keywords: ['static list', 'active list', 'segment', 'smart list'],
+        keywords: ['static list', 'active list', 'segment', 'smart list', 'rename', 'edit list', 'description'],
         body: [
             { list: [
                 { term: 'Static', text: 'a fixed set of contacts. Add people from Contacts (**Add to list**) or during an import.' },
                 { term: 'Active', text: 'contacts who match filters you set. Membership updates on its own as contacts change.' },
             ] },
             { p: 'Click a list to see its contacts on the Contacts screen. Lists can be enrolled in campaigns.' },
+            { h: 'Renaming a list' },
+            { p: 'Click the pencil on a list\'s row to change its **Name** or **Description** (and, for an active list, its filters). You can also rename the list you are viewing from the **List:** chip on Contacts, or an uploaded list from the pencil on **Prospect lists**. Its contacts stay the same.' },
             { note: '**Prospect lists** (under CRM) are the outreach upload lists used by campaigns; see "Prospect lists".' },
         ],
         related: ['contacts', 'prospect-lists'],
@@ -410,14 +412,50 @@ const SALES = [
 
 const WORKSPACE = [
     {
+        id: 'contact-scoring', category: 'Workspace & settings', title: 'Contact scoring', routes: ['/app/contact-scoring'],
+        summary: 'Score contacts 0-100 on fit and engagement, graded A to D. Admins set the rules.',
+        keywords: ['score', 'grade', 'lead scoring', 'fit', 'engagement', 'decay', 'recompute'],
+        body: [
+            { p: '**Fit rules** add points for who the contact is (job title, industry, company size, country and so on). **Engagement** adds points for emails opened, links clicked, replies, meetings, calls and completed tasks, fading with age. **Weights** set how much each counts, and **Grades** set the minimum score for A, B and C.' },
+            { p: 'Scores update when a contact is created or edited and when activity is logged; email activity is picked up by the background job. **Recompute all** rescores the whole workspace after you change the rules.' },
+            { note: 'Out-of-office and vacation auto-replies do not count as replies.' },
+        ],
+        related: ['contacts', 'contact-record'],
+    },
+    {
+        id: 'webhooks', category: 'Workspace & settings', title: 'Webhooks', routes: ['/app/webhooks'],
+        summary: 'Send signed events to another system when contacts, leads, deals or emails change. Admins only.',
+        keywords: ['webhook', 'integration', 'api', 'events', 'signature', 'secret', 'callback'],
+        body: [
+            { steps: [
+                'Click **Add endpoint**, enter an https URL and tick the events to send.',
+                'Copy the **Signing secret** when it is shown; it is not shown again. Use it to check the signature header on each request.',
+                'Click **Send test** to check your endpoint answers.',
+            ] },
+            { p: 'Each delivery is logged with its status. Failed deliveries are retried automatically; you can also retry one by hand. Turn an endpoint off, rotate its secret or delete it from its card.' },
+        ],
+        related: ['workflow-rules', 'team-management'],
+    },
+    {
+        id: 'discount-approval', category: 'Sales', title: 'Discount approval',
+        summary: 'Quotes with a discount above the workspace limit need a manager\'s approval before they go out.',
+        keywords: ['discount', 'approval', 'quote', 'approve', 'reject', 'limit'],
+        body: [
+            { p: 'An admin sets the limit in **Sales settings** → **Discount approval**. A quote above it shows **Approval needed** and cannot be marked Sent, Under review or Accepted until approved.' },
+            { p: 'Click **Submit for approval** in the quote. Your managers (or an admin) approve or reject it with a reason from **Sales** → **Awaiting my approval**, and you are notified. Raising the discount afterwards sends it back for approval.' },
+        ],
+        related: ['deal-page', 'sales-settings', 'sales-overview'],
+    },
+    {
         id: 'sales-team', category: 'Workspace & settings', title: 'Sales team', routes: ['/app/sales-team'],
         summary: 'Set each person\'s sales level and who they report to.',
         keywords: ['hierarchy', 'level', 'manager', 'reports to', 'org chart'],
         body: [
             { p: 'For each person choose a **Level** (L1 CEO / COO / Sales Head, L2 Business Development, L3 Business Executive, L4 Market Research) and who they **Report to**. People without a level are **Not in sales hierarchy**.' },
             { p: 'The hierarchy decides what managers see and how team reports add up.' },
+            { p: 'Admins can also set a person\'s **Sales level** and **Reports to** on **Team** (**Hierarchy** on their row, or when inviting them). Nobody can report to someone in their own team.' },
         ],
-        related: ['roles-and-visibility', 'targets'],
+        related: ['roles-and-visibility', 'targets', 'team-management'],
     },
     {
         id: 'sales-settings', category: 'Workspace & settings', title: 'Sales settings', routes: ['/app/sales-settings'],

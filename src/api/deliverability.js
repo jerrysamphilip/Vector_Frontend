@@ -39,6 +39,18 @@ const deliverabilityApi = {
         return response.data;
     },
 
+    // Add a sending domain (admins); returns { domain, dns_records, dkim_tokens_available }
+    addDomain: async (domainName) => {
+        const response = await api.post('/deliverability/domains', { domain_name: domainName });
+        return response.data;
+    },
+
+    // DNS records to publish for a domain (guidance only) with its last checked SPF / DKIM / DMARC
+    getDnsRecords: async (domainName) => {
+        const response = await api.get(`/deliverability/domains/${encodeURIComponent(domainName)}/dns-records`);
+        return response.data;
+    },
+
     deleteDomain: async (domainName) => {
         await api.delete(`/deliverability/domains/${domainName}`);
     },

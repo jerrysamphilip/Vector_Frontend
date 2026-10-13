@@ -4,12 +4,14 @@ import {
     Activity, ShieldCheck, ShieldAlert, AlertTriangle,
     RefreshCcw, CheckCircle2, XCircle, Info,
     Trash2, Loader2, Server, Mail,
-    TrendingUp, TrendingDown,
+    TrendingUp, TrendingDown, Plus, FileText,
 } from 'lucide-react';
 import deliverabilityApi from '../api/deliverability';
 import ReputationGauge from '../components/deliverability/ReputationGauge';
 import DeliverabilityTrendsChart from '../components/deliverability/DeliverabilityTrendsChart';
 import KpiTile from '../components/ui/KpiTile';
+import DomainDnsModal from '../components/deliverability/DomainDnsModal';
+import { getStoredUser } from '../lib/authStorage';
 
 // ── GradientCard ─────────────────────────────────────────────────
 function GradientCard(props) {
@@ -28,7 +30,7 @@ function getAuthInfo(status) {
 }
 
 // ── DomainCard ───────────────────────────────────────────────────
-function DomainCard({ domain, expanded, onToggle, onScan, onDelete, scanning }) {
+function DomainCard({ domain, expanded, onToggle, onScan, onDelete, onDns, scanning }) {
     // If all auth statuses are UNKNOWN, the domain has never been scanned — don't trust the stored SES status
     const neverScanned = ['spf_status', 'dkim_status', 'dmarc_status']
         .every(k => !domain[k] || domain[k] === 'UNKNOWN');
@@ -155,6 +157,14 @@ function DomainCard({ domain, expanded, onToggle, onScan, onDelete, scanning }) 
                                     <span className="text-xs text-gray-500 mr-auto">
                                         Rep: <strong className="text-gray-700">{(domain.account_reputation_score || 0).toFixed(2)}</strong>
                                     </span>
+                                    {onDns && (
+                                        <button
+                                            onClick={() => onDns(domain.domain_name)}
+                                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50 transition-colors">
+                                            <FileText className="w-3.5 h-3.5" />
+                                            DNS records
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => onScan(domain.domain_name)}
                                         disabled={scanning === domain.domain_name}
@@ -219,6 +229,8 @@ export default function DomainHealth() {
     const [expandedDomain, setExpandedDomain] = useState(null);
     const [domainToDelete, setDomainToDelete] = useState(null);
     const [deleting, setDeleting]           = useState(false);
+    const [dnsModal, setDnsModal]           = useState(null); // null | { domain: null (add) | name }
+    const canManageDomains = ['SUPER_ADMIN', 'ADMIN'].includes(getStoredUser()?.role);
 
     const toggleExpand = (name) => setExpandedDomain(expandedDomain === name ? null : name);
 
@@ -296,11 +308,20 @@ export default function DomainHealth() {
                     <h1 className="text-xl font-semibold tracking-tight text-slate-900">Domain Health</h1>
                     <p className="text-sm text-gray-400 mt-1">Monitor deliverability, authentication, and sending reputation.</p>
                 </div>
+                <div className="flex items-center gap-2">
                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
                     style={{ background: 'rgba(16,185,129,0.1)', color: '#059669' }}>
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                     System Operational
                 </span>
+                {canManageDomains && (
+                    <button onClick={() => setDnsModal({ domain: null })}
+                        className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-semibold text-white hover:opacity-90"
+                        style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                        <Plus className="w-4 h-4" /> Add domain
+                    </button>
+                )}
+                </div>
             </div>
 
             {/* ── Gradient KPI Cards ── */}
@@ -387,6 +408,7 @@ export default function DomainHealth() {
                                         onToggle={toggleExpand}
                                         onScan={handleScan}
                                         onDelete={setDomainToDelete}
+                                        onDns={name => setDnsModal({ domain: name })}
                                         scanning={scanning}
                                     />
                                 </div>
@@ -395,6 +417,12 @@ export default function DomainHealth() {
                     )}
                 </div>
             </div>
+
+            {/* ── Add domain / DNS records ── */}
+            {dnsModal && (
+                <DomainDnsModal domainName={dnsModal.domain} canManage={canManageDomains}
+                    onClose={() => setDnsModal(null)} onChanged={fetchData} />
+            )}
 
             {/* ── Delete Modal ── */}
             <AnimatePresence>

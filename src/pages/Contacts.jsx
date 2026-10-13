@@ -16,6 +16,7 @@ import FilterBuilder, { filterCount } from '../components/contacts/FilterBuilder
 import ScoreBadge from '../components/contacts/ScoreBadge';
 import { GRADES } from '../api/contactScoring';
 import EnrollmentResultModal from '../components/campaigns/EnrollmentResultModal';
+import ListRenameModal from '../components/contacts/ListRenameModal';
 import {
     Avatar, TagChips, OwnerSelect, relativeDate, BRAND_GRADIENT, Modal, PrimaryButton, SecondaryButton,
     ErrorNote, Field, inputClass, CustomFieldInput, useCrmMeta, StageBadge, StatusBadge, formatCustomValue,
@@ -328,6 +329,7 @@ export default function Contacts() {
     const [showColumns, setShowColumns] = useState(false);
     const [showExport, setShowExport] = useState(false);
     const [saveView, setSaveView] = useState(null);
+    const [renamingList, setRenamingList] = useState(null);
     const [groupBy, setGroupBy] = useState('lifecycle_stage');
     const [bulkError, setBulkError] = useState(null);
     const [notice, setNotice] = useState(null);
@@ -519,7 +521,7 @@ export default function Contacts() {
                         {(filterAccount || filterList) && (
                             <div className="flex gap-2 flex-wrap">
                                 {filterAccount && <span className="h-8 px-3 flex items-center gap-1.5 text-sm rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200">Company: {filterAccount.name}<button onClick={() => update({ account_id: '' })} aria-label="Clear company filter"><X className="w-3.5 h-3.5" /></button></span>}
-                                {filterList && <span className="h-8 px-3 flex items-center gap-1.5 text-sm rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200">List: {filterList.list_name}<button onClick={() => update({ list_id: '' })} aria-label="Clear list filter"><X className="w-3.5 h-3.5" /></button></span>}
+                                {filterList && <span className="h-8 px-3 flex items-center gap-1.5 text-sm rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200">List: {filterList.list_name}{canManage && <button onClick={() => setRenamingList(filterList)} aria-label="Rename list" title="Rename list"><PencilLine className="w-3.5 h-3.5" /></button>}<button onClick={() => update({ list_id: '' })} aria-label="Clear list filter"><X className="w-3.5 h-3.5" /></button></span>}
                             </div>
                         )}
                         {showFilters && (
@@ -623,6 +625,10 @@ export default function Contacts() {
                 <SaveViewModal view={saveView.view} canShare={canManage} onClose={() => setSaveView(null)}
                     state={{ filters, columns: shownColumns, sort: { by: sortBy, order: sortOrder } }}
                     onSaved={v => { setSaveView(null); queryClient.invalidateQueries({ queryKey: ['views'] }); update({ view: v.view_id }, false); }} />
+            )}
+            {renamingList && (
+                <ListRenameModal list={renamingList} onClose={() => setRenamingList(null)}
+                    onSaved={() => { setRenamingList(null); ['contact-facets', 'lists', 'list', 'prospect-lists'].forEach(k => queryClient.invalidateQueries({ queryKey: [k] })); }} />
             )}
             {enrollReport && (
                 <EnrollmentResultModal title="Enrolled in campaign" enrolled={enrollReport.enrolled} rejected={enrollReport.rejected}

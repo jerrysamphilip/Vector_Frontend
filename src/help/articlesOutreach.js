@@ -143,11 +143,28 @@ export const OUTREACH_ARTICLES = [
         related: ['domain-health', 'inbox', 'campaign-details'],
     },
     {
+        id: 'subject-variants', category: 'Outreach', title: 'A/B subject lines',
+        summary: 'Test 2 to 4 subject lines on a campaign step and promote the winner.',
+        keywords: ['a/b', 'ab test', 'split test', 'subject', 'variant', 'winner', 'open rate'],
+        body: [
+            { p: 'On a campaign step, add 2 to 4 subject variants (A, B, C, D) with optional weights. Each prospect gets one variant for that step; with no variants everyone gets the template subject.' },
+            { p: 'The campaign\'s analytics show sends, opens and replies per variant. When one is clearly ahead it is marked as the winner, and promoting it sends that subject to everyone from then on.' },
+        ],
+        related: ['campaign-details', 'campaign-analytics', 'create-campaign'],
+    },
+    {
         id: 'domain-health', category: 'Outreach', title: 'Domain health', routes: ['/app/domain-health'],
         summary: 'Deliverability and authentication for each domain you send from.',
-        keywords: ['spf', 'dkim', 'dmarc', 'blacklist', 'reputation', 'deliverability'],
+        keywords: ['spf', 'dkim', 'dmarc', 'blacklist', 'reputation', 'deliverability', 'add domain', 'dns', 'sending domain'],
         body: [
-            { p: 'Each sending domain (taken from your connected mailboxes) shows a reputation score, whether it is blacklisted, and its **SPF**, **DKIM** and **DMARC** status: pass, warning, fail or unknown.' },
+            { p: 'Each sending domain (added here or taken from your connected mailboxes) shows a reputation score, whether it is blacklisted, and its **SPF**, **DKIM** and **DMARC** status: pass, warning, fail or unknown.' },
+            { h: 'Adding a domain' },
+            { steps: [
+                'Click **Add domain** (admins) and enter the domain you send from, such as example.com.',
+                'Add the DNS records shown (DKIM, SPF on mail.<domain>, DMARC) at your DNS provider. Copy buttons are next to each value.',
+                'After the records are published, click **Check status** to see SPF, DKIM and DMARC update. DNS changes can take up to 48 hours.',
+            ] },
+            { p: '**DNS records** on a domain\'s details shows the records again at any time.' },
             { list: [
                 '**Run Diagnostics** checks the domains again.',
                 '**Details** shows the domain\'s campaign activity and connected inboxes.',
@@ -205,15 +222,16 @@ export const OUTREACH_ARTICLES = [
     {
         id: 'team-management', category: 'Workspace & settings', title: 'Team', routes: ['/app/team'],
         summary: 'Invite people, set their role and permissions, and deactivate leavers. Admins only.',
-        keywords: ['invite', 'users', 'members', 'permissions', 'deactivate', 'role'],
+        keywords: ['invite', 'users', 'members', 'permissions', 'deactivate', 'role', 'resend invite', 'hierarchy', 'reports to', 'sales level', 'manager'],
         body: [
             { steps: [
                 'Click **Invite Member**, enter their email and choose a **Role** (Admin, Manager or Agent; Super Admins can also invite Super Admins).',
                 'They get an email invitation. If email delivery fails, you are shown their sign-in details to share.',
             ] },
             { p: '**Permissions** fine-tunes what each person can do beyond their role: **Manage Campaigns**, **Manage Templates**, **Manage Inboxes**, **Manage Prospects**, **View Analytics**, **Export Data**, **Manage Team**.' },
-            { p: '**Deactivate** stops someone signing in (their records stay); **Reactivate** brings them back; **Revoke** cancels a pending invite. Super Admin roles cannot be changed here.' },
-            { note: 'Set sales levels and managers separately, on **Sales team**.' },
+            { p: '**Deactivate** stops someone signing in (their records stay); **Reactivate** brings them back; **Revoke** cancels a pending invite. **Resend invite** emails a pending invite again with a new sign-in link and temporary password (the old ones stop working; once a minute at most). Super Admin roles cannot be changed here.' },
+            { h: 'Sales hierarchy' },
+            { p: 'The **Reports to** column shows each person\'s sales level and manager. Click **Hierarchy** to change them, or pick a **Sales level** and **Reports to** when inviting. Only people at a higher level, outside the person\'s own team, can be chosen as manager. **Team tree** opens the whole hierarchy on **Sales team**.' },
         ],
         related: ['roles-and-visibility', 'sales-team'],
     },
