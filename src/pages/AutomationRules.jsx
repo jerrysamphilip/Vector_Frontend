@@ -20,6 +20,7 @@ import {
 import automationApi from '../api/automation';
 import { campaignApi } from '../api/campaigns';
 import Loading from '../components/common/Loading';
+import DialogPanel from '../components/common/DialogPanel';
 
 export default function AutomationRules() {
     const [rules, setRules] = useState([]);
@@ -337,19 +338,23 @@ export default function AutomationRules() {
                             onClick={() => setIsModalOpen(false)}
                             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
                         />
-                        <motion.div
+                        <DialogPanel
+                            as={motion.div}
+                            onClose={() => setIsModalOpen(false)}
+                            labelledBy="automation-rule-title"
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
                             className="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden"
                         >
                             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                <h2 id="automation-rule-title" className="text-xl font-bold text-slate-800 flex items-center gap-2">
                                     <Zap className="w-5 h-5 text-blue-600" />
                                     Create Automation Rule
                                 </h2>
                                 <button
                                     onClick={() => setIsModalOpen(false)}
+                                    aria-label="Close"
                                     className="p-2 hover:bg-slate-200 rounded-full transition-colors"
                                 >
                                     <X className="w-5 h-5 text-slate-500" />
@@ -476,7 +481,7 @@ export default function AutomationRules() {
                                     </button>
                                 </div>
                             </form>
-                        </motion.div>
+                        </DialogPanel>
                     </div>
                 )}
             </AnimatePresence>

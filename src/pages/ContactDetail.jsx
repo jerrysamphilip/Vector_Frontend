@@ -592,7 +592,7 @@ export default function ContactDetail() {
                         <div>
                             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Owner</p>
                             {contact.can_edit_owner
-                                ? <OwnerSelect owners={owners} value={contact.owner_id} onChange={owner_id => quickUpdate.mutate({ owner_id })} />
+                                ? <OwnerSelect owners={owners} value={contact.owner_id} ariaLabel="Owner" onChange={owner_id => quickUpdate.mutate({ owner_id })} />
                                 : <p className="text-sm font-medium text-slate-800">{contact.owner_name || 'Unassigned'}</p>}
                         </div>
                         {contact.can_delete && (

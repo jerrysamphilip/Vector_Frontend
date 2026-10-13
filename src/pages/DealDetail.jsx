@@ -9,6 +9,7 @@ import { ClientTypeBadge, DealStatusBadge, card, cardShadow, useLeadsMeta, useTe
 import CloseReasonModal from '../components/sales/CloseReasonModal';
 import { DealTimeline, QuoteModal, StageHistory } from '../components/sales/DealExtras';
 import { ApprovalBadge } from '../components/sales/QuoteApproval';
+import { useMediaQuery } from '../components/layout/useNavDrawer';
 
 const PROPOSAL_TONE = { DRAFT: 'bg-slate-100 text-slate-600', SENT: 'bg-sky-50 text-sky-700', UNDER_REVIEW: 'bg-amber-50 text-amber-700',
     ACCEPTED: 'bg-emerald-50 text-emerald-700', REJECTED: 'bg-red-50 text-red-700' };
@@ -62,6 +63,8 @@ function Proposals({ deal, onChanged }) {
 
 export default function DealDetail() {
     const { id } = useParams();
+    // the Proposals card sits in the middle column below xl and in the right column from xl: render it once
+    const isWide = useMediaQuery('(min-width: 1280px)');
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const owners = useTeamOwners();
@@ -187,10 +190,10 @@ export default function DealDetail() {
                 </div>
                 <div className="min-w-0 space-y-5">
                     <DealTimeline deal={deal} />
-                    <div className="xl:hidden"><Proposals deal={deal} onChanged={refresh} /></div>
+                    {!isWide && <div className="xl:hidden"><Proposals deal={deal} onChanged={refresh} /></div>}
                 </div>
                 <div className="hidden xl:block space-y-5">
-                    <Proposals deal={deal} onChanged={refresh} />
+                    {isWide && <Proposals deal={deal} onChanged={refresh} />}
                     <button onClick={() => window.confirm('Delete this opportunity and its proposals?') && remove.mutate()} className="text-sm font-semibold text-red-600 hover:text-red-800 flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Delete opportunity</button>
                 </div>
             </div>

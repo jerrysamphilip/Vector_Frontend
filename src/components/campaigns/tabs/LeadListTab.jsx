@@ -8,6 +8,7 @@ import { prospectsApi } from '../../../api/prospects';
 import { reportsApi } from '../../../api/reports';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import Loading from '../../common/Loading';
+import DialogPanel from '../../common/DialogPanel';
 
 // Status badge colors matching theme.
 // Real backend CampaignProspect statuses: ACTIVE, OPENED, COMPLETED, PAUSED,
@@ -593,11 +594,16 @@ export default function LeadListTab({ campaignId }) {
             {/* Add Prospects Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+                    <DialogPanel
+                        onClose={() => { setShowAddModal(false); setSelectedListId(''); }}
+                        labelledBy="lead-list-add-prospects-title"
+                        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+                    >
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-base font-semibold text-gray-800">Add Prospects</h3>
+                            <h3 id="lead-list-add-prospects-title" className="text-base font-semibold text-gray-800">Add Prospects</h3>
                             <button
                                 onClick={() => { setShowAddModal(false); setSelectedListId(''); }}
+                                aria-label="Close"
                                 className="p-1 text-gray-400 hover:text-gray-600 rounded-lg"
                             >
                                 <X className="w-4 h-4" />
@@ -647,7 +653,7 @@ export default function LeadListTab({ campaignId }) {
                                 {enrollMutation.isPending ? 'Adding…' : 'Add to Campaign'}
                             </button>
                         </div>
-                    </div>
+                    </DialogPanel>
                 </div>
             )}
         </motion.div>

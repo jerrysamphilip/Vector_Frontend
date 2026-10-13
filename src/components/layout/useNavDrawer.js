@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { activateModal } from '../common/useDialog';
 
 // Below the lg breakpoint (1024px: phones and tablets) the sidebar is an off-canvas drawer opened by the
-// hamburger in the top bar. It closes on route change, Escape and a click on the backdrop. From lg up the
-// sidebar is always shown, as before.
+// hamburger in the top bar. It closes on route change, Escape and a click on the backdrop. While open it is a modal
+// dialog (the layouts put role="dialog" aria-modal on it only then): focus moves to its first link, Tab / Shift+Tab
+// stay inside (the useDialog stack, so a dialog opened on top of it takes over), and focus goes back to the hamburger
+// when it closes. From lg up the sidebar is always shown, as before, and is not a dialog.
 export const DESKTOP_QUERY = '(min-width: 1024px)';
 
 export function useMediaQuery(query) {
@@ -33,18 +36,28 @@ export function useNavDrawer() {
     useEffect(() => { if (isDesktop) setOpen(false); }, [isDesktop]);
 
     useEffect(() => {
-        if (!open) return undefined;
-        // focus into the drawer, Escape closes it and gives focus back to the hamburger
-        const first = drawerRef.current?.querySelector('[data-drawer-close]') || drawerRef.current?.querySelector('a[href],button');
-        first?.focus({ preventScroll: true });
-        const onKey = (e) => {
-            if (e.key === 'Escape') { setOpen(false); toggleRef.current?.focus({ preventScroll: true }); }
-        };
-        document.addEventListener('keydown', onKey);
+        const node = drawerRef.current;
+        if (!open || !node) return undefined;
+        // focus to the first nav link, Tab trapped inside, Escape (top-most dialog only) closes
+        const deactivate = activateModal(node, {
+            onEscape: () => setOpen(false),
+            initialFocus: n => Array.from(n.querySelectorAll('a[href]')).find(a => a.getClientRects().length > 0),
+        });
         // no page scroll behind the open drawer
         const prev = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
-        return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+        return () => {
+            deactivate();
+            document.body.style.overflow = prev;
+            // closed (Escape, backdrop, close button, a link followed): focus back to the hamburger, unless focus has
+            // already moved somewhere else on purpose or the hamburger is gone (grown to desktop width)
+            const toggle = toggleRef.current;
+            const active = document.activeElement;
+            if (toggle && toggle.isConnected && toggle.getClientRects().length > 0
+                && (!active || active === document.body || node.contains(active))) {
+                toggle.focus({ preventScroll: true });
+            }
+        };
     }, [open]);
 
     return {

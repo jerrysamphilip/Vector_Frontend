@@ -11,6 +11,7 @@ import ReputationGauge from '../components/deliverability/ReputationGauge';
 import DeliverabilityTrendsChart from '../components/deliverability/DeliverabilityTrendsChart';
 import KpiTile from '../components/ui/KpiTile';
 import DomainDnsModal from '../components/deliverability/DomainDnsModal';
+import DialogPanel from '../components/common/DialogPanel';
 import { getStoredUser } from '../lib/authStorage';
 
 // ── GradientCard ─────────────────────────────────────────────────
@@ -428,7 +429,10 @@ export default function DomainHealth() {
             <AnimatePresence>
                 {domainToDelete && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                        <motion.div
+                        <DialogPanel
+                            as={motion.div}
+                            onClose={() => setDomainToDelete(null)}
+                            labelledBy="domain-delete-title"
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
@@ -437,7 +441,7 @@ export default function DomainHealth() {
                                 <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <Trash2 className="w-5 h-5" />
                                 </div>
-                                <h3 className="text-base font-bold text-gray-900 mb-2">
+                                <h3 id="domain-delete-title" className="text-base font-bold text-gray-900 mb-2">
                                     Delete {domainToDelete.domain_name}?
                                 </h3>
                                 <p className="text-sm text-gray-500 mb-6 leading-relaxed">
@@ -458,7 +462,7 @@ export default function DomainHealth() {
                                     </button>
                                 </div>
                             </div>
-                        </motion.div>
+                        </DialogPanel>
                     </div>
                 )}
             </AnimatePresence>

@@ -36,6 +36,58 @@ function initialTarget(root) {
 }
 
 /**
+ * Low-level modal behaviour on an element that is already in the page (used by useDialog and the mobile nav drawer):
+ * joins the dialog stack, moves focus in (initialFocus(node) or the default target), traps Tab / Shift+Tab, pulls
+ * escaped focus back and calls onEscape on Escape - all only while it is the top-most entry.
+ * @returns {() => void} deactivate (does not move focus; the caller restores it)
+ */
+export function activateModal(node, { onEscape, initialFocus } = {}) {
+    const entry = { node };
+    stack.push(entry);
+    const isTop = () => stack[stack.length - 1] === entry;
+    const startTarget = () => (initialFocus && initialFocus(node)) || initialTarget(node);
+
+    if (!node.contains(document.activeElement)) {
+        const target = startTarget();
+        if (target === node && !node.hasAttribute('tabindex')) node.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+    }
+
+    const onKeyDown = (e) => {
+        if (!isTop()) return;
+        if (e.key === 'Escape' && onEscape && !e.defaultPrevented) {
+            onEscape(e);
+            return;
+        }
+        if (e.key !== 'Tab') return;
+        const items = focusables(node);
+        if (!items.length) { e.preventDefault(); node.focus(); return; }
+        const first = items[0];
+        const last = items[items.length - 1];
+        const active = document.activeElement;
+        const inside = node.contains(active);
+        if (e.shiftKey && (active === first || !inside || active === node)) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && (active === last || !inside)) { e.preventDefault(); first.focus(); }
+    };
+    // Focus that escapes (mouse click on the page behind, programmatic focus) is pulled back
+    const onFocusIn = (e) => {
+        if (!isTop() || node.contains(e.target)) return;
+        // another dialog / popup rendered elsewhere (portals) may legitimately take focus
+        if (e.target.closest && e.target.closest('[role="dialog"],[role="alertdialog"],[role="listbox"],[role="menu"]')) return;
+        startTarget().focus({ preventScroll: true });
+    };
+    // bubble phase: a control inside the dialog (open menu, combobox) can handle Escape first and stop it
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('focusin', onFocusIn);
+    return () => {
+        document.removeEventListener('keydown', onKeyDown);
+        document.removeEventListener('focusin', onFocusIn);
+        const i = stack.indexOf(entry);
+        if (i >= 0) stack.splice(i, 1);
+    };
+}
+
+/**
  * @param {object} opts
  * @param {() => void} [opts.onClose]        called on Escape (omit / closeOnEscape=false to ignore Escape)
  * @param {boolean} [opts.closeOnEscape=true]
@@ -55,48 +107,11 @@ export function useDialog({ onClose, closeOnEscape = true, returnFocusRef, label
     useEffect(() => {
         const node = dialogRef.current;
         if (!node) return undefined;
-        const entry = { node };
-        stack.push(entry);
-        const isTop = () => stack[stack.length - 1] === entry;
-
-        if (!node.contains(document.activeElement)) {
-            const target = initialTarget(node);
-            if (target === node && !node.hasAttribute('tabindex')) node.setAttribute('tabindex', '-1');
-            target.focus({ preventScroll: true });
-        }
-
-        const onKeyDown = (e) => {
-            if (!isTop()) return;
-            if (e.key === 'Escape' && closeOnEscape && onCloseRef.current && !e.defaultPrevented) {
-                onCloseRef.current();
-                return;
-            }
-            if (e.key !== 'Tab') return;
-            const items = focusables(node);
-            if (!items.length) { e.preventDefault(); node.focus(); return; }
-            const first = items[0];
-            const last = items[items.length - 1];
-            const active = document.activeElement;
-            const inside = node.contains(active);
-            if (e.shiftKey && (active === first || !inside || active === node)) { e.preventDefault(); last.focus(); }
-            else if (!e.shiftKey && (active === last || !inside)) { e.preventDefault(); first.focus(); }
-        };
-        // Focus that escapes (mouse click on the page behind, programmatic focus) is pulled back
-        const onFocusIn = (e) => {
-            if (!isTop() || node.contains(e.target)) return;
-            // another dialog / popup rendered elsewhere (portals) may legitimately take focus
-            if (e.target.closest && e.target.closest('[role="dialog"],[role="alertdialog"],[role="listbox"],[role="menu"]')) return;
-            const target = initialTarget(node);
-            target.focus({ preventScroll: true });
-        };
-        // bubble phase: a control inside the dialog (open menu, combobox) can handle Escape first and stop it
-        document.addEventListener('keydown', onKeyDown);
-        document.addEventListener('focusin', onFocusIn);
+        const deactivate = activateModal(node, {
+            onEscape: closeOnEscape ? () => onCloseRef.current?.() : null,
+        });
         return () => {
-            document.removeEventListener('keydown', onKeyDown);
-            document.removeEventListener('focusin', onFocusIn);
-            const i = stack.indexOf(entry);
-            if (i >= 0) stack.splice(i, 1);
+            deactivate();
             const back = opener && opener.isConnected && opener !== document.body ? opener : returnFocusRef?.current;
             if (back && typeof back.focus === 'function') {
                 // After the unmount commit. Only when the dialog really left the page: a re-run of this effect

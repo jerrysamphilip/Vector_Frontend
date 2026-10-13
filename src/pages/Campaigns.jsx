@@ -194,7 +194,7 @@ const Campaigns = () => {
         <PageTransition>
             <motion.div variants={containerVariants} className="flex flex-col h-full">
                 {/* 1. Header Section - Sticky */}
-                <div className="sticky top-14 z-20 bg-[#F7F9FC] pt-1 pb-4 -mx-7 px-7 mb-2">
+                <div className="sticky top-14 z-20 bg-[#F7F9FC] pt-1 pb-4 -mx-4 px-4 sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7 mb-2">
                     <div className="flex flex-col gap-6">
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                             <div className="flex flex-col gap-2">

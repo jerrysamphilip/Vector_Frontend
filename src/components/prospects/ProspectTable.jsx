@@ -3,6 +3,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, Edit2, Trash2, User, Building, MapPin, AlertCircle, X } from 'lucide-react';
+import DialogPanel from '../common/DialogPanel';
 
 // Separate component to prevent cursor jumping on keystroke
 function EditInput({ initialValue, onChange, onKeyDown, placeholder }) {
@@ -161,7 +162,9 @@ export default function ProspectTable({
             {/* EDIT MODAL - Rendered at top level to prevent remounting */}
             {editingCell && (
                 <div className="fixed inset-0 z-40 bg-black/20" onClick={handleCancelEdit}>
-                    <div
+                    <DialogPanel
+                        onClose={handleCancelEdit}
+                        labelledBy="prospect-cell-edit-title"
                         className="absolute z-50 bg-white p-4 shadow-2xl rounded-xl border border-slate-200"
                         style={{
                             minWidth: '280px',
@@ -170,7 +173,7 @@ export default function ProspectTable({
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <p className="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">
+                        <p id="prospect-cell-edit-title" className="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">
                             Edit {editingCell.field.replace(/_/g, ' ')}
                         </p>
                         <EditInput
@@ -189,7 +192,7 @@ export default function ProspectTable({
                             </button>
                         </div>
                         <p className="text-xs text-slate-400 mt-2 text-center">Press Enter to save, Esc to cancel</p>
-                    </div>
+                    </DialogPanel>
                 </div>
             )}
 
@@ -400,7 +403,9 @@ export default function ProspectTable({
             {/* Delete Confirmation Modal */}
             {deleteConfirm !== null && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={handleCancelDelete}>
-                    <div
+                    <DialogPanel
+                        onClose={handleCancelDelete}
+                        labelledBy="prospect-table-delete-title"
                         className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -409,7 +414,7 @@ export default function ProspectTable({
                                 <Trash2 className="w-5 h-5 text-red-600" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-slate-800">Delete Prospect</h3>
+                                <h3 id="prospect-table-delete-title" className="font-semibold text-slate-800">Delete Prospect</h3>
                                 <p className="text-sm text-slate-500">This action cannot be undone</p>
                             </div>
                         </div>
@@ -435,7 +440,7 @@ export default function ProspectTable({
                                 Delete
                             </button>
                         </div>
-                    </div>
+                    </DialogPanel>
                 </div>
             )}
         </div>

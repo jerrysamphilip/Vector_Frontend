@@ -14,6 +14,8 @@ import { hierarchyApi } from '../api/sales';
 import { managerCandidates, hierarchyError } from '../lib/hierarchy';
 import { getStoredUser } from '../lib/authStorage';
 import KpiTile from '../components/ui/KpiTile';
+import { useDialog } from '../components/common/useDialog';
+import DialogPanel from '../components/common/DialogPanel';
 
 // ── Constants ──────────────────────────────────────────────────
 const ROLE_META = {
@@ -160,13 +162,14 @@ function HierarchyModal({ user, hierarchy, onClose, onSave, isSaving, error }) {
     const [level, setLevel] = useState(current?.sales_level || null);
     const [managerId, setManagerId] = useState(current?.manager_id || null);
     const problem = hierarchyError(hierarchy?.users || [], user.user_id, level, managerId);
+    const { titleId, dialogProps } = useDialog({ onClose });
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-            <div role="dialog" aria-label="Sales hierarchy" className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div {...dialogProps} className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden outline-none">
                 <div className="px-6 py-5 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                     <div>
-                        <h3 className="font-semibold !text-white">Sales hierarchy</h3>
+                        <h3 id={titleId} className="font-semibold !text-white">Sales hierarchy</h3>
                         <p className="text-xs text-white/70">{user.first_name} {user.last_name} · {user.email}</p>
                     </div>
                     <button onClick={onClose} aria-label="Close" className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/10"><X className="w-4 h-4" /></button>
@@ -201,6 +204,7 @@ function HierarchyModal({ user, hierarchy, onClose, onSave, isSaving, error }) {
 function PermissionsModal({ user, onClose, onSave, onReset, isSaving, isResetting }) {
     const [draft, setDraft] = useState(new Set(user.permissions || []));
     const hasChanges = JSON.stringify([...draft].sort()) !== JSON.stringify([...(user.permissions || [])].sort());
+    const { titleId, dialogProps } = useDialog({ onClose });
 
     const toggle = (key) => {
         setDraft(prev => {
@@ -213,7 +217,7 @@ function PermissionsModal({ user, onClose, onSave, onReset, isSaving, isResettin
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div {...dialogProps} className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden outline-none">
 
                 {/* Gradient header */}
                 <div className="px-6 py-5" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
@@ -221,7 +225,7 @@ function PermissionsModal({ user, onClose, onSave, onReset, isSaving, isResettin
                         <div className="flex items-center gap-3">
                             <Avatar firstName={user.first_name} lastName={user.last_name} email={user.email} size="lg" />
                             <div>
-                                <h3 className="font-semibold !text-white text-base">
+                                <h3 id={titleId} className="font-semibold !text-white text-base">
                                     {user.first_name} {user.last_name}
                                 </h3>
                                 <div className="flex items-center gap-2 mt-1">
@@ -230,7 +234,7 @@ function PermissionsModal({ user, onClose, onSave, onReset, isSaving, isResettin
                                 </div>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/10 flex-shrink-0">
+                        <button onClick={onClose} aria-label="Close" className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/10 flex-shrink-0">
                             <X className="w-4 h-4" />
                         </button>
                     </div>
@@ -758,7 +762,8 @@ export default function TeamManagement() {
             {isInviteOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsInviteOpen(false)} />
-                    <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+                    <DialogPanel onClose={() => setIsInviteOpen(false)} labelledBy="invite-member-title"
+                        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
 
                         {/* Gradient header */}
                         <div className="px-6 py-5 flex items-center justify-between"
@@ -768,11 +773,11 @@ export default function TeamManagement() {
                                     <UserPlus className="w-4 h-4 text-white" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold !text-white">Invite Team Member</h3>
+                                    <h3 id="invite-member-title" className="font-semibold !text-white">Invite Team Member</h3>
                                     <p className="text-xs text-white/70">They'll receive login credentials via email</p>
                                 </div>
                             </div>
-                            <button onClick={() => setIsInviteOpen(false)} className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/10">
+                            <button onClick={() => setIsInviteOpen(false)} aria-label="Close" className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/10">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
@@ -844,7 +849,7 @@ export default function TeamManagement() {
                                 </button>
                             </div>
                         </form>
-                    </div>
+                    </DialogPanel>
                 </div>
             )}
 
