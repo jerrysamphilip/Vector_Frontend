@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Children, cloneElement, isValidElement, useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X, Loader2, AlertTriangle } from 'lucide-react';
 import { contactsApi } from '../../api/contacts';
@@ -116,18 +116,24 @@ export function TagInput({ value = [], onChange, suggestions = [], placeholder =
 export const inputClass = 'w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all';
 
 export function Field({ label, children, hint, className = '' }) {
+    const labelId = useId();
+    // A <textarea> wrapped in its <label> gets the typed text in its accessible name ("BodyWe help ..."),
+    // so name it by the label text only.
+    const only = Children.count(children) === 1 && isValidElement(children) ? children : null;
+    const control = only && only.type === 'textarea' && !only.props['aria-label'] && !only.props['aria-labelledby']
+        ? cloneElement(only, { 'aria-labelledby': labelId }) : children;
     return (
         <label className={`block ${className}`}>
-            <span className="block text-xs font-medium text-slate-600 mb-1.5">{label}</span>
-            {children}
+            <span id={labelId} className="block text-xs font-medium text-slate-600 mb-1.5">{label}</span>
+            {control}
             {hint && <span className="block text-xs text-gray-400 mt-1">{hint}</span>}
         </label>
     );
 }
 
-export function OwnerSelect({ owners = [], value, onChange, allowUnassigned = true, className = inputClass, disabled }) {
+export function OwnerSelect({ owners = [], value, onChange, allowUnassigned = true, className = inputClass, disabled, ariaLabel }) {
     return (
-        <select value={value || ''} onChange={e => onChange(e.target.value || null)} className={className} disabled={disabled}>
+        <select value={value || ''} onChange={e => onChange(e.target.value || null)} className={className} disabled={disabled} aria-label={ariaLabel}>
             {allowUnassigned && <option value="">Unassigned</option>}
             {owners.map(o => <option key={o.user_id} value={o.user_id}>{o.name}</option>)}
         </select>

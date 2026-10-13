@@ -160,9 +160,9 @@ export default function ContactScoring() {
                 </div>
             </Section>
 
-            <div className="grid md:grid-cols-2 gap-5">
+            <div className="grid md:grid-cols-2 gap-5 [&>*]:min-w-0">
                 <Section title="Weights" subtitle="How much fit and engagement count towards the total. They add up to 100.">
-                    <div className="flex items-center gap-3 text-sm text-slate-700">
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-slate-700">
                         <label className="flex items-center gap-2">Fit <NumberInput label="Fit weight" value={form.fit_weight} min={0} max={100}
                             onChange={v => setForm(f => ({ ...f, fit_weight: v, engagement_weight: v === '' ? f.engagement_weight : Math.max(0, Math.min(100, 100 - v)) }))} /> %</label>
                         <span className="text-slate-400">+</span>
@@ -171,7 +171,7 @@ export default function ContactScoring() {
                     </div>
                 </Section>
                 <Section title="Grades" subtitle="Minimum score for each grade; anything lower is D.">
-                    <div className="flex items-center gap-4 text-sm">
+                    <div className="flex flex-wrap items-center gap-4 text-sm">
                         {['A', 'B', 'C'].map(g => (
                             <label key={g} className="flex items-center gap-2">
                                 <span className={`w-6 h-6 inline-flex items-center justify-center rounded-md border font-bold text-xs ${GRADE_TONES[g]}`}>{g}</span>
