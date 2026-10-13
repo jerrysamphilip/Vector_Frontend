@@ -15,4 +15,9 @@ export const platformAdminApi = {
 
     // Create tenant
     createTenant: (data) => apiClient.post('/api/admin/tenants', data).then(r => r.data),
+
+    // Email scheduler pause switch (platform-wide; /scheduler/* is root-mounted)
+    getSchedulerStatus: () => apiClient.get('/scheduler/status').then(r => r.data),
+    pauseScheduler: () => apiClient.post('/scheduler/stop').then(r => r.data),
+    resumeScheduler: () => apiClient.post('/scheduler/start').then(r => r.data),
 };

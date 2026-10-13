@@ -43,17 +43,17 @@ function LeadsTab({ member, period }) {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                 <div className={`${card} overflow-hidden`} style={cardShadow}>
                     <h2 className="text-sm font-bold text-slate-800 px-5 pt-5 pb-3">By source</h2>
-                    <table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase"><th className="pl-5 py-2.5">Source</th><th className={th}>Leads</th><th className={th}>SQLs</th><th className={`${th} pr-5`}>SQL rate</th></tr></thead>
+                    <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase"><th className="pl-5 py-2.5">Source</th><th className={th}>Leads</th><th className={th}>SQLs</th><th className={`${th} pr-5`}>SQL rate</th></tr></thead>
                         <tbody className="divide-y divide-slate-50">{data.by_source.map(s => (
                             <tr key={s.source}><td className="pl-5 py-2.5">{s.source}</td><td className={td}>{s.leads}</td><td className={td}>{s.sqls}</td><td className={`${td} pr-5`}>{pct(s.sql_rate)}</td></tr>
-                        ))}</tbody></table>
+                        ))}</tbody></table></div>
                 </div>
                 <div className={`${card} overflow-hidden`} style={cardShadow}>
                     <h2 className="text-sm font-bold text-slate-800 px-5 pt-5 pb-3">By owner</h2>
-                    <table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase"><th className="pl-5 py-2.5">Owner</th><th className={th}>Leads</th><th className={th}>SQLs</th><th className={th}>Converted</th><th className={th}>Disqualified</th><th className={`${th} pr-5`}>SQL rate</th></tr></thead>
+                    <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase"><th className="pl-5 py-2.5">Owner</th><th className={th}>Leads</th><th className={th}>SQLs</th><th className={th}>Converted</th><th className={th}>Disqualified</th><th className={`${th} pr-5`}>SQL rate</th></tr></thead>
                         <tbody className="divide-y divide-slate-50">{data.by_owner.map(o => (
                             <tr key={o.owner_id}><td className="pl-5 py-2.5">{o.owner_name}</td><td className={td}>{o.leads}</td><td className={td}>{o.sqls}</td><td className={td}>{o.converted}</td><td className={td}>{o.disqualified}</td><td className={`${td} pr-5`}>{pct(o.sql_rate)}</td></tr>
-                        ))}</tbody></table>
+                        ))}</tbody></table></div>
                 </div>
             </div>
             {(data.disqualified_reasons || []).length > 0 && (
@@ -77,12 +77,12 @@ function PipelineTab({ member }) {
             <ClientTypeFilter value={clientType} onChange={setClientType} />
             <div className={`${card} overflow-hidden`} style={cardShadow}>
                 <h2 className="text-sm font-bold text-slate-800 px-5 pt-5 pb-3">By owner</h2>
-                <table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase">
+                <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase">
                     <th className="pl-5 py-2.5">Owner</th><th className={th}>Open deals</th><th className={th}>Open amount</th><th className={th}>Weighted</th><th className={th}>Won</th><th className={th}>Lost</th><th className={`${th} pr-5`}>Win rate</th></tr></thead>
                     <tbody className="divide-y divide-slate-50">{data.by_owner.map(o => (
                         <tr key={o.owner_id}><td className="pl-5 py-2.5">{o.owner_name}</td><td className={td}>{o.open_count}</td><td className={td}>{money(o.open_amount)}</td><td className={td}>{money(o.weighted)}</td>
                             <td className={td}>{money(o.won_amount)} ({o.won_count})</td><td className={td}>{o.lost_count}</td><td className={`${td} pr-5`}>{pct(o.win_rate)}</td></tr>
-                    ))}</tbody></table>
+                    ))}</tbody></table></div>
             </div>
             <div className={`${card} p-5`} style={cardShadow}>
                 <h2 className="text-sm font-bold text-slate-800 mb-3">Open pipeline by expected close month</h2>
@@ -149,7 +149,7 @@ function ForecastTab({ member }) {
                 </div>
             </div>
             <div className={`${card} overflow-hidden`} style={cardShadow}>
-                <table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase">
+                <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase">
                     <th className="pl-5 py-2.5">Period</th><th className={th}>Target</th><th className={th}>Won</th><th className={th}>Attained</th><th className={th}>Commit</th><th className={th}>Best case (cat.)</th><th className={th}>Open pipeline</th><th className={th}>Weighted</th><th className={`${th} pr-5`}>Forecast</th></tr></thead>
                     <tbody className="divide-y divide-slate-50">
                         {data.quarters.map(q => (
@@ -158,7 +158,7 @@ function ForecastTab({ member }) {
                         ))}
                         <tr className="bg-slate-50/60 font-semibold"><td className="pl-5 py-2.5"><Link className="text-indigo-600" to={link(data.total)}>{data.label}</Link></td>
                             <td className={td}>{data.total.target ? money(data.total.target) : '—'}</td><td className={td}>{money(data.total.won)}</td><td className={td}>{pct(data.total.attainment)}</td><td className={td}>{money(data.total.commit)}</td><td className={td}>{money(data.total.best_case_category)}</td><td className={td}>{money(data.total.pipeline)}</td><td className={td}>{money(data.total.weighted)}</td><td className={`${td} pr-5`}>{money(data.total.forecast)}</td></tr>
-                    </tbody></table>
+                    </tbody></table></div>
             </div>
             <div className={`${card} p-5`} style={cardShadow}>
                 <h2 className="text-sm font-bold text-slate-800 mb-3">Financial-year-wise</h2>
@@ -272,12 +272,12 @@ function TargetsTab({ member, period }) {
                     <span className="text-xs text-slate-500">Revenue won, {PERIODS[period].toLowerCase()} (period picker above)</span>
                 </div>
                 {!board ? <Spinner /> : (
-                    <table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase">
+                    <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase">
                         <th className="pl-5 py-2.5 w-10">#</th><th className="py-2.5">Rep</th><th className={th}>Won amount</th><th className={th}>Deals won</th><th className={th}>SQLs</th><th className={th}>Activities</th><th className={`${th} pr-5`}>Win rate</th></tr></thead>
                         <tbody className="divide-y divide-slate-50">{board.rows.map(r => (
                             <tr key={r.user_id}><td className="pl-5 py-2.5 font-semibold text-slate-500 tabular-nums">{r.rank}</td><td className="py-2.5 font-medium text-slate-800">{r.name}</td>
                                 <td className={`${td} font-semibold`}>{money(r.won_amount)}</td><td className={td}>{r.won_count}</td><td className={td}>{r.sqls}</td><td className={td}>{r.activities}</td><td className={`${td} pr-5`}>{pct(r.win_rate)}</td></tr>
-                        ))}</tbody></table>
+                        ))}</tbody></table></div>
                 )}
             </div>
         </div>

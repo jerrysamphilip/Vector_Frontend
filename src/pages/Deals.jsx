@@ -76,7 +76,7 @@ function StagesModal({ onClose }) {
     return (
         <Modal title="Sales stages" subtitle="Probability weights the revenue pipeline and forecast" onClose={onClose} width="max-w-2xl"
             footer={<SecondaryButton onClick={onClose} className="ml-auto">Done</SecondaryButton>}>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
                 <thead><tr className="text-xs font-semibold text-left text-slate-400 uppercase tracking-wide"><th className="pb-2">Stage</th><th className="pb-2 w-24">Probability</th><th className="pb-2 w-20">Order</th><th className="pb-2 w-24">Type</th><th className="pb-2 w-20">Active</th></tr></thead>
                 <tbody>
                     {stages.map(s => (
@@ -91,7 +91,7 @@ function StagesModal({ onClose }) {
                         </tr>
                     ))}
                 </tbody>
-            </table>
+            </table></div>
             <div className="flex items-end gap-2 mt-4 p-3 bg-slate-50 rounded-xl">
                 <Field label="New stage" className="flex-1"><input className={inputClass} value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} /></Field>
                 <Field label="Probability %" className="w-28"><input type="number" min="0" max="100" className={inputClass} value={draft.probability} onChange={e => setDraft(d => ({ ...d, probability: e.target.value }))} /></Field>

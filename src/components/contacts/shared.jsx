@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X, Loader2, AlertTriangle } from 'lucide-react';
 import { contactsApi } from '../../api/contacts';
+import { useDialog } from '../common/useDialog';
 
 export const BRAND_GRADIENT = 'linear-gradient(135deg, #2d6bbf, #73C8D2)';
 
@@ -222,24 +223,27 @@ export function ErrorNote({ message }) {
     );
 }
 
-export function Modal({ title, subtitle, onClose, children, footer, width = 'max-w-lg' }) {
+/** Overlay dialog: role=dialog named by its title, aria-modal, focus trap, Escape closes, focus returns to the opener
+ *  (useDialog). Fits small screens: max 90% of the viewport height, the body scrolls inside. */
+export function Modal({ title, subtitle, onClose, children, footer, width = 'max-w-lg', returnFocusRef }) {
+    const { titleId, dialogProps } = useDialog({ onClose, returnFocusRef });
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
             <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} />
-            <div className={`relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${width} max-h-[90vh] flex flex-col overflow-hidden`}
+            <div {...dialogProps} className={`relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${width} max-h-[90vh] max-h-[90dvh] flex flex-col overflow-hidden outline-none`}
                 onClick={e => e.stopPropagation()}>
                 <div className="h-1.5 w-full flex-shrink-0" style={{ background: BRAND_GRADIENT }} />
-                <div className="px-6 pt-5 pb-3 flex items-start justify-between flex-shrink-0">
-                    <div>
-                        <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+                <div className="px-4 sm:px-6 pt-5 pb-3 flex items-start justify-between gap-3 flex-shrink-0">
+                    <div className="min-w-0">
+                        <h2 id={titleId} className="text-lg font-bold text-gray-900">{title}</h2>
                         {subtitle && <p className="text-sm text-gray-400 mt-0.5">{subtitle}</p>}
                     </div>
-                    <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors" aria-label="Close">
+                    <button type="button" onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors" aria-label="Close">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
-                <div className="px-6 pb-4 overflow-y-auto">{children}</div>
-                {footer && <div className="px-6 pb-6 pt-2 flex gap-2.5 flex-shrink-0">{footer}</div>}
+                <div className="px-4 sm:px-6 pb-4 overflow-y-auto min-h-0">{children}</div>
+                {footer && <div className="px-4 sm:px-6 pb-5 sm:pb-6 pt-2 flex gap-2.5 flex-shrink-0">{footer}</div>}
             </div>
         </div>
     );

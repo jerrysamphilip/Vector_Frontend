@@ -145,16 +145,16 @@ export default function Header({ actionSlot = null }) {
     useEffect(() => { setUserName(getDisplayName()); }, []);
 
     return (
-        <header className="w-full flex items-center justify-between mb-8">
-            <div>
-                <h2 className="text-2xl font-bold text-gray-900 leading-tight flex items-center">
+        <header className="w-full flex items-center justify-between flex-wrap gap-4 mb-8">
+            <div className="min-w-0">
+                <h1 className="text-2xl font-bold text-gray-900 leading-tight flex items-center">
                     {getGreeting()}, {userName}
                     <CoffeeCup />
-                </h2>
+                </h1>
                 <p className="text-sm text-gray-400 mt-1">Here's what's happening with your campaigns today.</p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
                 {actionSlot}
                 {hasPermission('manage_campaigns') && (
                     <button

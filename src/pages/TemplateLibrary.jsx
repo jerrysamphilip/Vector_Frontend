@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Eye, FileText, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, FileText, Search, AlertTriangle, RefreshCw } from 'lucide-react';
 import { templatesApi } from '../api/sales';
 import { PageHeader, card, cardShadow, selectSm, Empty } from '../components/sales/shared';
 import { Modal, Field, inputClass, PrimaryButton, SecondaryButton, ErrorNote, relativeDate } from '../components/contacts/shared';
@@ -90,12 +90,18 @@ export default function TemplateLibrary() {
     const [category, setCategory] = useState('');
     const [editing, setEditing] = useState(null);
     const [preview, setPreview] = useState(null);
-    const { data, isLoading } = useQuery({ queryKey: ['template-library', q, category], queryFn: () => templatesApi.list({ q, category }) });
-    const remove = useMutation({ mutationFn: (t) => templatesApi.remove(t.template_id), onSuccess: () => qc.invalidateQueries({ queryKey: ['template-library'] }) });
+    const [deleteError, setDeleteError] = useState('');
+    const { data, isLoading, isError, error, refetch, isFetching } = useQuery({ queryKey: ['template-library', q, category], queryFn: () => templatesApi.list({ q, category }) });
+    const remove = useMutation({
+        mutationFn: (t) => templatesApi.remove(t.template_id),
+        onMutate: () => setDeleteError(''),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['template-library'] }),
+        onError: (e, t) => setDeleteError(`Could not delete "${t.name}": ${errText(e)}`),
+    });
     const items = data?.items || [];
     return (
         <div className="space-y-6">
-            <PageHeader title="Email templates" subtitle="Reusable messages with merge fields. Use them from the inbox reply box.">
+            <PageHeader title="Email templates" subtitle="Reusable messages with merge fields. Insert them when you reply from a campaign's Inbox tab.">
                 <PrimaryButton onClick={() => setEditing({})}><Plus className="w-4 h-4" /> New template</PrimaryButton>
             </PageHeader>
             <div className="flex gap-2 flex-wrap">
@@ -108,11 +114,22 @@ export default function TemplateLibrary() {
                     {(data?.categories || []).map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
             </div>
+            <ErrorNote message={deleteError} />
             <div className={card} style={cardShadow}>
-                {isLoading ? <p className="p-6 text-sm text-slate-400">Loading…</p> : !items.length ? (
-                    <Empty icon={FileText} title="No templates yet" text="Create one to reuse it in replies." />
+                {isLoading ? <p className="p-6 text-sm text-slate-400">Loading…</p> : isError ? (
+                    <div role="alert" className="py-14 text-center px-6">
+                        <AlertTriangle className="w-9 h-9 text-red-300 mx-auto mb-3" />
+                        <p className="font-semibold text-slate-800">Could not load templates</p>
+                        <p className="text-sm text-slate-500 mt-1">{errText(error)}</p>
+                        <SecondaryButton onClick={() => refetch()} disabled={isFetching} className="mx-auto mt-4">
+                            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} /> Try again
+                        </SecondaryButton>
+                    </div>
+                ) : !items.length ? (
+                    <Empty icon={FileText} title="No templates yet" text="Create one to reuse it in campaign Inbox replies." />
                 ) : (
-                    <table className="w-full text-sm">
+                    <div className="overflow-x-auto">
+                    <table className="w-full text-sm min-w-[720px]">
                         <thead><tr className="text-left text-xs text-slate-400 uppercase tracking-wide border-b border-slate-100">
                             <th className="px-4 py-3 font-semibold">Template</th><th className="font-semibold">Category</th>
                             <th className="font-semibold">Owner</th><th className="font-semibold text-right">Used</th>
@@ -139,6 +156,7 @@ export default function TemplateLibrary() {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 )}
             </div>
             {editing && <TemplateModal template={editing.template_id ? editing : null} categories={data?.categories || []}

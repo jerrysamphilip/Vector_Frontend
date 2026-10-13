@@ -163,13 +163,13 @@ function BulkBar({ count, owners, canDelete, facets, fields, meta, listId, onAct
                 <button onClick={() => run({ action: 'assign_owner', owner_id: owner })} className={apply} style={{ background: BRAND_GRADIENT }}>Apply</button>
             </>}
             {mode === 'edit' && <>
-                <select className={selectClass} value={prop} onChange={e => { setProp(e.target.value); setPropValue(''); }}>
+                <select className={selectClass} value={prop} onChange={e => { setProp(e.target.value); setPropValue(''); }} aria-label="Property to edit">
                     {editable.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
                 </select>
                 {current[3] ? (
                     <div className="min-w-[180px]"><CustomFieldInput field={current[3]} value={propValue} onChange={setPropValue} /></div>
                 ) : current[2] ? (
-                    <select className={selectClass} value={propValue} onChange={e => setPropValue(e.target.value)}>
+                    <select className={selectClass} value={propValue} onChange={e => setPropValue(e.target.value)} aria-label="New value">
                         <option value="">Choose…</option>
                         {current[2].map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
@@ -188,7 +188,7 @@ function BulkBar({ count, owners, canDelete, facets, fields, meta, listId, onAct
                 </button>
             </>}
             {mode === 'list' && <>
-                <select className={selectClass} value={targetList} onChange={e => setTargetList(e.target.value)}>
+                <select className={selectClass} value={targetList} onChange={e => setTargetList(e.target.value)} aria-label="Target list">
                     <option value="">New static list…</option>
                     {staticLists.map(l => <option key={l.list_id} value={l.list_id}>{l.list_name}</option>)}
                 </select>
@@ -197,7 +197,7 @@ function BulkBar({ count, owners, canDelete, facets, fields, meta, listId, onAct
                     className={apply} style={{ background: BRAND_GRADIENT }}>Add</button>
             </>}
             {mode === 'enroll' && <>
-                <select className={selectClass} value={campaignId} onChange={e => setCampaignId(e.target.value)}>
+                <select className={selectClass} value={campaignId} onChange={e => setCampaignId(e.target.value)} aria-label="Campaign">
                     <option value="">Choose a campaign…</option>
                     {campaigns.map(c => <option key={c.campaign_id} value={c.campaign_id}>{c.campaign_name} ({c.status.toLowerCase()})</option>)}
                 </select>
@@ -225,7 +225,7 @@ function Board({ params, groupBy, setGroupBy, onOpen }) {
         <div className="p-4 space-y-3">
             <div className="flex items-center gap-2">
                 <span className="text-sm text-slate-500">Group by</span>
-                <select className={selectClass} value={groupBy} onChange={e => setGroupBy(e.target.value)}>
+                <select className={selectClass} value={groupBy} onChange={e => setGroupBy(e.target.value)} aria-label="Group by">
                     <option value="lifecycle_stage">Lifecycle stage</option>
                     <option value="lead_status">Lead status</option>
                 </select>

@@ -190,8 +190,8 @@ function App() {
                         )}
                     >
                         <Route index element={<PlatformAdmin />} />
-                        <Route path="tenants" element={<PlatformAdmin />} />
-                        <Route path="users" element={<PlatformAdmin />} />
+                        <Route path="tenants" element={<PlatformAdmin view="tenants" />} />
+                        <Route path="users" element={<PlatformAdmin view="users" />} />
                         <Route path="security" element={<div className="p-8"><AccountSecurity /></div>} />
                     </Route>
 

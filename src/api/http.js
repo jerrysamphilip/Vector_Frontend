@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { clearAuthSession, getCsrfToken, setAuthSession, updateStoredUser } from '../lib/authStorage';
+import { currentReturnPath } from '../lib/returnTo';
 
 // BASE_URL is Vite's `base` ('/' by default, e.g. '/vector/' when served under a path prefix)
 const APP_BASE = import.meta.env.BASE_URL;
@@ -22,11 +23,25 @@ const COMMON = {
 
 let refreshPromise = null;
 
-function redirectToLogin() {
+/**
+ * Full-page redirect to the login page, keeping the page in use (path + query + hash) in ?next= so signing in
+ * again returns there (validated as an internal /app or /admin path by Login, see lib/returnTo.js).
+ * reason: 'expired' (session could not be refreshed) or 'suspended' (the workspace was suspended); Login shows it.
+ */
+function redirectToLogin(reason) {
     if (typeof window === 'undefined') return;
-    if (window.location.pathname !== LOGIN_PATH) {
-        window.location.assign(LOGIN_PATH);
-    }
+    if (window.location.pathname === LOGIN_PATH) return;
+    const params = new URLSearchParams();
+    const next = currentReturnPath();
+    if (next) params.set('next', next);
+    if (reason) params.set('reason', reason);
+    const query = params.toString();
+    window.location.assign(query ? `${LOGIN_PATH}?${query}` : LOGIN_PATH);
+}
+
+/** 403 "Tenant suspended": the user's workspace was suspended by the platform admin (app/core/auth.py). */
+function isTenantSuspended(error) {
+    return error?.response?.status === 403 && /^tenant suspended$/i.test(String(error?.response?.data?.detail || '').trim());
 }
 
 function redirectToSecurity() {
@@ -84,6 +99,13 @@ function attachAuthInterceptors(client) {
                 return Promise.reject(error);
             }
 
+            // Workspace suspended mid-session: end the session and say why on the login page
+            if (isTenantSuspended(error) && !originalRequest?.skipAuth) {
+                clearAuthSession();
+                redirectToLogin('suspended');
+                return Promise.reject(error);
+            }
+
             if (!originalRequest || originalRequest.skipAuth || status !== 401 || originalRequest._retry) {
                 return Promise.reject(error);
             }
@@ -101,7 +123,7 @@ function attachAuthInterceptors(client) {
                 return client(withCsrf(originalRequest));
             } catch (refreshError) {
                 clearAuthSession();
-                redirectToLogin();
+                redirectToLogin(isTenantSuspended(refreshError) ? 'suspended' : 'expired');
                 return Promise.reject(refreshError);
             }
         },

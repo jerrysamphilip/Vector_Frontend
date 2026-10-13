@@ -151,13 +151,13 @@ function ActivityBody({ item, onChanged }) {
             <div className="space-y-2 mt-1">
                 {a.activity_type !== 'NOTE' && <input className={inputClass} value={draft.subject} onChange={e => setDraft(d => ({ ...d, subject: e.target.value }))} placeholder="Subject" />}
                 {a.activity_type === 'CALL' && (
-                    <select className={inputClass} value={draft.outcome} onChange={e => setDraft(d => ({ ...d, outcome: e.target.value }))}>{CALL_OUTCOMES.map(o => <option key={o}>{o}</option>)}</select>
+                    <select className={inputClass} value={draft.outcome} onChange={e => setDraft(d => ({ ...d, outcome: e.target.value }))} aria-label="Call outcome">{CALL_OUTCOMES.map(o => <option key={o}>{o}</option>)}</select>
                 )}
                 {isNote
                     ? <MentionTextarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm" value={draft.body}
                         onChange={body => setDraft(d => ({ ...d, body }))} mentions={draftMentions} onMentionsChange={setDraftMentions} aria-label="Note"
                         scope={a.prospect_id ? { prospect_id: a.prospect_id } : undefined} />
-                    : <textarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm" value={draft.body} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} />}
+                    : <textarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm" value={draft.body} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} aria-label="Details" />}
                 <div className="flex gap-2">
                     <PrimaryButton onClick={() => save.mutate()} loading={save.isPending} className="h-8 px-3 text-xs"><Check className="w-3.5 h-3.5" /> Save</PrimaryButton>
                     <SecondaryButton onClick={() => setEditing(false)} className="h-8 px-3 text-xs">Cancel</SecondaryButton>

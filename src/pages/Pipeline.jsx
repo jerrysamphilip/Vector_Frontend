@@ -33,7 +33,7 @@ function Revenue({ owner, clientType }) {
                 ))}
             </div>
             <div className={`${card} overflow-hidden`} style={cardShadow}>
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto"><table className="w-full text-sm">
                     <thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase tracking-wide">
                         <th className="pl-5 py-3">Stage</th><th className="px-3 py-3 text-right">Probability</th><th className="px-3 py-3 text-right">Deals</th>
                         <th className="px-3 py-3 text-right">Amount</th><th className="px-3 py-3 text-right">Weighted</th><th className="px-3 py-3 text-right">New clients</th><th className="px-3 pr-5 py-3 text-right">Existing clients</th>
@@ -56,7 +56,7 @@ function Revenue({ owner, clientType }) {
                             <td className="px-3 py-2.5 text-right tabular-nums">{money(t.by_client_type.NEW.amount)}</td><td className="px-3 pr-5 py-2.5 text-right tabular-nums">{money(t.by_client_type.EXISTING.amount)}</td>
                         </tr>
                     </tbody>
-                </table>
+                </table></div>
             </div>
         </div>
     );

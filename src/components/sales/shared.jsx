@@ -43,7 +43,7 @@ export function StatTile({ label, value, sub, tone = 'text-slate-900', onClick }
 
 export function Seg({ options, value, onChange }) {
     return (
-        <div className="flex bg-slate-100 rounded-lg p-0.5">
+        <div className="flex flex-wrap max-w-full bg-slate-100 rounded-lg p-0.5">
             {options.map(([v, label]) => (
                 <button key={typeof label === 'string' ? label : v} onClick={() => onChange(v)}
                     className={`px-3 h-8 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${value === v ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>{label}</button>
