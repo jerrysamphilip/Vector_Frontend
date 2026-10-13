@@ -56,11 +56,27 @@ export default function CampaignDetails() {
         refetchOnWindowFocus: false,
     });
 
-    // Send Now Mutation
+    // Send Now Mutation: the server sends a capped batch per request, so keep
+    // calling until nothing is left, showing progress on the button.
+    const [sendProgress, setSendProgress] = useState('');
     const sendNowMutation = useMutation({
-        mutationFn: (id) => campaignApi.sendNow(id),
+        mutationFn: async (id) => {
+            const totals = { sent: 0, failed: 0, skipped: 0 };
+            let params = {};
+            for (let batch = 0; batch < 1000; batch += 1) {
+                const data = await campaignApi.sendNow(id, params);
+                totals.sent += data.sent || 0;
+                totals.failed += data.failed || 0;
+                totals.skipped += data.skipped || 0;
+                if (!data.has_more || !data.cursor) break;
+                setSendProgress(`Sending... ${totals.sent} sent, ${data.remaining} left`);
+                params = { cursor: data.cursor, since: data.started_at };
+            }
+            return totals;
+        },
+        onSettled: () => setSendProgress(''),
         onSuccess: (data) => {
-            alert(`✅ Success!\n\nSent: ${data.sent}\nFailed: ${data.failed}\n\nCheck 'Schedule' tab for updates.`);
+            alert(`✅ Success!\n\nSent: ${data.sent}\nFailed: ${data.failed}${data.skipped ? `\nSkipped: ${data.skipped}` : ''}\n\nCheck 'Schedule' tab for updates.`);
             queryClient.invalidateQueries(['campaign', id]);
             queryClient.invalidateQueries(['campaign-analytics', id]);
             // Force refresh schedule
@@ -226,7 +242,7 @@ export default function CampaignDetails() {
                                         disabled={sendNowMutation.isPending}
                                         className="btn btn-secondary text-red-600 border-red-200 hover:bg-red-50"
                                     >
-                                        {sendNowMutation.isPending ? 'Sending...' : '⚡ Send Now'}
+                                        {sendNowMutation.isPending ? (sendProgress || 'Sending...') : '⚡ Send Now'}
                                     </button>
                                 )}
                             </div>

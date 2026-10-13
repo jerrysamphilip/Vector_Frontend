@@ -7,12 +7,14 @@ import {
   Home, Mail, Users, Activity, MessageSquare, Inbox, BarChart3, Shield, KeyRound, Eye, EyeOff, CheckCircle,
   LogOut, X, ArrowLeft, Contact, Building2, ListChecks, CheckSquare, Gauge, Target, Inbox as InboxIcon,
   Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star, LifeBuoy, ShieldCheck,
+  Webhook,
 } from 'lucide-react';
 import logoMark from '../../assets/logo-mark.png';
 import { authApi } from '../../api/auth';
 import { tasksApi, viewsApi } from '../../api/contacts';
 import { BUILT_IN_VIEWS, contactViewHref } from '../../lib/contactViews';
 import { clearAuthSession, getStoredUser, hasPermission, setAuthSession } from '../../lib/authStorage';
+import { useDialog } from '../common/useDialog';
 
 // Grouped navigation. permission: null = everyone; admin: admins only.
 const NAV = [
@@ -49,6 +51,8 @@ const NAV = [
     { name: 'Team', href: '/app/team', icon: Shield, permission: 'manage_team', admin: true },
     { name: 'Sales team', href: '/app/sales-team', icon: Network },
     { name: 'Sales settings', href: '/app/sales-settings', icon: Settings2, admin: true },
+    { name: 'Webhooks', href: '/app/webhooks', icon: Webhook, admin: true },
+    { name: 'Contact scoring', href: '/app/contact-scoring', icon: Gauge, admin: true },
     { name: 'Calendar sync', href: '/app/connections', icon: CalendarSync },
   ] },
 ];
@@ -76,7 +80,7 @@ function getInitials(user) {
 }
 
 // ── Change Password Modal (full-screen overlay) ────────────
-function ChangePasswordModal({ currentUser, onClose }) {
+function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -86,6 +90,9 @@ function ChangePasswordModal({ currentUser, onClose }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [forgotMsg, setForgotMsg] = useState('');
+
+  // role=dialog, focus trap, Escape closes, focus returns to the Account button
+  const { titleId, dialogProps } = useDialog({ onClose, returnFocusRef });
 
   const forgotPwMutation = useMutation({
     mutationFn: () => authApi.forgotPassword(currentUser?.email),
@@ -120,7 +127,8 @@ function ChangePasswordModal({ currentUser, onClose }) {
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <motion.div
-        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+        {...dialogProps}
+        className="relative w-full max-w-md max-h-[90vh] max-h-[90dvh] overflow-x-hidden overflow-y-auto bg-white rounded-2xl shadow-2xl outline-none"
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -133,11 +141,11 @@ function ChangePasswordModal({ currentUser, onClose }) {
               <KeyRound className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-slate-900">Change Password</h2>
+              <h2 id={titleId} className="text-base font-semibold text-slate-900">Change Password</h2>
               <p className="text-xs text-slate-500">Update your account password</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+          <button type="button" onClick={onClose} aria-label="Close" className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -147,7 +155,7 @@ function ChangePasswordModal({ currentUser, onClose }) {
           {/* Current password */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium text-slate-700">Current password</label>
+              <label htmlFor="cp-current" className="block text-sm font-medium text-slate-700">Current password</label>
               <button
                 type="button"
                 onClick={() => forgotPwMutation.mutate()}
@@ -159,6 +167,7 @@ function ChangePasswordModal({ currentUser, onClose }) {
             </div>
             <div className="relative">
               <input
+                id="cp-current"
                 type={showCurrent ? 'text' : 'password'}
                 value={currentPw}
                 onChange={(e) => setCurrentPw(e.target.value)}
@@ -167,6 +176,7 @@ function ChangePasswordModal({ currentUser, onClose }) {
                 className="w-full px-3 py-2.5 pr-10 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
               />
               <button type="button" onClick={() => setShowCurrent(v => !v)}
+                aria-label={showCurrent ? 'Hide current password' : 'Show current password'} aria-pressed={showCurrent}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                 {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -178,9 +188,10 @@ function ChangePasswordModal({ currentUser, onClose }) {
 
           {/* New password */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">New password</label>
+            <label htmlFor="cp-new" className="block text-sm font-medium text-slate-700 mb-1.5">New password</label>
             <div className="relative">
               <input
+                id="cp-new"
                 type={showNew ? 'text' : 'password'}
                 value={newPw}
                 onChange={(e) => setNewPw(e.target.value)}
@@ -189,6 +200,7 @@ function ChangePasswordModal({ currentUser, onClose }) {
                 className="w-full px-3 py-2.5 pr-10 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
               />
               <button type="button" onClick={() => setShowNew(v => !v)}
+                aria-label={showNew ? 'Hide new password' : 'Show new password'} aria-pressed={showNew}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                 {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -197,8 +209,9 @@ function ChangePasswordModal({ currentUser, onClose }) {
 
           {/* Confirm password */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm new password</label>
+            <label htmlFor="cp-confirm" className="block text-sm font-medium text-slate-700 mb-1.5">Confirm new password</label>
             <input
+              id="cp-confirm"
               type="password"
               value={confirmPw}
               onChange={(e) => setConfirmPw(e.target.value)}
@@ -287,7 +300,7 @@ function ContactViews({ isAdmin }) {
 }
 
 // ── Sidebar ────────────────────────────────────────────────
-export default function Sidebar() {
+export default function Sidebar({ drawer = null }) {
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(() => getStoredUser());
   const role = currentUser?.role || '';
@@ -308,12 +321,26 @@ export default function Sidebar() {
   const activeGroup = groups.find(g => g.title && g.items.some(i => isActiveHref(location.pathname, i.href)))?.title || null;
   const [open, setOpen] = useState(activeGroup);
   useEffect(() => { if (activeGroup) setOpen(activeGroup); }, [activeGroup]);
+  const isDrawer = Boolean(drawer && !drawer.isDesktop);
+  const drawerOpen = Boolean(isDrawer && drawer.open);
 
   return (
-    <aside className="fixed top-0 left-0 w-60 h-screen z-40 flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-blue-600 text-white">
+    <>
+    {/* Below lg: off-canvas drawer (useNavDrawer in Layout). Backdrop closes it. */}
+    {isDrawer && drawerOpen && (
+      <div className="fixed top-0 right-0 bottom-0 left-0 z-40 bg-slate-900/50 lg:hidden" onClick={drawer.closeDrawer} aria-hidden="true" />
+    )}
+    <aside id="app-sidebar" ref={drawer?.drawerRef} aria-label="Main navigation" inert={isDrawer && !drawerOpen ? true : undefined}
+      className={`fixed top-0 left-0 w-60 h-screen h-[100dvh] lg:h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-blue-600 text-white transition-transform duration-200 lg:translate-x-0 lg:z-40 ${drawerOpen ? 'translate-x-0 z-50 shadow-2xl' : '-translate-x-full z-40'}`}>
       <div className="h-14 flex items-center gap-2.5 px-4 shrink-0 border-b border-white/10">
         <img src={logoMark} alt="" className="w-7 h-7" />
         <span className="text-[15px] font-bold tracking-tight text-white">OUTREACH360<span className="text-[#73C8D2]">.AI</span></span>
+        {isDrawer && (
+          <button type="button" data-drawer-close onClick={drawer.closeDrawer} aria-label="Close navigation menu"
+            className="ml-auto lg:hidden p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10">
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
       <div className="mx-3 mt-3 mb-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
         <p className="text-[13px] font-semibold text-white truncate">{currentUser?.tenant_name || 'Workspace'}</p>
@@ -352,6 +379,7 @@ export default function Sidebar() {
         </NavLink>
       </div>
     </aside>
+    </>
   );
 }
 
@@ -361,6 +389,7 @@ export function ProfileMenu() {
   const ref = useRef(null);
   const [open, setOpen] = useState(false);
   const [changePwOpen, setChangePwOpen] = useState(false);
+  const accountBtnRef = useRef(null);
   const currentUser = getStoredUser();
   const role = currentUser?.role || '';
   useEffect(() => {
@@ -377,7 +406,7 @@ export function ProfileMenu() {
   };
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen(v => !v)} aria-label="Account" className="w-9 h-9 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center hover:ring-4 hover:ring-blue-100">
+      <button ref={accountBtnRef} onClick={() => setOpen(v => !v)} aria-label="Account" aria-expanded={open} className="w-9 h-9 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center hover:ring-4 hover:ring-blue-100">
         {getInitials(currentUser)}
       </button>
       {open && (
@@ -408,7 +437,7 @@ export function ProfileMenu() {
       )}
       {createPortal(
         <AnimatePresence>
-          {changePwOpen && <ChangePasswordModal currentUser={currentUser} onClose={() => setChangePwOpen(false)} />}
+          {changePwOpen && <ChangePasswordModal currentUser={currentUser} onClose={() => setChangePwOpen(false)} returnFocusRef={accountBtnRef} />}
         </AnimatePresence>, document.body)}
     </div>
   );

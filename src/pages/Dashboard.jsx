@@ -865,7 +865,7 @@ export default function Dashboard() {
                             </button>
                         )}
                     </div>
-                    <table className="w-full text-left">
+                    <div className="overflow-x-auto"><table className="w-full text-left">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200">
                                 <th className="py-3 px-5 text-xs font-semibold text-slate-500/90 uppercase tracking-wider">Campaign</th>
@@ -904,7 +904,7 @@ export default function Dashboard() {
                                 );
                             })}
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
             </div>
         </div>

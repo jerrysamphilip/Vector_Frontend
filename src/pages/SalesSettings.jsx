@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Pencil, Zap } from 'lucide-react';
-import { settingsApi, workflowApi, productsApi, money } from '../api/sales';
+import { settingsApi, workflowApi, productsApi, moneyExact } from '../api/sales';
 import { PageHeader, card, cardShadow, useTeamOwners, Seg } from '../components/sales/shared';
 import { Modal, Field, inputClass, PrimaryButton, SecondaryButton, ErrorNote } from '../components/contacts/shared';
+import { DiscountApprovalSettings } from '../components/sales/QuoteApproval';
 
 const errText = (e) => {
     const d = e?.response?.data?.detail;
@@ -378,7 +379,7 @@ function Products() {
                             <tr key={p.product_id} className={p.active ? '' : 'text-slate-400'}>
                                 <td className="py-2.5"><span className="font-medium">{p.name}</span>{!p.active && <span className="ml-2 text-xs">(inactive)</span>}</td>
                                 <td>{p.sku || '—'}</td>
-                                <td className="text-right tabular-nums pr-6">{money(p.unit_price)}</td>
+                                <td className="text-right tabular-nums pr-6">{moneyExact(p.unit_price)}</td>
                                 <td className="text-slate-500">{p.unit ? `per ${p.unit}` : '—'}</td>
                                 <td className="text-right"><button onClick={() => setEditing(p)} className="p-1.5 text-slate-400 hover:text-slate-700" aria-label="Edit"><Pencil className="w-4 h-4" /></button></td>
                             </tr>
@@ -404,6 +405,7 @@ export default function SalesSettings() {
             <GeneralSettings settings={settings} owners={owners} />
             <WorkflowRules owners={owners} />
             <Products />
+            <DiscountApprovalSettings />
         </div>
     );
 }

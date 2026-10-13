@@ -31,6 +31,12 @@ const usersApi = {
         return response.data;
     },
 
+    // New temporary password + sign-in link for a still-pending invite (at most once a minute)
+    resendInvite: async (userId) => {
+        const response = await apiV1Client.post(`/users/${userId}/resend-invite`);
+        return response.data;
+    },
+
     listInvitations: async () => {
         const response = await apiV1Client.get('/users/invitations');
         return response.data;

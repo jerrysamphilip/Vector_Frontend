@@ -65,7 +65,7 @@ export default function RevalidateModal({ prospect, onClose, onSuccess }) {
                             <p className="text-white/70 text-xs">Admin action — audit logged</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="text-white/70 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
+                    <button onClick={onClose} aria-label="Close" className="text-white/70 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
                         <X className="w-4 h-4" />
                     </button>
                 </div>

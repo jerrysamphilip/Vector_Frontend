@@ -9,7 +9,7 @@ import { ErrorNote, Field, Modal, OwnerSelect, PrimaryButton, SecondaryButton, i
 import { ClientTypeBadge, ClientTypeFilter, DealStatusBadge, Empty, OwnerFilter, PageHeader, Seg, card, cardShadow, selectSm, useLeadsMeta, useTeamOwners } from '../components/sales/shared';
 import CloseReasonModal from '../components/sales/CloseReasonModal';
 
-export function DealFormModal({ onClose, onSaved, defaults = {} }) {
+export function DealFormModal({ onClose, onSaved, defaults = {}, defaultAccountName, contactName }) {
     const owners = useTeamOwners();
     const me = getStoredUser();
     const meta = useLeadsMeta();
@@ -29,9 +29,18 @@ export function DealFormModal({ onClose, onSaved, defaults = {} }) {
         </>}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Name *" className="sm:col-span-2"><input className={inputClass} value={form.name} onChange={set('name')} autoFocus /></Field>
+                {/* Opened from a contact record: show which contact the deal is linked to (read-only) */}
+                {defaults.prospect_id && (
+                    <Field label="Contact" className="sm:col-span-2">
+                        <input className={`${inputClass} bg-slate-50 text-slate-600`} value={contactName || 'This contact'} readOnly aria-readonly="true" data-testid="deal-form-contact" />
+                    </Field>
+                )}
                 <Field label="Company" className="sm:col-span-2">
                     <select className={inputClass} value={form.account_id} onChange={set('account_id')}>
                         <option value="">No company</option>
+                        {/* A pre-filled company may be outside the picker's first page */}
+                        {defaults.account_id && defaultAccountName && !(companies?.items || []).some(a => a.account_id === defaults.account_id)
+                            && <option value={defaults.account_id}>{defaultAccountName}</option>}
                         {(companies?.items || []).map(a => <option key={a.account_id} value={a.account_id}>{a.name}</option>)}
                     </select>
                 </Field>
@@ -67,7 +76,7 @@ function StagesModal({ onClose }) {
     return (
         <Modal title="Sales stages" subtitle="Probability weights the revenue pipeline and forecast" onClose={onClose} width="max-w-2xl"
             footer={<SecondaryButton onClick={onClose} className="ml-auto">Done</SecondaryButton>}>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
                 <thead><tr className="text-xs font-semibold text-left text-slate-400 uppercase tracking-wide"><th className="pb-2">Stage</th><th className="pb-2 w-24">Probability</th><th className="pb-2 w-20">Order</th><th className="pb-2 w-24">Type</th><th className="pb-2 w-20">Active</th></tr></thead>
                 <tbody>
                     {stages.map(s => (
@@ -82,7 +91,7 @@ function StagesModal({ onClose }) {
                         </tr>
                     ))}
                 </tbody>
-            </table>
+            </table></div>
             <div className="flex items-end gap-2 mt-4 p-3 bg-slate-50 rounded-xl">
                 <Field label="New stage" className="flex-1"><input className={inputClass} value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} /></Field>
                 <Field label="Probability %" className="w-28"><input type="number" min="0" max="100" className={inputClass} value={draft.probability} onChange={e => setDraft(d => ({ ...d, probability: e.target.value }))} /></Field>

@@ -3,11 +3,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, FileText, Plus, History, Trash2, AlertTriangle, Megaphone, ListOrdered } from 'lucide-react';
 import { errorMessage } from '../api/contacts';
-import { dealsApi, money, proposalsApi, stagesApi } from '../api/sales';
+import { dealsApi, money, moneyExact, proposalsApi, stagesApi } from '../api/sales';
 import { ErrorNote, Field, OwnerSelect, PrimaryButton, formatDateTime, inputClass, relativeDate } from '../components/contacts/shared';
 import { ClientTypeBadge, DealStatusBadge, card, cardShadow, useLeadsMeta, useTeamOwners } from '../components/sales/shared';
 import CloseReasonModal from '../components/sales/CloseReasonModal';
 import { DealTimeline, QuoteModal, StageHistory } from '../components/sales/DealExtras';
+import { ApprovalBadge } from '../components/sales/QuoteApproval';
 
 const PROPOSAL_TONE = { DRAFT: 'bg-slate-100 text-slate-600', SENT: 'bg-sky-50 text-sky-700', UNDER_REVIEW: 'bg-amber-50 text-amber-700',
     ACCEPTED: 'bg-emerald-50 text-emerald-700', REJECTED: 'bg-red-50 text-red-700' };
@@ -33,12 +34,13 @@ function Proposals({ deal, onChanged }) {
                             <p className="text-sm font-medium text-slate-800 min-w-0 truncate">{p.title}</p>
                             <button onClick={() => window.confirm('Delete this proposal?') && remove.mutate(p.proposal_id)} className="p-0.5 text-slate-300 hover:text-red-500 shrink-0" aria-label="Delete proposal"><Trash2 className="w-4 h-4" /></button>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">{canSee ? money(p.amount) : 'Amount hidden'}{p.line_count ? ` · ${p.line_count} line${p.line_count === 1 ? '' : 's'}` : ''}{p.sent_at ? ` · sent ${relativeDate(p.sent_at)}` : ''}{p.decided_at ? ` · decided ${relativeDate(p.decided_at)}` : ''}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{canSee ? moneyExact(p.amount) : 'Amount hidden'}{p.line_count ? ` · ${p.line_count} line${p.line_count === 1 ? '' : 's'}` : ''}{p.sent_at ? ` · sent ${relativeDate(p.sent_at)}` : ''}{p.decided_at ? ` · decided ${relativeDate(p.decided_at)}` : ''}</p>
                         <div className="flex items-center gap-2 mt-2">
                             <select value={p.status} onChange={e => update.mutate({ id: p.proposal_id, payload: { status: e.target.value } })}
                                 className={`h-7 px-2 rounded-md text-xs font-semibold border-0 ${PROPOSAL_TONE[p.status]}`} aria-label="Proposal status">
                                 {(meta?.proposal_statuses || []).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                             </select>
+                            <ApprovalBadge status={p.approval_status} />
                             {canSee && <button onClick={() => setQuoting(p)} className="ml-auto h-7 px-2.5 rounded-md text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1" title="Quote lines and PDF"><ListOrdered className="w-3.5 h-3.5" /> Quote &amp; PDF</button>}
                         </div>
                     </li>

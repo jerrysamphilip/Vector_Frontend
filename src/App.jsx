@@ -37,6 +37,8 @@ const Pipeline = lazy(() => import('./pages/Pipeline'));
 const SalesReports = lazy(() => import('./pages/SalesReports'));
 const SalesTeam = lazy(() => import('./pages/SalesTeam'));
 const SalesSettings = lazy(() => import('./pages/SalesSettings'));
+const Webhooks = lazy(() => import('./pages/Webhooks'));
+const ContactScoring = lazy(() => import('./pages/ContactScoring'));
 const SalesTargets = lazy(() => import('./pages/SalesTargets'));
 const TemplateLibrary = lazy(() => import('./pages/TemplateLibrary'));
 const Connections = lazy(() => import('./pages/Connections'));
@@ -49,6 +51,7 @@ const TestAutomation = lazy(() => import('./pages/TestAutomation'));
 const TeamManagement = lazy(() => import('./pages/TeamManagement'));
 const SetPassword = lazy(() => import('./pages/SetPassword'));
 const AccountSecurity = lazy(() => import('./pages/AccountSecurity'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 import ErrorBoundary from './components/common/ErrorBoundary';
 import './index.css';
 
@@ -146,6 +149,8 @@ function App() {
                         <Route path="sales-reports" element={<SalesReports />} />
                         <Route path="sales-team" element={<SalesTeam />} />
                         <Route path="sales-settings" element={<SalesSettings />} />
+                        <Route path="webhooks" element={<Webhooks />} />
+                        <Route path="contact-scoring" element={<ContactScoring />} />
                         <Route path="sales-targets" element={<SalesTargets />} />
                         <Route path="templates" element={<TemplateLibrary />} />
                         <Route path="connections" element={<Connections />} />
@@ -172,6 +177,7 @@ function App() {
                         <Route path="team" element={<PermissionRoute permission="manage_team"><TeamManagement /></PermissionRoute>} />
                         {import.meta.env.DEV && <Route path="test-automation" element={<TestAutomation />} />}
                         <Route path="settings" element={<Dashboard />} />
+                        <Route path="*" element={<NotFound />} />
                     </Route>
 
                     {/* Platform Admin routes — separate layout */}
@@ -184,8 +190,8 @@ function App() {
                         )}
                     >
                         <Route index element={<PlatformAdmin />} />
-                        <Route path="tenants" element={<PlatformAdmin />} />
-                        <Route path="users" element={<PlatformAdmin />} />
+                        <Route path="tenants" element={<PlatformAdmin view="tenants" />} />
+                        <Route path="users" element={<PlatformAdmin view="users" />} />
                         <Route path="security" element={<div className="p-8"><AccountSecurity /></div>} />
                     </Route>
 

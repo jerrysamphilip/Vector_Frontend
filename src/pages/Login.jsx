@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { authApi } from "../api/auth";
 import { isAuthenticated, consumeFirstLogin, getStoredUser } from "../lib/authStorage";
 import MfaChallenge from "../components/auth/MfaChallenge";
+import { safeReturnPath } from "../lib/returnTo";
 
 import bg from "../assets/bg.png";
 import logo from "../assets/logo.png";
@@ -13,7 +14,17 @@ import neutrinoLogo from "../assets/Neutrino.png";
 const LoginPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const fromPath = location.state?.from?.pathname || "/app/dashboard";
+    // Back to the page that was requested / in use: route state from ProtectedRoute (path + query + hash), or
+    // ?next= from the http.js session-expiry redirect. Internal /app or /admin paths only (no open redirect).
+    const params = new URLSearchParams(location.search);
+    const from = location.state?.from;
+    const fromPath = safeReturnPath(from ? `${from.pathname || ""}${from.search || ""}${from.hash || ""}` : null)
+        || safeReturnPath(params.get("next"))
+        || "/app/dashboard";
+    const reason = params.get("reason");
+    const notice = reason === "suspended"
+        ? "Your workspace is suspended. Contact your administrator to restore access."
+        : reason === "expired" ? "Your session has expired. Sign in again to continue where you left off." : "";
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -96,7 +107,7 @@ const LoginPage = () => {
 
             {/* ================= LOGIN CARD ================= */}
             <div
-                className="w-[500px] rounded-[16px] px-6 py-6 backdrop-blur-[50px] relative overflow-hidden"
+                className="w-[calc(100%-2rem)] max-w-[500px] rounded-[16px] px-6 py-6 backdrop-blur-[50px] relative overflow-hidden"
                 style={{
                     background: 'radial-gradient(98.05% 261.61% at 1.95% 3.59%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 100%)',
                     boxShadow: 'rgba(0, 0, 0, 0.25) 0px 4px 4px 0px',
@@ -111,9 +122,9 @@ const LoginPage = () => {
                         className="max-w-[230px] h-auto object-contain mb-1"
                     />
                     <div className="flex justify-center mb-1">
-                        <div className="text-[16px] font-medium text-white pb-2 border-b-2 border-white/60">
+                        <h1 className="text-[16px] font-medium text-white pb-2 border-b-2 border-white/60">
                             Login
-                        </div>
+                        </h1>
                     </div>
                 </div>
 
@@ -124,9 +135,16 @@ const LoginPage = () => {
                         onCancel={() => { setMfaToken(""); setError(""); }}
                     />
                 ) : (<>
+                {/* WHY THE USER IS HERE (session expired / workspace suspended) */}
+                {notice && !error && (
+                    <p role="status" className={`text-sm text-center mb-4 ${reason === "suspended" ? "text-amber-200" : "text-white/80"}`}>
+                        {notice}
+                    </p>
+                )}
+
                 {/* ERROR */}
                 {error && (
-                    <p className="text-red-400 text-sm text-center mb-4">
+                    <p role="alert" className="text-red-400 text-sm text-center mb-4">
                         {error}
                     </p>
                 )}
@@ -134,13 +152,15 @@ const LoginPage = () => {
                 <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
                     {/* EMAIL */}
                     <div className="mb-4">
-                        <label className="block text-[14px] font-normal text-white mb-1.5">Email Address</label>
+                        <label htmlFor="login-email" className="block text-[14px] font-normal text-white mb-1.5">Email Address</label>
                         <div className="relative">
                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-white">
                                 <Mail size={18} />
                             </div>
                             <input
+                                id="login-email"
                                 type="email"
+                                autoComplete="username"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full h-[42px] pl-11 pr-3.5 rounded-lg text-[14px] outline-none transition-all text-white placeholder:text-white/40"
@@ -155,13 +175,15 @@ const LoginPage = () => {
 
                     {/* PASSWORD */}
                     <div className="mb-5">
-                        <label className="block text-[13px] font-normal text-white mb-1.5">Password</label>
+                        <label htmlFor="login-password" className="block text-[13px] font-normal text-white mb-1.5">Password</label>
                         <div className="relative">
                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-white">
                                 <Lock size={18} />
                             </div>
                             <input
+                                id="login-password"
                                 type={showPassword ? "text" : "password"}
+                                autoComplete="current-password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full h-[42px] pl-11 pr-11 rounded-lg text-[14px] outline-none transition-all text-white placeholder:text-white/40"
@@ -174,6 +196,8 @@ const LoginPage = () => {
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                                aria-pressed={showPassword}
                                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
                             >
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

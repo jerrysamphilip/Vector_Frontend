@@ -1,4 +1,4 @@
-import { Eye, Trash2, Users, ChevronUp, ChevronDown, Check, Plus } from 'lucide-react';
+import { Eye, Trash2, Users, ChevronUp, ChevronDown, Check, Plus, Pencil } from 'lucide-react';
 
 // ── Avatar from list name initials ─────────────────────────────
 const GRADIENTS = [
@@ -104,6 +104,7 @@ export default function ProspectListsTable({
   isLoading,
   onView,
   onDelete,
+  onRename,
   sortBy,
   sortOrder,
   onSort,
@@ -228,6 +229,16 @@ export default function ProspectListsTable({
                       <Eye className="w-3.5 h-3.5" />
                       View
                     </button>
+                    {onRename && (
+                      <button
+                        onClick={() => onRename(list)}
+                        aria-label={`Rename ${list.list_name}`}
+                        title="Rename"
+                        className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={() => onDelete?.(list)}
                       className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"

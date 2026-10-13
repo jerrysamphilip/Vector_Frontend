@@ -158,13 +158,15 @@ const CRM = [
     {
         id: 'contact-record', category: 'CRM', title: 'A contact\'s page', routes: ['/app/contacts/:id'],
         summary: 'Everything about one person: details, activity, tasks, lists, deals and history.',
-        keywords: ['contact detail', 'timeline', 'notes', 'activity', 'lifecycle', 'subscription'],
+        keywords: ['contact detail', 'timeline', 'notes', 'activity', 'lifecycle', 'subscription', 'mention', 'associated companies', 'association label'],
         body: [
             { list: [
                 { term: 'Left', text: 'the contact\'s details and properties. Click a value to edit it; changes are saved and recorded in history.' },
                 { term: 'Middle', text: 'the activity timeline: notes, calls, meetings and emails you log, campaign emails sent and received, and changes. Log something with the composer at the top.' },
-                { term: 'Right', text: 'company, open tasks, lists, leads and deals for this contact.' },
+                { term: 'Right', text: 'companies, open tasks, lists, leads and deals for this contact.' },
             ] },
+            { p: '**Companies**: a contact can be associated with several companies, each with a label such as *Decision maker* or *Billing*. One is the **primary** company (the one shown in the Company field); use the star to make another company primary. To remove the primary company, choose which one takes its place.' },
+            { p: '**@mentions**: in a note, type **@** and pick a colleague (arrow keys and Enter work). They get a notification in the bell that links to the record, and an email too if they turned email notifications on.' },
             { p: '**Create lead** starts qualifying this contact as a sales lead. Lifecycle stage moves on its own as the lead and deal progress (Lead → MQL → SQL → Opportunity → Customer).' },
             { p: 'Subscription status shows whether the contact can receive campaign emails. Unsubscribed contacts are never emailed.' },
         ],
@@ -184,13 +186,15 @@ const CRM = [
     {
         id: 'lists', category: 'CRM', title: 'Lists', routes: ['/app/lists'],
         summary: 'Groups of contacts for campaigns and follow-up.',
-        keywords: ['static list', 'active list', 'segment', 'smart list'],
+        keywords: ['static list', 'active list', 'segment', 'smart list', 'rename', 'edit list', 'description'],
         body: [
             { list: [
                 { term: 'Static', text: 'a fixed set of contacts. Add people from Contacts (**Add to list**) or during an import.' },
                 { term: 'Active', text: 'contacts who match filters you set. Membership updates on its own as contacts change.' },
             ] },
             { p: 'Click a list to see its contacts on the Contacts screen. Lists can be enrolled in campaigns.' },
+            { h: 'Renaming a list' },
+            { p: 'Click the pencil on a list\'s row to change its **Name** or **Description** (and, for an active list, its filters). You can also rename the list you are viewing from the **List:** chip on Contacts, or an uploaded list from the pencil on **Prospect lists**. Its contacts stay the same.' },
             { note: '**Prospect lists** (under CRM) are the outreach upload lists used by campaigns; see "Prospect lists".' },
         ],
         related: ['contacts', 'prospect-lists'],
@@ -323,6 +327,8 @@ const SALES = [
             { p: 'The timeline shows activities, tasks, emails with the contact (including ones synced from your mailbox) and every change to the deal. Filter it with **All**, **Activities**, **Tasks**, **Emails** and **Changes**.' },
             { h: 'Proposals and quotes (right)' },
             { p: 'Add a proposal and track its status (Draft, Sent, Under review, Accepted, Rejected). **Quote & PDF** opens the quote: add lines from the price list or custom lines with quantity, price and discount; saving sets the proposal amount. **PDF** downloads a quote to send.' },
+            { h: 'Discount approval' },
+            { p: 'When an admin sets a discount limit (**Sales settings** → **Discount approval**), a quote whose discount on any line, or overall, is above it shows **Approval needed** and cannot be marked Sent, Under review or Accepted. Click **Submit for approval** in the quote. Your managers (or an admin, when you have none) are notified; they approve or reject it with a reason, and you are notified of the decision. Raising the discount after approval sends the quote back for approval.' },
         ],
         related: ['deals', 'forecasting', 'calendar-sync', 'sales-settings'],
     },
@@ -334,6 +340,7 @@ const SALES = [
             { list: [
                 { term: 'Revenue pipeline', text: 'open amount and weighted amount (amount × stage probability) per stage, split into new and existing clients.' },
                 { term: 'Proposal pipeline', text: 'proposals by status with their totals.' },
+                { term: 'Discount approvals', text: '**Awaiting my approval** lists quotes from your team (or, for admins, anyone) whose discount is waiting for you; approve, or reject with a reason. **My requests** shows your own quotes sent for approval.' },
             ] },
             { p: 'Use the owner and client-type filters to narrow it. Click a stage to see its deals.' },
         ],
@@ -342,7 +349,7 @@ const SALES = [
     {
         id: 'forecasting', category: 'Sales', title: 'Forecasts and targets explained',
         summary: 'How weighted pipeline, forecast categories and targets fit together.',
-        keywords: ['forecast', 'commit', 'best case', 'weighted', 'quarter', 'financial year', 'target', 'attainment'],
+        keywords: ['forecast', 'commit', 'best case', 'weighted', 'quarter', 'financial year', 'target', 'attainment', 'forecast accuracy', 'sql to win'],
         body: [
             { list: [
                 { term: 'Weighted', text: 'amount × stage probability. A $100K deal at Proposal (50%) counts $50K.' },
@@ -353,6 +360,8 @@ const SALES = [
             ] },
             { p: 'Forecast categories are set from the stage probability (70% and above: Commit; 40% and above: Best case; otherwise Pipeline). Reps can override a deal\'s category on the deal page.' },
             { p: 'The financial year starts in April: Q1 is April–June.' },
+            { p: '**Forecast accuracy** (Sales reports → Forecast): at the start of every month and quarter the forecast is stored automatically; when the period ends it is compared with revenue actually won: accuracy = 1 − |actual − forecast| ÷ forecast. Admins can store it by hand with **Take snapshot now**.' },
+            { p: '**SQL to win** (Sales reports → Leads & SQLs): of the leads that reached SQL in the period, the share whose deal was won.' },
         ],
         related: ['sales-reports', 'targets', 'deal-page'],
     },
@@ -403,14 +412,50 @@ const SALES = [
 
 const WORKSPACE = [
     {
+        id: 'contact-scoring', category: 'Workspace & settings', title: 'Contact scoring', routes: ['/app/contact-scoring'],
+        summary: 'Score contacts 0-100 on fit and engagement, graded A to D. Admins set the rules.',
+        keywords: ['score', 'grade', 'lead scoring', 'fit', 'engagement', 'decay', 'recompute'],
+        body: [
+            { p: '**Fit rules** add points for who the contact is (job title, industry, company size, country and so on). **Engagement** adds points for emails opened, links clicked, replies, meetings, calls and completed tasks, fading with age. **Weights** set how much each counts, and **Grades** set the minimum score for A, B and C.' },
+            { p: 'Scores update when a contact is created or edited and when activity is logged; email activity is picked up by the background job. **Recompute all** rescores the whole workspace after you change the rules.' },
+            { note: 'Out-of-office and vacation auto-replies do not count as replies.' },
+        ],
+        related: ['contacts', 'contact-record'],
+    },
+    {
+        id: 'webhooks', category: 'Workspace & settings', title: 'Webhooks', routes: ['/app/webhooks'],
+        summary: 'Send signed events to another system when contacts, leads, deals or emails change. Admins only.',
+        keywords: ['webhook', 'integration', 'api', 'events', 'signature', 'secret', 'callback'],
+        body: [
+            { steps: [
+                'Click **Add endpoint**, enter an https URL and tick the events to send.',
+                'Copy the **Signing secret** when it is shown; it is not shown again. Use it to check the signature header on each request.',
+                'Click **Send test** to check your endpoint answers.',
+            ] },
+            { p: 'Each delivery is logged with its status. Failed deliveries are retried automatically; you can also retry one by hand. Turn an endpoint off, rotate its secret or delete it from its card.' },
+        ],
+        related: ['workflow-rules', 'team-management'],
+    },
+    {
+        id: 'discount-approval', category: 'Sales', title: 'Discount approval',
+        summary: 'Quotes with a discount above the workspace limit need a manager\'s approval before they go out.',
+        keywords: ['discount', 'approval', 'quote', 'approve', 'reject', 'limit'],
+        body: [
+            { p: 'An admin sets the limit in **Sales settings** → **Discount approval**. A quote above it shows **Approval needed** and cannot be marked Sent, Under review or Accepted until approved.' },
+            { p: 'Click **Submit for approval** in the quote. Your managers (or an admin) approve or reject it with a reason from **Sales** → **Awaiting my approval**, and you are notified. Raising the discount afterwards sends it back for approval.' },
+        ],
+        related: ['deal-page', 'sales-settings', 'sales-overview'],
+    },
+    {
         id: 'sales-team', category: 'Workspace & settings', title: 'Sales team', routes: ['/app/sales-team'],
         summary: 'Set each person\'s sales level and who they report to.',
         keywords: ['hierarchy', 'level', 'manager', 'reports to', 'org chart'],
         body: [
             { p: 'For each person choose a **Level** (L1 CEO / COO / Sales Head, L2 Business Development, L3 Business Executive, L4 Market Research) and who they **Report to**. People without a level are **Not in sales hierarchy**.' },
             { p: 'The hierarchy decides what managers see and how team reports add up.' },
+            { p: 'Admins can also set a person\'s **Sales level** and **Reports to** on **Team** (**Hierarchy** on their row, or when inviting them). Nobody can report to someone in their own team.' },
         ],
-        related: ['roles-and-visibility', 'targets'],
+        related: ['roles-and-visibility', 'targets', 'team-management'],
     },
     {
         id: 'sales-settings', category: 'Workspace & settings', title: 'Sales settings', routes: ['/app/sales-settings'],
@@ -430,6 +475,7 @@ const WORKSPACE = [
             { p: 'Remember to click **Save settings**.' },
             { h: 'Also on this screen' },
             { p: '**Workflow rules** and **Products and price list**; see their own articles.' },
+            { p: '**Discount approval**: quotes with a discount above this percent need approval by the owner\'s manager or an admin before they can be sent or accepted. Leave it empty to turn approval off.' },
         ],
         related: ['workflow-rules', 'products', 'leads'],
     },

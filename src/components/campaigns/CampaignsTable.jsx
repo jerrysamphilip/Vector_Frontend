@@ -77,7 +77,7 @@ export function ColumnPicker({ visible, onChange, onClose }) {
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100"
                 style={{ background: 'linear-gradient(90deg, #1f4bba, #73C8D2)' }}>
                 <span className="text-xs font-bold uppercase tracking-wider text-white/90">Customise Columns</span>
-                <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
+                <button onClick={onClose} aria-label="Close" className="text-white/70 hover:text-white transition-colors">
                     <X className="w-3.5 h-3.5" />
                 </button>
             </div>
@@ -116,7 +116,7 @@ export function ColumnPicker({ visible, onChange, onClose }) {
 export default function CampaignsTable({
     campaigns, isLoading, onAction, performingActionId,
     selectedIds = [], onToggleSelect, onToggleAll,
-    visibleCols = []
+    visibleCols = [], searchTerm = ''
 }) {
     const navigate = useNavigate();
 
@@ -140,9 +140,9 @@ export default function CampaignsTable({
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0046FF] to-[#73C8D2] flex items-center justify-center mb-4 shadow-lg">
                     <Mail className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-slate-900 font-semibold text-lg">No campaigns yet</h3>
+                <h3 className="text-slate-900 font-semibold text-lg">{searchTerm ? 'No campaigns match your search' : 'No campaigns yet'}</h3>
                 <p className="text-slate-400 text-sm mt-1 max-w-sm">
-                    Create your first campaign to start reaching out to prospects.
+                    {searchTerm ? 'Try a different name, or clear the search.' : 'Create your first campaign to start reaching out to prospects.'}
                 </p>
             </div>
         );
@@ -159,7 +159,7 @@ export default function CampaignsTable({
                             <th className="py-3.5 px-4 w-[50px] min-w-[50px] sticky left-0 z-20" style={{ background: '#f8fafc' }}>
                                 <input type="checkbox"
                                     className="w-4 h-4 rounded border-slate-300 bg-white text-indigo-600 cursor-pointer"
-                                    checked={allSelected} onChange={onToggleAll} />
+                                    checked={allSelected} onChange={onToggleAll} aria-label="Select all campaigns" />
                             </th>
                             <th className="py-3.5 px-4 w-[280px] min-w-[280px] max-w-[280px] sticky left-[50px] z-20" style={{ background: '#f8fafc' }}>
                                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Campaign</span>
@@ -237,7 +237,8 @@ export default function CampaignsTable({
                                             <input type="checkbox"
                                                 className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                                                 checked={isSelected}
-                                                onChange={() => onToggleSelect(campaign.campaign_id)} />
+                                                onChange={() => onToggleSelect(campaign.campaign_id)}
+                                                aria-label={`Select ${campaign.campaign_name || 'campaign'}`} />
                                         </td>
 
                                         {/* Campaign Name */}

@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { dealsApi, money, moneyShort, proposalsApi } from '../api/sales';
 import { relativeDate } from '../components/contacts/shared';
+import { ApprovalBadge, ApprovalsList } from '../components/sales/QuoteApproval';
 import { ClientTypeBadge, ClientTypeFilter, HBar, OwnerFilter, PageHeader, Seg, StatTile, card, cardShadow } from '../components/sales/shared';
 
 const PROPOSAL_TONE = { DRAFT: 'border-slate-300', SENT: 'border-sky-400', UNDER_REVIEW: 'border-amber-400', ACCEPTED: 'border-emerald-500', REJECTED: 'border-red-400' };
@@ -32,7 +33,7 @@ function Revenue({ owner, clientType }) {
                 ))}
             </div>
             <div className={`${card} overflow-hidden`} style={cardShadow}>
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto"><table className="w-full text-sm">
                     <thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase tracking-wide">
                         <th className="pl-5 py-3">Stage</th><th className="px-3 py-3 text-right">Probability</th><th className="px-3 py-3 text-right">Deals</th>
                         <th className="px-3 py-3 text-right">Amount</th><th className="px-3 py-3 text-right">Weighted</th><th className="px-3 py-3 text-right">New clients</th><th className="px-3 pr-5 py-3 text-right">Existing clients</th>
@@ -55,7 +56,7 @@ function Revenue({ owner, clientType }) {
                             <td className="px-3 py-2.5 text-right tabular-nums">{money(t.by_client_type.NEW.amount)}</td><td className="px-3 pr-5 py-2.5 text-right tabular-nums">{money(t.by_client_type.EXISTING.amount)}</td>
                         </tr>
                     </tbody>
-                </table>
+                </table></div>
             </div>
         </div>
     );
@@ -80,6 +81,7 @@ function Proposals({ owner, clientType }) {
                                 <p className="text-xs text-slate-500 truncate">{p.company_name || p.opportunity_name}</p>
                                 <div className="flex items-center justify-between mt-2"><span className="text-sm font-bold">{moneyShort(p.amount)}</span><ClientTypeBadge value={p.client_type} /></div>
                                 <p className="text-[11px] text-slate-400 mt-1">{p.owner_name} · {relativeDate(p.sent_at || p.created_at)}</p>
+                                {p.approval_status && p.approval_status !== 'NOT_REQUIRED' && <div className="mt-1.5"><ApprovalBadge status={p.approval_status} /></div>}
                             </Link>
                         ))}
                         {!col.count && <p className="text-xs text-slate-400 text-center py-6">None</p>}
@@ -100,11 +102,11 @@ export default function Pipeline() {
         <div className="w-full space-y-6">
             <PageHeader title="Pipeline" subtitle="Revenue and proposals across new and existing clients" />
             <div className={`${card} px-5 py-4 flex items-center gap-3 flex-wrap`} style={cardShadow}>
-                <Seg options={[['revenue', 'Revenue pipeline'], ['proposals', 'Proposal pipeline']]} value={tab} onChange={v => update({ tab: v })} />
-                <OwnerFilter value={owner} onChange={v => update({ owner: v })} />
-                <ClientTypeFilter value={clientType} onChange={v => update({ client_type: v })} />
+                <Seg options={[['revenue', 'Revenue pipeline'], ['proposals', 'Proposal pipeline'], ['approvals', 'Discount approvals']]} value={tab} onChange={v => update({ tab: v })} />
+                {tab !== 'approvals' && <OwnerFilter value={owner} onChange={v => update({ owner: v })} />}
+                {tab !== 'approvals' && <ClientTypeFilter value={clientType} onChange={v => update({ client_type: v })} />}
             </div>
-            {tab === 'revenue' ? <Revenue owner={owner} clientType={clientType} /> : <Proposals owner={owner} clientType={clientType} />}
+            {tab === 'revenue' ? <Revenue owner={owner} clientType={clientType} /> : tab === 'approvals' ? <ApprovalsList /> : <Proposals owner={owner} clientType={clientType} />}
         </div>
     );
 }

@@ -4,10 +4,14 @@ import {
     Users, UserPlus, Search, Shield, Copy,
     Clock, X, Mail, Crown, UserCheck, UserX, ChevronDown,
     CheckCircle, Settings2, RotateCcw, Trash2, TrendingUp, TrendingDown,
+    Network, Send,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import Loading from '../components/common/Loading';
 import usersApi from '../api/users';
+import { hierarchyApi } from '../api/sales';
+import { managerCandidates, hierarchyError } from '../lib/hierarchy';
 import { getStoredUser } from '../lib/authStorage';
 import KpiTile from '../components/ui/KpiTile';
 
@@ -111,6 +115,85 @@ function StatusBadge({ status }) {
         <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gray-100 text-gray-500">
             <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />Inactive
         </span>
+    );
+}
+
+// ── Sales hierarchy fields (BRD 5.4): level + "Reports to" ───────────
+const LEVEL_LABELS = { 1: 'CEO / COO / Sales Head', 2: 'Business Development', 3: 'Business Executive', 4: 'Market Research' };
+
+function HierarchyFields({ hierarchy, userId, level, managerId, onChange }) {
+    const users = hierarchy?.users || [];
+    const levels = hierarchy?.levels?.length ? hierarchy.levels : Object.entries(LEVEL_LABELS).map(([k, v]) => ({ level: Number(k), label: v }));
+    const candidates = managerCandidates(users, userId, level);
+    const selectCls = 'w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 disabled:bg-gray-50 disabled:text-gray-400';
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1.5" htmlFor="hier-level">Sales level</label>
+                <select id="hier-level" className={selectCls} value={level || ''}
+                    onChange={e => {
+                        const next = e.target.value ? Number(e.target.value) : null;
+                        const keep = managerCandidates(users, userId, next).some(u => u.user_id === managerId);
+                        onChange(next, keep ? managerId : (managerCandidates(users, userId, next).slice(-1)[0]?.user_id || null));
+                    }}>
+                    <option value="">Not in sales hierarchy</option>
+                    {levels.map(l => <option key={l.level} value={l.level}>L{l.level} · {l.label}</option>)}
+                </select>
+            </div>
+            <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1.5" htmlFor="hier-manager">Reports to</label>
+                <select id="hier-manager" className={selectCls} value={managerId || ''} disabled={!level || level <= 1}
+                    onChange={e => onChange(level, e.target.value || null)}>
+                    <option value="">{!level || level <= 1 ? 'No manager' : 'Choose a manager'}</option>
+                    {candidates.map(m => <option key={m.user_id} value={m.user_id}>{m.name} (L{m.sales_level})</option>)}
+                </select>
+                {level > 1 && candidates.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-1">Nobody is at a higher level yet: set up their manager first.</p>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function HierarchyModal({ user, hierarchy, onClose, onSave, isSaving, error }) {
+    const current = (hierarchy?.users || []).find(u => u.user_id === user.user_id);
+    const [level, setLevel] = useState(current?.sales_level || null);
+    const [managerId, setManagerId] = useState(current?.manager_id || null);
+    const problem = hierarchyError(hierarchy?.users || [], user.user_id, level, managerId);
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div role="dialog" aria-label="Sales hierarchy" className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div className="px-6 py-5 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                    <div>
+                        <h3 className="font-semibold !text-white">Sales hierarchy</h3>
+                        <p className="text-xs text-white/70">{user.first_name} {user.last_name} · {user.email}</p>
+                    </div>
+                    <button onClick={onClose} aria-label="Close" className="p-1.5 text-white/70 hover:text-white rounded-lg hover:bg-white/10"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="px-6 py-5 space-y-4">
+                    <p className="text-xs text-gray-500">People in the hierarchy see their own records and their team's. A manager must sit at a higher level, and nobody can report to someone in their own team.</p>
+                    {!current ? (
+                        <p className="text-sm text-gray-500">This account is not active, so it is not part of the hierarchy.</p>
+                    ) : (
+                        <HierarchyFields hierarchy={hierarchy} userId={user.user_id} level={level} managerId={managerId}
+                            onChange={(l, m) => { setLevel(l); setManagerId(m); }} />
+                    )}
+                    {(error || (current && problem)) && (
+                        <div className="px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">{error || problem}</div>
+                    )}
+                    <div className="flex items-center gap-3 pt-1">
+                        <Button type="button" variant="ghost" className="flex-1" onClick={onClose}>Cancel</Button>
+                        <button type="button" disabled={!current || !!problem || isSaving}
+                            onClick={() => onSave({ sales_level: level, manager_id: level > 1 ? managerId : null })}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+                            style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
+                            {isSaving ? 'Saving…' : 'Save'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -222,6 +305,10 @@ export default function TeamManagement() {
     const [roleDrafts,      setRoleDrafts]      = useState({});
     const [permissionsUser, setPermissionsUser] = useState(null);
     const [actionError,     setActionError]     = useState(null);
+    const [inviteLevel,     setInviteLevel]     = useState(null);
+    const [inviteManager,   setInviteManager]   = useState(null);
+    const [hierarchyUser,   setHierarchyUser]   = useState(null);
+    const [hierarchyErr,    setHierarchyErr]    = useState(null);
 
     const canManageUsers  = currentRole === 'SUPER_ADMIN' || currentRole === 'ADMIN';
     const canChangeRole   = currentRole === 'SUPER_ADMIN';
@@ -234,6 +321,18 @@ export default function TeamManagement() {
         enabled: canManageUsers,
     });
 
+    const hierarchyQuery = useQuery({
+        queryKey: ['hierarchy'],
+        queryFn: hierarchyApi.get,
+        enabled: canManageUsers,
+    });
+    const hierarchy = hierarchyQuery.data;
+    const hierarchyById = useMemo(
+        () => Object.fromEntries((hierarchy?.users || []).map(u => [u.user_id, u])),
+        [hierarchy],
+    );
+    const refreshHierarchy = () => ['hierarchy', 'contact-owners', 'contacts'].forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
+
     const onMutationError = (error) => {
         const msg = error?.response?.data?.detail || error?.message || 'Action failed. Please try again.';
         setActionError(msg);
@@ -241,14 +340,41 @@ export default function TeamManagement() {
     };
 
     const inviteMutation = useMutation({
-        mutationFn: usersApi.inviteUser,
+        // Invite, then place the new account in the sales hierarchy when a level was chosen
+        mutationFn: async ({ hierarchy: place, ...payload }) => {
+            const data = await usersApi.inviteUser(payload);
+            if (place?.sales_level && data?.user_id) {
+                try {
+                    await hierarchyApi.set(data.user_id, place);
+                } catch (err) {
+                    data.hierarchyError = err?.response?.data?.detail || 'Could not set the sales level';
+                }
+            }
+            return data;
+        },
         onSuccess: (data) => {
             setInviteResult(data);
             setInviteEmail('');
             setInviteRole('ADMIN');
+            setInviteLevel(null);
+            setInviteManager(null);
             setIsInviteOpen(false);
+            if (data?.hierarchyError) onMutationError({ message: `Invitation sent, but the hierarchy was not saved: ${data.hierarchyError}` });
             queryClient.invalidateQueries({ queryKey: ['team-users'] });
+            refreshHierarchy();
         },
+    });
+
+    const resendMutation = useMutation({
+        mutationFn: usersApi.resendInvite,
+        onSuccess: (data) => { setInviteResult(data); queryClient.invalidateQueries({ queryKey: ['team-users'] }); },
+        onError: onMutationError,
+    });
+
+    const hierarchyMutation = useMutation({
+        mutationFn: ({ userId, payload }) => hierarchyApi.set(userId, payload),
+        onSuccess: () => { setHierarchyUser(null); setHierarchyErr(null); refreshHierarchy(); },
+        onError: (error) => setHierarchyErr(error?.response?.data?.detail || error?.message || 'Could not save'),
     });
 
     const changeRoleMutation    = useMutation({ mutationFn: ({ userId, role }) => usersApi.changeRole(userId, role),        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['team-users'] }), onError: onMutationError });
@@ -276,7 +402,10 @@ export default function TeamManagement() {
 
     const handleInvite = (e) => {
         e.preventDefault();
-        inviteMutation.mutate({ email: inviteEmail.trim(), role: inviteRole });
+        inviteMutation.mutate({
+            email: inviteEmail.trim(), role: inviteRole,
+            hierarchy: inviteLevel ? { sales_level: inviteLevel, manager_id: inviteLevel > 1 ? inviteManager : null } : null,
+        });
     };
 
     const handleRoleSave = (user) => {
@@ -318,6 +447,12 @@ export default function TeamManagement() {
                     <h1 className="text-xl font-bold text-gray-900 leading-tight">Team Management</h1>
                     <p className="text-sm text-gray-400 mt-0.5">Manage users, roles and permissions for your workspace</p>
                 </div>
+                <div className="flex items-center gap-2">
+                <Link to="/app/sales-team"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-white border border-gray-200 hover:bg-gray-50">
+                    <Network className="w-4 h-4" />
+                    Team tree
+                </Link>
                 <button
                     onClick={() => setIsInviteOpen(true)}
                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
@@ -326,6 +461,7 @@ export default function TeamManagement() {
                     <UserPlus className="w-4 h-4" />
                     Invite Member
                 </button>
+                </div>
             </div>
 
             {/* ── Error banner ────────────────────────────────── */}
@@ -473,6 +609,7 @@ export default function TeamManagement() {
                                 <tr className="bg-slate-50 border-b border-slate-200">
                                     <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Member</th>
                                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Role</th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Reports to</th>
                                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
                                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Last Active</th>
                                     <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
@@ -487,6 +624,9 @@ export default function TeamManagement() {
                                     const canToggle = canToggleStatus && !isSelf && !isSuperAdmin && !(currentRole === 'ADMIN' && u.role === 'ADMIN');
                                     const canDelete = currentRole === 'SUPER_ADMIN' && !isSelf && !isSuperAdmin && u.status === 'INACTIVE';
                                     const isInvited = u.status === 'INVITED';
+                                    const canResend = isInvited && !(currentRole !== 'SUPER_ADMIN' && isSuperAdmin);
+                                    const place = hierarchyById[u.user_id];
+                                    const boss = place?.manager_id ? hierarchyById[place.manager_id] : null;
 
                                     return (
                                         <tr key={u.user_id}
@@ -539,6 +679,16 @@ export default function TeamManagement() {
                                                 )}
                                             </td>
 
+                                            {/* Sales hierarchy */}
+                                            <td className="px-4 py-4 text-xs">
+                                                {place?.sales_level ? (
+                                                    <div>
+                                                        <span className="inline-block px-2 py-0.5 rounded-full font-semibold bg-indigo-50 text-indigo-700">L{place.sales_level} · {place.level_label}</span>
+                                                        <p className="text-gray-500 mt-1">{boss ? `Reports to ${boss.name}` : 'Top of hierarchy'}</p>
+                                                    </div>
+                                                ) : <span className="text-gray-300">—</span>}
+                                            </td>
+
                                             {/* Status */}
                                             <td className="px-4 py-4">
                                                 <StatusBadge status={u.status} />
@@ -554,6 +704,20 @@ export default function TeamManagement() {
                                                         <button onClick={() => setPermissionsUser(u)}
                                                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 rounded-lg transition-colors">
                                                             <Settings2 className="w-3.5 h-3.5" />Permissions
+                                                        </button>
+                                                    )}
+                                                    {canResend && (
+                                                        <button onClick={() => resendMutation.mutate(u.user_id)}
+                                                            disabled={resendMutation.isPending && resendMutation.variables === u.user_id}
+                                                            title="Send a new sign-in link and temporary password"
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors disabled:opacity-50">
+                                                            <Send className="w-3.5 h-3.5" />Resend invite
+                                                        </button>
+                                                    )}
+                                                    {place && (
+                                                        <button onClick={() => { setHierarchyErr(null); setHierarchyUser(u); }}
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+                                                            <Network className="w-3.5 h-3.5" />Hierarchy
                                                         </button>
                                                     )}
                                                     {canToggle && (u.status === 'ACTIVE' || isInvited) && (
@@ -576,7 +740,7 @@ export default function TeamManagement() {
                                                             <Trash2 className="w-3.5 h-3.5" />Delete
                                                         </button>
                                                     )}
-                                                    {!canToggle && !canEdit && !canSetPerms && !canDelete && (
+                                                    {!canToggle && !canEdit && !canSetPerms && !canDelete && !canResend && !place && (
                                                         <span className="text-xs text-gray-300">—</span>
                                                     )}
                                                 </div>
@@ -656,6 +820,12 @@ export default function TeamManagement() {
                                 </div>
                             </div>
 
+                            <div>
+                                <p className="text-sm font-medium text-gray-700 mb-2">Sales hierarchy <span className="text-xs font-normal text-gray-400">(optional)</span></p>
+                                <HierarchyFields hierarchy={hierarchy} userId={null} level={inviteLevel} managerId={inviteManager}
+                                    onChange={(l, m) => { setInviteLevel(l); setInviteManager(m); }} />
+                            </div>
+
                             {inviteMutation.isError && (
                                 <div className="px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">
                                     {inviteMutation.error?.response?.data?.detail || 'Failed to invite user. Please try again.'}
@@ -666,7 +836,7 @@ export default function TeamManagement() {
                                 <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsInviteOpen(false)}>
                                     Cancel
                                 </Button>
-                                <button type="submit" disabled={inviteMutation.isPending}
+                                <button type="submit" disabled={inviteMutation.isPending || !!hierarchyError(hierarchy?.users || [], null, inviteLevel, inviteManager)}
                                     className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
                                     style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                                     <UserPlus className="w-4 h-4" />
@@ -676,6 +846,18 @@ export default function TeamManagement() {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* ── Sales hierarchy Modal ────────────────────────── */}
+            {hierarchyUser && (
+                <HierarchyModal
+                    user={hierarchyUser}
+                    hierarchy={hierarchy}
+                    onClose={() => setHierarchyUser(null)}
+                    onSave={payload => hierarchyMutation.mutate({ userId: hierarchyUser.user_id, payload })}
+                    isSaving={hierarchyMutation.isPending}
+                    error={hierarchyErr}
+                />
             )}
 
             {/* ── Permissions Modal ────────────────────────────── */}

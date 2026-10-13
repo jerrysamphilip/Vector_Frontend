@@ -6,6 +6,7 @@ import { accountsApi, contactsApi } from '../api/contacts';
 import { hasPermission } from '../lib/authStorage';
 import { AccountFormModal, formatRevenue } from './Accounts';
 import ContactFormModal from '../components/contacts/ContactFormModal';
+import AccountDeals from '../components/sales/AccountDeals';
 import { Avatar, OwnerSelect, StageBadge, TagChips, formatDateTime, relativeDate, useCrmMeta } from '../components/contacts/shared';
 
 export default function AccountDetail() {
@@ -115,7 +116,11 @@ export default function AccountDetail() {
                                 <Link to={`/app/contacts/${c.prospect_id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/70">
                                     <Avatar first={c.first_name} last={c.last_name} seed={c.email} size="sm" />
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-slate-800 truncate">{c.full_name}</p>
+                                        <p className="text-sm font-semibold text-slate-800 truncate flex items-center gap-1.5">
+                                            <span className="truncate">{c.full_name}</span>
+                                            {c.association_label && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 flex-shrink-0">{c.association_label}</span>}
+                                            {c.is_primary_company === false && <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 flex-shrink-0" title={c.account_name ? `Primary company: ${c.account_name}` : undefined}>Associated</span>}
+                                        </p>
                                         <p className="text-xs text-slate-500 truncate">{c.designation || '—'}</p>
                                     </div>
                                     <div className="hidden md:block text-sm text-slate-600 w-64 truncate"><Mail className="w-3.5 h-3.5 inline mr-1.5 text-slate-400" />{c.email}</div>
@@ -128,6 +133,8 @@ export default function AccountDetail() {
                     </ul>
                 )}
             </div>
+
+            <AccountDeals accountId={account.account_id} />
 
             {account.history?.length > 0 && (
                 <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>

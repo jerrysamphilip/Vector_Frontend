@@ -12,6 +12,7 @@ import {
     Plus,
     RefreshCw,
     Search,
+    Send,
     ShieldCheck,
     Users,
     X,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react';
 import { platformAdminApi } from '../api/platformAdmin';
 import KpiTile from '../components/ui/KpiTile';
+import { useDialog } from '../components/common/useDialog';
 
 function Skeleton({ className = '' }) {
     return <div className={`animate-pulse rounded-xl bg-slate-200/70 ${className}`} />;
@@ -111,6 +113,7 @@ function TenantDetailModal({ tenantId, onClose }) {
         queryFn: () => platformAdminApi.getTenantDetail(tenantId),
         enabled: !!tenantId,
     });
+    const { titleId, dialogProps } = useDialog({ onClose });
 
     if (!tenantId) return null;
 
@@ -124,7 +127,9 @@ function TenantDetailModal({ tenantId, onClose }) {
             >
                 <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onClick={onClose} />
                 <motion.div
-                    className="relative flex max-h-[84vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl"
+                    {...dialogProps}
+                    aria-label={isLoading ? 'Tenant detail' : undefined}
+                    className="relative flex max-h-[84vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl outline-none"
                     initial={{ opacity: 0, scale: 0.96, y: 12 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -143,6 +148,7 @@ function TenantDetailModal({ tenantId, onClose }) {
                                 <div className="mt-4 h-10 w-52 animate-pulse rounded-xl bg-white/25" />
                             ) : (
                                 <h2
+                                    id={titleId}
                                     className="mt-4 text-3xl font-bold tracking-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.18)]"
                                     style={{ color: '#ffffff' }}
                                 >
@@ -151,7 +157,7 @@ function TenantDetailModal({ tenantId, onClose }) {
                             )}
                             <p className="mt-1 text-sm text-white/90">Team, status, and account activity in one place.</p>
                         </div>
-                        <button onClick={onClose} className="rounded-2xl bg-white/10 p-2.5 text-white/85 transition hover:bg-white/20">
+                        <button type="button" onClick={onClose} aria-label="Close tenant detail" className="rounded-2xl bg-white/10 p-2.5 text-white/85 transition hover:bg-white/20">
                             <X className="h-5 w-5" />
                         </button>
                     </div>
@@ -236,6 +242,8 @@ function CreateTenantModal({ onClose, onCreated }) {
         e.preventDefault();
         mutation.mutate(form);
     };
+    // Escape / backdrop do not dismiss the one-time activation link
+    const { titleId, dialogProps } = useDialog({ onClose, closeOnEscape: !magicLink });
 
     const handleCopy = () => {
         navigator.clipboard.writeText(magicLink).then(() => {
@@ -254,7 +262,8 @@ function CreateTenantModal({ onClose, onCreated }) {
             >
                 <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onClick={!magicLink ? onClose : undefined} />
                 <motion.div
-                    className="relative w-full max-w-lg overflow-hidden rounded-[28px] bg-white shadow-2xl"
+                    {...dialogProps}
+                    className="relative w-full max-w-lg max-h-[90vh] max-h-[90dvh] overflow-x-hidden overflow-y-auto rounded-[28px] bg-white shadow-2xl outline-none"
                     initial={{ opacity: 0, scale: 0.96, y: 12 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -269,6 +278,7 @@ function CreateTenantModal({ onClose, onCreated }) {
                                 New Tenant
                             </div>
                             <h2
+                                id={titleId}
                                 className="mt-3 text-2xl font-bold tracking-tight"
                                 style={{ color: '#ffffff' }}
                             >
@@ -276,7 +286,7 @@ function CreateTenantModal({ onClose, onCreated }) {
                             </h2>
                             <p className="mt-1 text-sm text-white/85">Set up a new workspace and its Super Admin.</p>
                         </div>
-                        <button onClick={onClose} className="rounded-2xl bg-white/10 p-2.5 text-white/85 transition hover:bg-white/20">
+                        <button type="button" onClick={onClose} aria-label="Close" className="rounded-2xl bg-white/10 p-2.5 text-white/85 transition hover:bg-white/20">
                             <X className="h-5 w-5" />
                         </button>
                     </div>
@@ -299,7 +309,10 @@ function CreateTenantModal({ onClose, onCreated }) {
                                     <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
                                         <p className="flex-1 truncate font-mono text-xs text-slate-700">{magicLink}</p>
                                         <button
+                                            type="button"
                                             onClick={handleCopy}
+                                            aria-label={copied ? 'Activation link copied' : 'Copy activation link'}
+                                            title="Copy activation link"
                                             className="shrink-0 rounded-xl bg-white px-3 py-1.5 text-xs font-semibold text-[#2d6bbf] shadow-sm transition hover:bg-blue-50"
                                         >
                                             {copied ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
@@ -325,10 +338,11 @@ function CreateTenantModal({ onClose, onCreated }) {
                                 )}
 
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                    <label htmlFor="ct-tenant-name" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
                                         Organization / Tenant Name
                                     </label>
                                     <input
+                                        id="ct-tenant-name"
                                         required
                                         value={form.tenant_name}
                                         onChange={e => setForm(f => ({ ...f, tenant_name: e.target.value }))}
@@ -339,10 +353,11 @@ function CreateTenantModal({ onClose, onCreated }) {
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                        <label htmlFor="ct-first-name" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
                                             First Name
                                         </label>
                                         <input
+                                        id="ct-first-name"
                                             required
                                             value={form.admin_first_name}
                                             onChange={e => setForm(f => ({ ...f, admin_first_name: e.target.value }))}
@@ -351,10 +366,11 @@ function CreateTenantModal({ onClose, onCreated }) {
                                         />
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                        <label htmlFor="ct-last-name" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
                                             Last Name
                                         </label>
                                         <input
+                                        id="ct-last-name"
                                             required
                                             value={form.admin_last_name}
                                             onChange={e => setForm(f => ({ ...f, admin_last_name: e.target.value }))}
@@ -365,10 +381,11 @@ function CreateTenantModal({ onClose, onCreated }) {
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                    <label htmlFor="ct-admin-email" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
                                         Admin Email
                                     </label>
                                     <input
+                                        id="ct-admin-email"
                                         required
                                         type="email"
                                         value={form.admin_email}
@@ -404,7 +421,204 @@ function CreateTenantModal({ onClose, onCreated }) {
     );
 }
 
-export default function PlatformAdmin() {
+function ErrorBanner({ message }) {
+    if (!message) return null;
+    return (
+        <div role="alert" className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {message}
+        </div>
+    );
+}
+
+const errDetail = (e, fallback) => {
+    const d = e?.response?.data?.detail;
+    return typeof d === 'string' ? d : fallback;
+};
+
+/** Platform-wide email scheduler pause switch (/scheduler/status|stop|start). */
+function SchedulerCard() {
+    const queryClient = useQueryClient();
+    const { data, isLoading, isError } = useQuery({
+        queryKey: ['admin-scheduler'],
+        queryFn: platformAdminApi.getSchedulerStatus,
+        staleTime: 15_000,
+    });
+    const running = data?.running;
+    const toggle = useMutation({
+        mutationFn: (pause) => (pause ? platformAdminApi.pauseScheduler() : platformAdminApi.resumeScheduler()),
+        onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin-scheduler'] }),
+    });
+    const onToggle = () => {
+        const pause = Boolean(running);
+        const question = pause
+            ? 'Pause the email scheduler? No scheduled campaign email is sent for any tenant until it is resumed.'
+            : 'Resume the email scheduler? Scheduled campaign emails start sending again for every tenant.';
+        if (window.confirm(question)) toggle.mutate(pause);
+    };
+
+    return (
+        <SectionCard
+            title="Email scheduler"
+            subtitle="Sends scheduled campaign emails for every tenant"
+            icon={Send}
+            delay="360ms"
+            action={!isLoading && !isError && (
+                <button
+                    type="button"
+                    onClick={onToggle}
+                    disabled={toggle.isPending}
+                    data-testid="scheduler-toggle"
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${running
+                        ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
+                >
+                    {running ? <PauseCircle className="h-3.5 w-3.5" /> : <PlayCircle className="h-3.5 w-3.5" />}
+                    {running ? 'Pause scheduler' : 'Resume scheduler'}
+                </button>
+            )}
+        >
+            <div className="flex flex-wrap items-center gap-3 px-6 py-4 text-sm" data-testid="scheduler-status">
+                {isLoading ? <Skeleton className="h-5 w-40" /> : isError ? (
+                    <span className="text-rose-600">Could not read the scheduler status.</span>
+                ) : (
+                    <>
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${running
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+                            {running ? <CheckCircle2 className="h-3 w-3" /> : <PauseCircle className="h-3 w-3" />}
+                            {running ? 'Running' : 'Paused'}
+                        </span>
+                        <span className="text-slate-500">
+                            {running
+                                ? 'Scheduled emails are being sent.'
+                                : `Sending is paused for all tenants${data?.paused_by ? ` (paused by ${data.paused_by})` : ''}.`}
+                        </span>
+                    </>
+                )}
+                {toggle.isError && <span className="text-rose-600">{errDetail(toggle.error, 'Could not change the scheduler state.')}</span>}
+            </div>
+        </SectionCard>
+    );
+}
+
+/** Read-only list of every tenant user (/api/admin/users, first 200 matches). */
+function PlatformUsers() {
+    const queryClient = useQueryClient();
+    const [search, setSearch] = useState('');
+    const { data: users, isLoading, isError, error } = useQuery({
+        queryKey: ['admin-users', search],
+        queryFn: () => platformAdminApi.listAllUsers(search ? { search } : {}),
+        staleTime: 30_000,
+    });
+
+    return (
+        <div className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+            <div className="card-anim overflow-hidden rounded-[28px] bg-white/80 shadow-sm ring-1 ring-white/70">
+                <div
+                    className="flex flex-col gap-6 px-5 py-6 sm:px-7 sm:py-7 xl:flex-row xl:items-end xl:justify-between"
+                    style={{ background: 'linear-gradient(135deg, rgba(45,107,191,0.12), rgba(115,200,210,0.14), rgba(255,255,255,0.92))' }}
+                >
+                    <div className="max-w-3xl">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2d6bbf] shadow-sm">
+                            <Users className="h-3.5 w-3.5" />
+                            All tenants
+                        </div>
+                        <h1 className="mt-4 text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">Users</h1>
+                        <p className="mt-2 text-sm text-slate-500">Every tenant user across the platform (read-only).</p>
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                        <div className="relative sm:min-w-[280px]">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <input
+                                type="search"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search users..."
+                                aria-label="Search users by name or email"
+                                className="w-full rounded-2xl border border-slate-200 bg-white/90 py-3 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500/15"
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => queryClient.invalidateQueries({ queryKey: ['admin-users'] })}
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-[#2d6bbf]"
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <SectionCard
+                title="User Directory"
+                subtitle={`${users?.length ?? 0} users${users?.length === 200 ? ' (first 200 shown: refine the search)' : ''}`}
+                icon={Users}
+                delay="80ms"
+            >
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[860px] text-left">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200">
+                                {['Name', 'Email', 'Tenant', 'Role', 'Status', 'Last login'].map((header) => (
+                                    <th key={header} className="px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500/90">
+                                        {header}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {isLoading ? (
+                                Array.from({ length: 4 }).map((_, index) => (
+                                    <tr key={index}>
+                                        {Array.from({ length: 6 }).map((__, cellIndex) => (
+                                            <td key={cellIndex} className="px-5 py-4"><Skeleton className="h-4 w-full" /></td>
+                                        ))}
+                                    </tr>
+                                ))
+                            ) : isError ? (
+                                <tr>
+                                    <td colSpan={6} className="px-5 py-16 text-center text-sm text-rose-600">
+                                        {errDetail(error, 'Could not load users.')}
+                                    </td>
+                                </tr>
+                            ) : users?.length ? (
+                                users.map((user, index) => (
+                                    <tr key={user.user_id} className={index % 2 ? 'bg-slate-50/45' : 'bg-white'}>
+                                        <td className="px-5 py-4 text-sm font-semibold text-slate-800">{`${user.first_name} ${user.last_name}`.trim() || '—'}</td>
+                                        <td className="px-5 py-4 text-sm text-slate-500">{user.email}</td>
+                                        <td className="px-5 py-4 text-sm text-slate-700">{user.tenant_name || '—'}</td>
+                                        <td className="px-5 py-4"><RoleBadge role={user.role} /></td>
+                                        <td className="px-5 py-4"><StatusBadge status={user.status} /></td>
+                                        <td className="px-5 py-4 text-sm text-slate-500">{formatDate(user.last_login_at)}</td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={6} className="px-5 py-16 text-center text-sm text-slate-400">
+                                        No users found for the current search.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </SectionCard>
+        </div>
+    );
+}
+
+/**
+ * Platform admin console. view: 'dashboard' (/admin: stats, scheduler, tenant roster),
+ * 'tenants' (/admin/tenants: the tenant list), 'users' (/admin/users: every tenant user).
+ */
+export default function PlatformAdmin({ view = 'dashboard' }) {
+    if (view === 'users') return <PlatformUsers />;
+    return <TenantsConsole dashboard={view !== 'tenants'} />;
+}
+
+function TenantsConsole({ dashboard }) {
     const queryClient = useQueryClient();
     const [search, setSearch] = useState('');
     const [selectedTenant, setSelectedTenant] = useState(null);
@@ -414,6 +628,7 @@ export default function PlatformAdmin() {
         queryKey: ['admin-stats'],
         queryFn: platformAdminApi.getStats,
         staleTime: 60_000,
+        enabled: dashboard,
     });
 
     const { data: tenants, isLoading: tenantsLoading } = useQuery({
@@ -432,6 +647,13 @@ export default function PlatformAdmin() {
             }
         },
     });
+    // Suspending cuts every user of the tenant off the API at once: confirm first (both ways)
+    const changeStatus = (tenant, status) => {
+        const question = status === 'SUSPENDED'
+            ? `Suspend "${tenant.tenant_name}"? Its users lose access immediately and cannot sign in until the tenant is reactivated.`
+            : `Reactivate "${tenant.tenant_name}"? Its users can sign in and use the workspace again.`;
+        if (window.confirm(question)) statusMutation.mutate({ tenantId: tenant.tenant_id, status });
+    };
 
     const summary = useMemo(() => ({
         activeTenants: stats?.active_tenants ?? 0,
@@ -441,10 +663,10 @@ export default function PlatformAdmin() {
     }), [stats]);
 
     return (
-        <div className="mx-auto max-w-[1480px] space-y-6 px-6 py-8">
+        <div className="mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 sm:py-8">
             <div className="card-anim overflow-hidden rounded-[28px] bg-white/80 shadow-sm ring-1 ring-white/70" style={{ animationDelay: '0ms' }}>
                 <div
-                    className="flex flex-col gap-6 px-7 py-7 xl:flex-row xl:items-end xl:justify-between"
+                    className="flex flex-col gap-6 px-5 py-6 sm:px-7 sm:py-7 xl:flex-row xl:items-end xl:justify-between"
                     style={{ background: 'linear-gradient(135deg, rgba(45,107,191,0.12), rgba(115,200,210,0.14), rgba(255,255,255,0.92))' }}
                 >
                     <div className="max-w-3xl">
@@ -452,20 +674,23 @@ export default function PlatformAdmin() {
                             <ShieldCheck className="h-3.5 w-3.5" />
                             Platform Control Center
                         </div>
-                        <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-900">Platform Administration</h1>
+                        <h1 className="mt-4 text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">{dashboard ? 'Platform Administration' : 'Tenants'}</h1>
                         <p className="mt-2 text-sm text-slate-500">
-                            Manage tenants, users, suspension state, and system-wide growth from one operational surface.
+                            {dashboard
+                                ? 'Manage tenants, users, suspension state, and system-wide growth from one operational surface.'
+                                : 'Every workspace on the platform: search, inspect, suspend or reactivate, and add tenants.'}
                         </p>
                     </div>
 
                     <div className="flex flex-col gap-3 sm:flex-row">
-                        <div className="relative min-w-[280px]">
+                        <div className="relative sm:min-w-[280px]">
                             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <input
                                 type="text"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 placeholder="Search tenants..."
+                                aria-label="Search tenants"
                                 className="w-full rounded-2xl border border-slate-200 bg-white/90 py-3 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-500/15"
                             />
                         </div>
@@ -474,6 +699,7 @@ export default function PlatformAdmin() {
                                 queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
                                 queryClient.invalidateQueries({ queryKey: ['admin-tenants'] });
                                 queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+                                queryClient.invalidateQueries({ queryKey: ['admin-scheduler'] });
                             }}
                             className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-[#2d6bbf]"
                         >
@@ -492,6 +718,7 @@ export default function PlatformAdmin() {
                 </div>
             </div>
 
+            {dashboard && (<>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <GradientCard
                     label="Total Tenants"
@@ -535,6 +762,11 @@ export default function PlatformAdmin() {
                     delay="320ms"
                 />
             </div>
+
+            <SchedulerCard />
+            </>)}
+
+            <ErrorBanner message={statusMutation.isError ? errDetail(statusMutation.error, 'Could not change the tenant status.') : ''} />
 
             <div className="grid gap-6">
                 <SectionCard
@@ -592,7 +824,7 @@ export default function PlatformAdmin() {
                                                     </button>
                                                     {tenant.status === 'ACTIVE' ? (
                                                         <button
-                                                            onClick={() => statusMutation.mutate({ tenantId: tenant.tenant_id, status: 'SUSPENDED' })}
+                                                            onClick={() => changeStatus(tenant, 'SUSPENDED')}
                                                             disabled={statusMutation.isPending}
                                                             className="inline-flex items-center gap-1 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
                                                         >
@@ -601,7 +833,7 @@ export default function PlatformAdmin() {
                                                         </button>
                                                     ) : (
                                                         <button
-                                                            onClick={() => statusMutation.mutate({ tenantId: tenant.tenant_id, status: 'ACTIVE' })}
+                                                            onClick={() => changeStatus(tenant, 'ACTIVE')}
                                                             disabled={statusMutation.isPending}
                                                             className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
                                                         >

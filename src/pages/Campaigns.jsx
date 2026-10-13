@@ -268,6 +268,7 @@ const Campaigns = () => {
                         selectedIds={selectedIds}
                         onToggleSelect={handleToggleSelect}
                         visibleCols={visibleCols}
+                        searchTerm={debouncedSearch.trim()}
                         onToggleAll={() => {
                             if (selectedIds.length === campaigns.length) setSelectedIds([]);
                             else setSelectedIds(campaigns.map(c => c.campaign_id));

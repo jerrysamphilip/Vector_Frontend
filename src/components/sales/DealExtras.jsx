@@ -4,9 +4,11 @@ import {
     StickyNote, Phone, Users, Mail, MailOpen, CheckSquare, PencilLine, Clock, Plus, Trash2, Download, Loader2,
 } from 'lucide-react';
 import { errorMessage, tasksApi } from '../../api/contacts';
-import { dealsApi, money, productsApi, quotesApi } from '../../api/sales';
+import { dealsApi, moneyExact, productsApi, quotesApi } from '../../api/sales';
 import { ErrorNote, Modal, PrimaryButton, SecondaryButton, formatDateTime, inputClass, relativeDate } from '../contacts/shared';
 import { card, cardShadow, Seg } from './shared';
+import MentionTextarea, { MentionText, activeMentions } from '../contacts/MentionTextarea';
+import { ApprovalPanel } from './QuoteApproval';
 
 const KIND = {
     NOTE: { icon: StickyNote, label: 'Note', tone: 'text-amber-600 bg-amber-50' },
@@ -28,8 +30,9 @@ function Composer({ deal, onDone }) {
     const [when, setWhen] = useState('');
     const [duration, setDuration] = useState('');
     const [calendar, setCalendar] = useState(false);
+    const [mentions, setMentions] = useState([]);
     const [error, setError] = useState(null);
-    const reset = () => { setSubject(''); setBody(''); setWhen(''); setDuration(''); setCalendar(false); setError(null); };
+    const reset = () => { setSubject(''); setBody(''); setWhen(''); setDuration(''); setCalendar(false); setMentions([]); setError(null); };
     const save = useMutation({
         mutationFn: () => (mode === 'TASK'
             ? tasksApi.create({ title: subject, notes: body || undefined, due_at: when ? new Date(when).toISOString() : undefined,
@@ -38,6 +41,7 @@ function Composer({ deal, onDone }) {
                 activity_type: mode, subject: subject || undefined, body: body || undefined,
                 occurred_at: when ? new Date(when).toISOString() : undefined,
                 duration_minutes: duration ? Number(duration) : undefined, add_to_calendar: mode === 'MEETING' && calendar,
+                mentioned_user_ids: mode === 'NOTE' ? activeMentions(body, mentions).map(m => m.user_id) : undefined,
             })),
         onSuccess: () => { reset(); onDone(); },
         onError: e => setError(errorMessage(e)),
@@ -47,8 +51,12 @@ function Composer({ deal, onDone }) {
             <Seg value={mode} onChange={setMode} options={[['NOTE', 'Note'], ['CALL', 'Call'], ['MEETING', 'Meeting'], ['EMAIL', 'Email'], ['TASK', 'Task']]} />
             <input className={inputClass} value={subject} onChange={e => setSubject(e.target.value)}
                 placeholder={mode === 'TASK' ? 'What needs doing?' : mode === 'NOTE' ? 'Title (optional)' : 'Subject'} />
-            <textarea rows={3} className={`${inputClass} h-auto py-2`} value={body} onChange={e => setBody(e.target.value)}
-                placeholder={mode === 'TASK' ? 'Notes (optional)' : 'What happened?'} />
+            {mode === 'NOTE'
+                ? <MentionTextarea rows={3} className={`${inputClass} h-auto py-2`} value={body} onChange={setBody} mentions={mentions}
+                    onMentionsChange={setMentions} placeholder="What happened? Type @ to mention a colleague" aria-label="Note"
+                    scope={{ opportunity_id: deal.opportunity_id }} />
+                : <textarea rows={3} className={`${inputClass} h-auto py-2`} value={body} onChange={e => setBody(e.target.value)}
+                    placeholder={mode === 'TASK' ? 'Notes (optional)' : 'What happened?'} />}
             <div className="flex flex-wrap items-center gap-2">
                 <label className="text-xs text-slate-500 flex items-center gap-1.5">
                     {mode === 'TASK' ? 'Due' : 'When'}
@@ -79,7 +87,7 @@ function TimelineItem({ item, onToggleTask }) {
     if (item.activity) {
         const a = item.activity;
         title = a.subject || k.label;
-        body = a.body;
+        body = a.mentions?.length ? <MentionText text={a.body} mentions={a.mentions} /> : a.body;
         if (a.outcome) meta.push(a.outcome);
         if (a.duration_minutes) meta.push(`${a.duration_minutes} min`);
         if (a.created_by_name) meta.push(a.created_by_name);
@@ -212,6 +220,8 @@ export function QuoteModal({ proposal, onClose, onSaved }) {
             {isLoading || !lines ? <Loader2 className="w-5 h-5 animate-spin text-indigo-500" /> : (
                 <div className="space-y-3">
                     <ErrorNote message={error} />
+                    <ApprovalPanel proposalId={proposal.proposal_id} approval={quote?.approval}
+                        onChanged={() => { qc.invalidateQueries({ queryKey: ['quote', proposal.proposal_id] }); qc.invalidateQueries({ queryKey: ['quote-approvals'] }); onSaved(); }} />
                     <table className="w-full text-sm">
                         <thead><tr className="text-left text-[11px] text-slate-400 uppercase tracking-wide">
                             <th className="pb-2 font-semibold w-44">Product</th><th className="pb-2 font-semibold">Description</th>
@@ -230,7 +240,7 @@ export function QuoteModal({ proposal, onClose, onSaved }) {
                                     <td className="pr-2 pb-2"><input type="number" min="0" step="any" className={`${inputClass} h-9 text-right`} value={l.quantity} onChange={e => setLine(i, { quantity: e.target.value })} /></td>
                                     <td className="pr-2 pb-2"><input type="number" min="0" step="any" className={`${inputClass} h-9 text-right`} value={l.unit_price ?? ''} onChange={e => setLine(i, { unit_price: e.target.value })} /></td>
                                     <td className="pr-2 pb-2"><input type="number" min="0" max="100" step="any" className={`${inputClass} h-9 text-right`} value={l.discount_pct} onChange={e => setLine(i, { discount_pct: e.target.value })} /></td>
-                                    <td className="pb-2 pt-2 text-right tabular-nums font-medium">{money(lineTotal(l))}</td>
+                                    <td className="pb-2 pt-2 text-right tabular-nums font-medium">{moneyExact(lineTotal(l))}</td>
                                     <td className="pb-2 pt-1.5 text-right"><button onClick={() => setLines(ls => ls.filter((_, j) => j !== i))} className="p-1 text-slate-300 hover:text-red-500" aria-label="Remove line"><Trash2 className="w-4 h-4" /></button></td>
                                 </tr>
                             ))}
@@ -238,7 +248,7 @@ export function QuoteModal({ proposal, onClose, onSaved }) {
                     </table>
                     <div className="flex items-center justify-between">
                         <button onClick={() => setLines(ls => [...ls, { ...blankLine }])} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"><Plus className="w-4 h-4" /> Add line</button>
-                        <p className="text-sm text-slate-600">Total <span className="text-lg font-bold text-slate-900 ml-2 tabular-nums">{money(total)}</span></p>
+                        <p className="text-sm text-slate-600">Total <span className="text-lg font-bold text-slate-900 ml-2 tabular-nums">{moneyExact(total)}</span></p>
                     </div>
                     {!products.length && <p className="text-xs text-slate-400">No products in the price list yet; admins add them under Sales settings. Custom lines work without one.</p>}
                 </div>

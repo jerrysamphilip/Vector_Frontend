@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import { campaignApi } from '../../../api/campaigns';
 import KpiTile from '../../ui/KpiTile';
+import SubjectVariantsStats from '../SubjectVariantsStats';
 
 // Dashboard Theme Colors
 const COLORS = {
@@ -390,6 +391,9 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
                                 <div className="text-xs font-bold text-slate-500 uppercase mt-2 flex items-center justify-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Bounced</div>
                             </div>
                         </div>
+
+                        {/* Subject A/B test results (BR-SF-18) - renders nothing without variants */}
+                        <SubjectVariantsStats campaignId={campaign?.campaign_id} step={seq.step} />
 
                         {/* Footer Action */}
                         <div className="bg-slate-50 p-5 flex flex-col items-center justify-center border-t border-slate-100 text-center">
