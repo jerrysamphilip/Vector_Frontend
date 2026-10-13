@@ -514,12 +514,14 @@ export default function ContactDetail() {
         queryClient.invalidateQueries({ queryKey: ['contact-timeline', id] });
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
         queryClient.invalidateQueries({ queryKey: ['contacts'] });
+        queryClient.invalidateQueries({ queryKey: ['contact-score', id] });
     };
     const onSaved = data => {
         queryClient.setQueryData(['contact', id], data);
         queryClient.invalidateQueries({ queryKey: ['contact-timeline', id] });
         queryClient.invalidateQueries({ queryKey: ['contacts'] });
         queryClient.invalidateQueries({ queryKey: ['contact-facets'] });
+        queryClient.invalidateQueries({ queryKey: ['contact-score', id] });
     };
 
     const quickUpdate = useMutation({
