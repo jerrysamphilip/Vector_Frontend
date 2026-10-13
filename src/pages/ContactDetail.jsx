@@ -18,6 +18,7 @@ import {
 } from '../components/contacts/shared';
 import MentionTextarea, { MentionText, activeMentions } from '../components/contacts/MentionTextarea';
 import ContactCompaniesCard from '../components/contacts/ContactCompaniesCard';
+import ContactScoreCard from '../components/contacts/ContactScoreCard';
 
 const CALL_OUTCOMES = ['Connected', 'Left voicemail', 'No answer', 'Wrong number', 'Busy'];
 
@@ -112,7 +113,7 @@ function Composer({ contactId, owners, onLogged }) {
                 )}
                 {type === 'NOTE' ? (
                     <MentionTextarea rows={3} value={form.body} onChange={body => setForm(f => ({ ...f, body }))}
-                        mentions={mentions} onMentionsChange={setMentions} aria-label="Note"
+                        mentions={mentions} onMentionsChange={setMentions} aria-label="Note" scope={{ prospect_id: contactId }}
                         placeholder="Write a note about this contact… Type @ to mention a colleague"
                         className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 resize-y" />
                 ) : (
@@ -154,7 +155,8 @@ function ActivityBody({ item, onChanged }) {
                 )}
                 {isNote
                     ? <MentionTextarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm" value={draft.body}
-                        onChange={body => setDraft(d => ({ ...d, body }))} mentions={draftMentions} onMentionsChange={setDraftMentions} aria-label="Note" />
+                        onChange={body => setDraft(d => ({ ...d, body }))} mentions={draftMentions} onMentionsChange={setDraftMentions} aria-label="Note"
+                        scope={a.prospect_id ? { prospect_id: a.prospect_id } : undefined} />
                     : <textarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm" value={draft.body} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} />}
                 <div className="flex gap-2">
                     <PrimaryButton onClick={() => save.mutate()} loading={save.isPending} className="h-8 px-3 text-xs"><Check className="w-3.5 h-3.5" /> Save</PrimaryButton>
@@ -480,7 +482,8 @@ function SalesCard({ contact }) {
             )}
             {creating && <NewLeadModal contact={contact} onClose={() => setCreating(false)}
                 onCreated={l => { setCreating(false); queryClient.invalidateQueries({ queryKey: ['leads'] }); navigate(`/app/leads/${l.lead_id}`); }} />}
-            {creatingDeal && <DealFormModal defaults={{ prospect_id: id, account_id: contact.account?.account_id || '' }} defaultAccountName={contact.account?.name} onClose={() => setCreatingDeal(false)}
+            {creatingDeal && <DealFormModal defaults={{ prospect_id: id, account_id: contact.account?.account_id || '' }} defaultAccountName={contact.account?.name}
+                contactName={[contact.first_name, contact.last_name].filter(Boolean).join(' ') || contact.email} onClose={() => setCreatingDeal(false)}
                 onSaved={d => { setCreatingDeal(false); queryClient.invalidateQueries({ queryKey: ['deals'] }); navigate(`/app/deals/${d.opportunity_id}`); }} />}
         </SideCard>
     );
@@ -644,6 +647,7 @@ export default function ContactDetail() {
                 </div>
 
                 <div className="space-y-5 lg:col-start-2 2xl:col-start-auto">
+                    <ContactScoreCard contactId={id} card={card} cardShadow={cardShadow} />
                     <SalesCard contact={contact} />
                     <ContactCompaniesCard contact={contact} onChanged={refresh} card={card} cardShadow={cardShadow} />
                     <TasksCard contactId={id} onChanged={refresh} />

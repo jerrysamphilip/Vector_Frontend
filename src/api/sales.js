@@ -136,6 +136,17 @@ export const quotesApi = {
     },
 };
 
+// Discount approval on quotes (BR-SF-17)
+export const quoteApprovalsApi = {
+    settings: () => get('/quotes/approval-settings'),
+    saveSettings: (threshold) => put('/quotes/approval-settings', { discount_approval_threshold: threshold }),
+    get: (proposalId) => get(`/proposals/${proposalId}/approval`),
+    submit: (proposalId, note) => post(`/proposals/${proposalId}/approval/submit`, { note: note || null }),
+    approve: (proposalId, reason) => post(`/proposals/${proposalId}/approval/approve`, { reason: reason || null }),
+    reject: (proposalId, reason) => post(`/proposals/${proposalId}/approval/reject`, { reason }),
+    list: (params) => get('/quotes/approvals', params),
+};
+
 export const connectionsApi = {
     list: () => get('/connections'),
     start: (provider) => post(`/connections/${provider}/start`),

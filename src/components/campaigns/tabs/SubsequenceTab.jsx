@@ -8,6 +8,7 @@ import Loading from '../../common/Loading';
 import RichTextEditor from '../../common/RichTextEditor';
 import AttachmentManager from '../../common/AttachmentManager';
 import { sanitizeHtml, htmlToText } from '../../../lib/sanitizeHtml';
+import SubjectVariantsEditor from '../SubjectVariantsEditor';
 
 export default function SubsequenceTab({ campaignId }) {
     const queryClient = useQueryClient();
@@ -436,6 +437,9 @@ export default function SubsequenceTab({ campaignId }) {
                                         {expandedStep !== index && (
                                             <p className="text-sm text-slate-500 line-clamp-2">{stripHtml(step.template?.body)?.substring(0, 120) || "No content..."}...</p>
                                         )}
+
+                                        {/* Subject A/B variants (BR-SF-18) */}
+                                        <SubjectVariantsEditor campaignId={campaignId} step={step.step_number} />
                                     </>
                                 )}
                             </div>

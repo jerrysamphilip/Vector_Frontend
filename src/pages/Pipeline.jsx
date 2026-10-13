@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { dealsApi, money, moneyShort, proposalsApi } from '../api/sales';
 import { relativeDate } from '../components/contacts/shared';
+import { ApprovalBadge, ApprovalsList } from '../components/sales/QuoteApproval';
 import { ClientTypeBadge, ClientTypeFilter, HBar, OwnerFilter, PageHeader, Seg, StatTile, card, cardShadow } from '../components/sales/shared';
 
 const PROPOSAL_TONE = { DRAFT: 'border-slate-300', SENT: 'border-sky-400', UNDER_REVIEW: 'border-amber-400', ACCEPTED: 'border-emerald-500', REJECTED: 'border-red-400' };
@@ -80,6 +81,7 @@ function Proposals({ owner, clientType }) {
                                 <p className="text-xs text-slate-500 truncate">{p.company_name || p.opportunity_name}</p>
                                 <div className="flex items-center justify-between mt-2"><span className="text-sm font-bold">{moneyShort(p.amount)}</span><ClientTypeBadge value={p.client_type} /></div>
                                 <p className="text-[11px] text-slate-400 mt-1">{p.owner_name} · {relativeDate(p.sent_at || p.created_at)}</p>
+                                {p.approval_status && p.approval_status !== 'NOT_REQUIRED' && <div className="mt-1.5"><ApprovalBadge status={p.approval_status} /></div>}
                             </Link>
                         ))}
                         {!col.count && <p className="text-xs text-slate-400 text-center py-6">None</p>}
@@ -100,11 +102,11 @@ export default function Pipeline() {
         <div className="w-full space-y-6">
             <PageHeader title="Pipeline" subtitle="Revenue and proposals across new and existing clients" />
             <div className={`${card} px-5 py-4 flex items-center gap-3 flex-wrap`} style={cardShadow}>
-                <Seg options={[['revenue', 'Revenue pipeline'], ['proposals', 'Proposal pipeline']]} value={tab} onChange={v => update({ tab: v })} />
-                <OwnerFilter value={owner} onChange={v => update({ owner: v })} />
-                <ClientTypeFilter value={clientType} onChange={v => update({ client_type: v })} />
+                <Seg options={[['revenue', 'Revenue pipeline'], ['proposals', 'Proposal pipeline'], ['approvals', 'Discount approvals']]} value={tab} onChange={v => update({ tab: v })} />
+                {tab !== 'approvals' && <OwnerFilter value={owner} onChange={v => update({ owner: v })} />}
+                {tab !== 'approvals' && <ClientTypeFilter value={clientType} onChange={v => update({ client_type: v })} />}
             </div>
-            {tab === 'revenue' ? <Revenue owner={owner} clientType={clientType} /> : <Proposals owner={owner} clientType={clientType} />}
+            {tab === 'revenue' ? <Revenue owner={owner} clientType={clientType} /> : tab === 'approvals' ? <ApprovalsList /> : <Proposals owner={owner} clientType={clientType} />}
         </div>
     );
 }

@@ -9,7 +9,7 @@ import { ErrorNote, Field, Modal, OwnerSelect, PrimaryButton, SecondaryButton, i
 import { ClientTypeBadge, ClientTypeFilter, DealStatusBadge, Empty, OwnerFilter, PageHeader, Seg, card, cardShadow, selectSm, useLeadsMeta, useTeamOwners } from '../components/sales/shared';
 import CloseReasonModal from '../components/sales/CloseReasonModal';
 
-export function DealFormModal({ onClose, onSaved, defaults = {}, defaultAccountName }) {
+export function DealFormModal({ onClose, onSaved, defaults = {}, defaultAccountName, contactName }) {
     const owners = useTeamOwners();
     const me = getStoredUser();
     const meta = useLeadsMeta();
@@ -29,6 +29,12 @@ export function DealFormModal({ onClose, onSaved, defaults = {}, defaultAccountN
         </>}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Name *" className="sm:col-span-2"><input className={inputClass} value={form.name} onChange={set('name')} autoFocus /></Field>
+                {/* Opened from a contact record: show which contact the deal is linked to (read-only) */}
+                {defaults.prospect_id && (
+                    <Field label="Contact" className="sm:col-span-2">
+                        <input className={`${inputClass} bg-slate-50 text-slate-600`} value={contactName || 'This contact'} readOnly aria-readonly="true" data-testid="deal-form-contact" />
+                    </Field>
+                )}
                 <Field label="Company" className="sm:col-span-2">
                     <select className={inputClass} value={form.account_id} onChange={set('account_id')}>
                         <option value="">No company</option>

@@ -7,6 +7,7 @@ import {
   Home, Mail, Users, Activity, MessageSquare, Inbox, BarChart3, Shield, KeyRound, Eye, EyeOff, CheckCircle,
   LogOut, X, ArrowLeft, Contact, Building2, ListChecks, CheckSquare, Gauge, Target, Inbox as InboxIcon,
   Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star, LifeBuoy, ShieldCheck,
+  Webhook,
 } from 'lucide-react';
 import logoMark from '../../assets/logo-mark.png';
 import { authApi } from '../../api/auth';
@@ -49,6 +50,8 @@ const NAV = [
     { name: 'Team', href: '/app/team', icon: Shield, permission: 'manage_team', admin: true },
     { name: 'Sales team', href: '/app/sales-team', icon: Network },
     { name: 'Sales settings', href: '/app/sales-settings', icon: Settings2, admin: true },
+    { name: 'Webhooks', href: '/app/webhooks', icon: Webhook, admin: true },
+    { name: 'Contact scoring', href: '/app/contact-scoring', icon: Gauge, admin: true },
     { name: 'Calendar sync', href: '/app/connections', icon: CalendarSync },
   ] },
 ];

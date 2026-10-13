@@ -3172,6 +3172,14 @@ function CreateCampaignContent() {
                                             </div>
                                         </div>
                                         <div className="p-8">
+                                            {(processingResult?.ai_fallback_used
+                                                || processingResult?.templates_generated?.some(t => t.fallback_used)) && (
+                                                <div role="status" data-testid="ai-fallback-notice"
+                                                    className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+                                                    <span>{processingResult?.notice || 'AI unavailable - starter templates were used, please review'}</span>
+                                                </div>
+                                            )}
 
                                             <div className="space-y-8">
                                                 {/* Persona Buttons */}

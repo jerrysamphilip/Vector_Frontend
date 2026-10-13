@@ -8,6 +8,7 @@ import { ErrorNote, Field, OwnerSelect, PrimaryButton, formatDateTime, inputClas
 import { ClientTypeBadge, DealStatusBadge, card, cardShadow, useLeadsMeta, useTeamOwners } from '../components/sales/shared';
 import CloseReasonModal from '../components/sales/CloseReasonModal';
 import { DealTimeline, QuoteModal, StageHistory } from '../components/sales/DealExtras';
+import { ApprovalBadge } from '../components/sales/QuoteApproval';
 
 const PROPOSAL_TONE = { DRAFT: 'bg-slate-100 text-slate-600', SENT: 'bg-sky-50 text-sky-700', UNDER_REVIEW: 'bg-amber-50 text-amber-700',
     ACCEPTED: 'bg-emerald-50 text-emerald-700', REJECTED: 'bg-red-50 text-red-700' };
@@ -39,6 +40,7 @@ function Proposals({ deal, onChanged }) {
                                 className={`h-7 px-2 rounded-md text-xs font-semibold border-0 ${PROPOSAL_TONE[p.status]}`} aria-label="Proposal status">
                                 {(meta?.proposal_statuses || []).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                             </select>
+                            <ApprovalBadge status={p.approval_status} />
                             {canSee && <button onClick={() => setQuoting(p)} className="ml-auto h-7 px-2.5 rounded-md text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1" title="Quote lines and PDF"><ListOrdered className="w-3.5 h-3.5" /> Quote &amp; PDF</button>}
                         </div>
                     </li>

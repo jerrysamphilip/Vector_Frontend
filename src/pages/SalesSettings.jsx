@@ -4,6 +4,7 @@ import { Plus, Trash2, Pencil, Zap } from 'lucide-react';
 import { settingsApi, workflowApi, productsApi, moneyExact } from '../api/sales';
 import { PageHeader, card, cardShadow, useTeamOwners, Seg } from '../components/sales/shared';
 import { Modal, Field, inputClass, PrimaryButton, SecondaryButton, ErrorNote } from '../components/contacts/shared';
+import { DiscountApprovalSettings } from '../components/sales/QuoteApproval';
 
 const errText = (e) => {
     const d = e?.response?.data?.detail;
@@ -404,6 +405,7 @@ export default function SalesSettings() {
             <GeneralSettings settings={settings} owners={owners} />
             <WorkflowRules owners={owners} />
             <Products />
+            <DiscountApprovalSettings />
         </div>
     );
 }

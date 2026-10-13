@@ -37,6 +37,8 @@ const Pipeline = lazy(() => import('./pages/Pipeline'));
 const SalesReports = lazy(() => import('./pages/SalesReports'));
 const SalesTeam = lazy(() => import('./pages/SalesTeam'));
 const SalesSettings = lazy(() => import('./pages/SalesSettings'));
+const Webhooks = lazy(() => import('./pages/Webhooks'));
+const ContactScoring = lazy(() => import('./pages/ContactScoring'));
 const SalesTargets = lazy(() => import('./pages/SalesTargets'));
 const TemplateLibrary = lazy(() => import('./pages/TemplateLibrary'));
 const Connections = lazy(() => import('./pages/Connections'));
@@ -147,6 +149,8 @@ function App() {
                         <Route path="sales-reports" element={<SalesReports />} />
                         <Route path="sales-team" element={<SalesTeam />} />
                         <Route path="sales-settings" element={<SalesSettings />} />
+                        <Route path="webhooks" element={<Webhooks />} />
+                        <Route path="contact-scoring" element={<ContactScoring />} />
                         <Route path="sales-targets" element={<SalesTargets />} />
                         <Route path="templates" element={<TemplateLibrary />} />
                         <Route path="connections" element={<Connections />} />

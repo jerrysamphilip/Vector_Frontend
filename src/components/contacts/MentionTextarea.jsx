@@ -13,9 +13,10 @@ export function activeMentions(text, mentions) {
 /**
  * Textarea with an @mention picker (BR-CM-16): typing "@" opens a list of colleagues;
  * arrow keys move, Enter or Tab picks, Escape closes. The picked person goes into the text
- * as "@First Last" and into `mentions` ([{user_id, name}]).
+ * as "@First Last" and into `mentions` ([{user_id, name}]). `scope` ({ prospect_id } or
+ * { opportunity_id }) offers only colleagues who can see that record.
  */
-export default function MentionTextarea({ value, onChange, mentions, onMentionsChange, className, ...props }) {
+export default function MentionTextarea({ value, onChange, mentions, onMentionsChange, className, scope, ...props }) {
     const ref = useRef(null);
     const [query, setQuery] = useState(null); // null = picker closed
     const [debounced, setDebounced] = useState('');
@@ -28,8 +29,8 @@ export default function MentionTextarea({ value, onChange, mentions, onMentionsC
     }, [query]);
 
     const { data: users = [] } = useQuery({
-        queryKey: ['mentionable-users', debounced],
-        queryFn: () => contactsApi.mentionableUsers(debounced),
+        queryKey: ['mentionable-users', debounced, scope?.prospect_id || null, scope?.opportunity_id || null],
+        queryFn: () => contactsApi.mentionableUsers(debounced, scope || {}),
         enabled: query !== null,
         staleTime: 60000,
     });

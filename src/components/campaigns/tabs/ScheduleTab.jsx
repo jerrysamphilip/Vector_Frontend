@@ -399,6 +399,11 @@ export default function ScheduleTab({ campaignId }) {
                                                                         return (
                                                                             <span key={pIdx} className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-white rounded border border-slate-200 text-slate-600">
                                                                                 {p.name || p.email}
+                                                                                {p.subject_variant && (
+                                                                                    <span className="px-1 rounded bg-indigo-50 text-indigo-600 font-semibold" title={`Subject variant ${p.subject_variant}`}>
+                                                                                        {p.subject_variant}
+                                                                                    </span>
+                                                                                )}
                                                                                 {timeLabel && (
                                                                                     <span className="text-slate-400" title={p.sent_at ? 'Actually sent at' : 'Scheduled for'}>
                                                                                         · {p.sent_at ? '✓' : '⏳'} {timeLabel}

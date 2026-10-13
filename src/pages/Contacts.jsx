@@ -13,6 +13,8 @@ import ContactFormModal from '../components/contacts/ContactFormModal';
 import MergeDuplicatesModal from '../components/contacts/MergeDuplicatesModal';
 import CustomFieldsModal from '../components/contacts/CustomFieldsModal';
 import FilterBuilder, { filterCount } from '../components/contacts/FilterBuilder';
+import ScoreBadge from '../components/contacts/ScoreBadge';
+import { GRADES } from '../api/contactScoring';
 import EnrollmentResultModal from '../components/campaigns/EnrollmentResultModal';
 import {
     Avatar, TagChips, OwnerSelect, relativeDate, BRAND_GRADIENT, Modal, PrimaryButton, SecondaryButton,
@@ -20,8 +22,8 @@ import {
 } from '../components/contacts/shared';
 
 const PAGE_SIZE = 25;
-const DEFAULT_COLUMNS = ['full_name', 'email', 'company_name', 'owner_name', 'lifecycle_stage', 'lead_status', 'tags', 'last_activity_at', 'created_at'];
-const SORTABLE = { full_name: 'name', email: 'email', company_name: 'company', lifecycle_stage: 'lifecycle_stage', lead_status: 'lead_status', created_at: 'created_at', updated_at: 'updated_at' };
+const DEFAULT_COLUMNS = ['full_name', 'email', 'company_name', 'owner_name', 'lifecycle_stage', 'lead_status', 'score', 'tags', 'last_activity_at', 'created_at'];
+const SORTABLE = { full_name: 'name', email: 'email', company_name: 'company', lifecycle_stage: 'lifecycle_stage', lead_status: 'lead_status', created_at: 'created_at', updated_at: 'updated_at', score: 'score' };
 const COLUMNS_KEY = 'contacts.columns';
 const selectClass = 'h-9 pl-3 pr-8 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-indigo-400';
 
@@ -74,6 +76,8 @@ function Cell({ col, c, fields, stageLabel, statusLabel }) {
             return <StatusBadge value={c.lead_status} label={statusLabel[c.lead_status]} />;
         case 'tags':
             return <TagChips tags={c.tags} max={3} />;
+        case 'score':
+            return <ScoreBadge score={c.score} grade={c.score_grade} fit={c.fit_score} engagement={c.engagement_score} />;
         case 'consent_status':
             return <span className={`text-xs font-semibold ${c.consent_status === 'UNSUBSCRIBED' ? 'text-red-600' : 'text-emerald-700'}`}>{c.consent_status === 'UNSUBSCRIBED' ? 'Unsubscribed' : 'Subscribed'}</span>;
         case 'last_activity_at': case 'last_contacted_at': case 'created_at': case 'updated_at':
@@ -309,6 +313,9 @@ export default function Contacts() {
     const listId = params.get('list_id') || '';
     const accountId = params.get('account_id') || '';
     const filters = useMemo(() => { try { return JSON.parse(params.get('filters') || 'null'); } catch { return null; } }, [params]);
+    // Contact score filters (BR-CM-43)
+    const grade = params.get('grade') || '';
+    const scoreMin = params.get('score_min') || '';
 
     const [columns, setColumnsState] = useState(readColumns);
     const setColumns = (cols) => { setColumnsState(cols); try { localStorage.setItem(COLUMNS_KEY, JSON.stringify(cols)); } catch { /* ignore */ } };
@@ -369,7 +376,7 @@ export default function Contacts() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [urlQ]);
 
-    const query = { q: debouncedSearch, owner, list_id: listId, account_id: accountId, filters, sort_by: sortBy, sort_order: sortOrder, page, page_size: PAGE_SIZE };
+    const query = { q: debouncedSearch, owner, list_id: listId, account_id: accountId, filters, grade, score_min: scoreMin, sort_by: sortBy, sort_order: sortOrder, page, page_size: PAGE_SIZE };
     const { data, isLoading, isFetching } = useQuery({
         queryKey: ['contacts', query], queryFn: () => contactsApi.list(query), placeholderData: keepPreviousData, enabled: mode === 'table',
     });
@@ -478,6 +485,15 @@ export default function Contacts() {
                                 className={`h-9 px-3 flex items-center gap-1.5 text-sm font-medium rounded-xl border ${showFilters || nFilters ? 'border-indigo-300 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 bg-white'}`}>
                                 <Filter className="w-4 h-4" /> Filters{nFilters ? ` (${nFilters})` : ''}
                             </button>
+                            {mode === 'table' && <>
+                                <select className={selectClass} value={grade} onChange={e => update({ grade: e.target.value })} aria-label="Score grade" data-testid="grade-filter">
+                                    <option value="">Any grade</option>
+                                    {GRADES.map(g => <option key={g} value={g}>Grade {g}</option>)}
+                                </select>
+                                <input type="number" min={0} max={100} value={scoreMin} placeholder="Min score" aria-label="Minimum score" data-testid="score-min-filter"
+                                    onChange={e => update({ score_min: e.target.value === '' ? '' : String(Math.max(0, Math.min(100, Number(e.target.value) || 0))) })}
+                                    className="h-9 w-24 px-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-indigo-400" />
+                            </>}
                             <div className="relative">
                                 <button onClick={() => setShowColumns(s => !s)} disabled={mode !== 'table'} className="h-9 px-3 flex items-center gap-1.5 text-sm font-medium rounded-xl border border-slate-200 text-slate-600 bg-white disabled:opacity-50"><Columns3 className="w-4 h-4" /> Columns</button>
                                 {showColumns && <ColumnChooser columns={columns} setColumns={setColumns} available={availableColumns} onClose={() => setShowColumns(false)} />}

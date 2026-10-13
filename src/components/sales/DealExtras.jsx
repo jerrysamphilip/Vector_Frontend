@@ -8,6 +8,7 @@ import { dealsApi, moneyExact, productsApi, quotesApi } from '../../api/sales';
 import { ErrorNote, Modal, PrimaryButton, SecondaryButton, formatDateTime, inputClass, relativeDate } from '../contacts/shared';
 import { card, cardShadow, Seg } from './shared';
 import MentionTextarea, { MentionText, activeMentions } from '../contacts/MentionTextarea';
+import { ApprovalPanel } from './QuoteApproval';
 
 const KIND = {
     NOTE: { icon: StickyNote, label: 'Note', tone: 'text-amber-600 bg-amber-50' },
@@ -52,7 +53,8 @@ function Composer({ deal, onDone }) {
                 placeholder={mode === 'TASK' ? 'What needs doing?' : mode === 'NOTE' ? 'Title (optional)' : 'Subject'} />
             {mode === 'NOTE'
                 ? <MentionTextarea rows={3} className={`${inputClass} h-auto py-2`} value={body} onChange={setBody} mentions={mentions}
-                    onMentionsChange={setMentions} placeholder="What happened? Type @ to mention a colleague" aria-label="Note" />
+                    onMentionsChange={setMentions} placeholder="What happened? Type @ to mention a colleague" aria-label="Note"
+                    scope={{ opportunity_id: deal.opportunity_id }} />
                 : <textarea rows={3} className={`${inputClass} h-auto py-2`} value={body} onChange={e => setBody(e.target.value)}
                     placeholder={mode === 'TASK' ? 'Notes (optional)' : 'What happened?'} />}
             <div className="flex flex-wrap items-center gap-2">
@@ -218,6 +220,8 @@ export function QuoteModal({ proposal, onClose, onSaved }) {
             {isLoading || !lines ? <Loader2 className="w-5 h-5 animate-spin text-indigo-500" /> : (
                 <div className="space-y-3">
                     <ErrorNote message={error} />
+                    <ApprovalPanel proposalId={proposal.proposal_id} approval={quote?.approval}
+                        onChanged={() => { qc.invalidateQueries({ queryKey: ['quote', proposal.proposal_id] }); qc.invalidateQueries({ queryKey: ['quote-approvals'] }); onSaved(); }} />
                     <table className="w-full text-sm">
                         <thead><tr className="text-left text-[11px] text-slate-400 uppercase tracking-wide">
                             <th className="pb-2 font-semibold w-44">Product</th><th className="pb-2 font-semibold">Description</th>

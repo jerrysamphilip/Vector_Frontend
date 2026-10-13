@@ -50,7 +50,8 @@ export const contactsApi = {
     removeCompany: (id, accountId, newPrimaryId) =>
         del(`/contacts/${id}/companies/${accountId}${newPrimaryId ? `?new_primary_id=${encodeURIComponent(newPrimaryId)}` : ''}`),
     // Colleagues for the @mention picker in notes (BR-CM-16)
-    mentionableUsers: (q) => get('/contacts/mentionable-users', { q }),
+    // scope: { prospect_id } or { opportunity_id } limits the list to people who can see that record
+    mentionableUsers: (q, scope = {}) => get('/contacts/mentionable-users', { q, ...scope }),
 
     facets: () => get('/contacts/facets'),
     owners: () => get('/contacts/owners'),

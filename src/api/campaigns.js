@@ -52,8 +52,9 @@ export const campaignApi = {
     },
 
     // Send Now (Bypass Schedule)
-    sendNow: async (id) => {
-        const response = await api.post(`/campaigns/${id}/send-now`);
+    // One batch per call; pass { cursor, since } from the previous response to continue the run
+    sendNow: async (id, params = {}) => {
+        const response = await api.post(`/campaigns/${id}/send-now`, null, { params });
         return response.data;
     },
 
