@@ -16,6 +16,7 @@ import ProspectListModal from '../components/prospects/ProspectListModal';
 import ListRenameModal from '../components/contacts/ListRenameModal';
 import BouncedRevalidationModal from '../components/prospects/BouncedRevalidationModal';
 import KpiTile from '../components/ui/KpiTile';
+import { useDialog } from '../components/common/useDialog';
 
 // ── GradientCard ─────────────────────────────────────────────────
 function GradientCard(props) {
@@ -89,6 +90,7 @@ function UploadModal({ onClose }) {
     const [file, setFile]     = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError]   = useState(null);
+    const { titleId, dialogProps } = useDialog({ onClose });
 
     const handleSubmit = async () => {
         if (!name.trim()) { setError('Give this list a name'); return; }
@@ -117,7 +119,7 @@ function UploadModal({ onClose }) {
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+            <div {...dialogProps} className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden outline-none"
                 onClick={e => e.stopPropagation()}>
 
                 {/* Gradient top bar */}
@@ -125,10 +127,10 @@ function UploadModal({ onClose }) {
 
                 <div className="px-6 pt-5 pb-2 flex items-start justify-between">
                     <div>
-                        <h2 className="text-lg font-bold text-gray-900">New Prospect List</h2>
+                        <h2 id={titleId} className="text-lg font-bold text-gray-900">New Prospect List</h2>
                         <p className="text-sm text-gray-400 mt-0.5">Upload contacts from a spreadsheet</p>
                     </div>
-                    <button onClick={onClose}
+                    <button onClick={onClose} aria-label="Close"
                         className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">
                         <X className="w-4 h-4" />
                     </button>
@@ -183,15 +185,16 @@ function UploadModal({ onClose }) {
 
 // ── Delete Confirm Modal ──────────────────────────────────────────
 function DeleteModal({ title, message, onConfirm, onCancel, loading }) {
+    const { titleId, dialogProps } = useDialog({ onClose: onCancel });
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6"
+            <div {...dialogProps} className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 outline-none"
                 onClick={e => e.stopPropagation()}>
                 <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
                     <Trash2 className="w-5 h-5 text-red-500" />
                 </div>
-                <h3 className="text-center font-bold text-gray-800 mb-1">{title}</h3>
+                <h3 id={titleId} className="text-center font-bold text-gray-800 mb-1">{title}</h3>
                 <p className="text-center text-sm text-gray-500 mb-5">{message}</p>
                 <div className="flex gap-2.5">
                     <button onClick={onCancel}

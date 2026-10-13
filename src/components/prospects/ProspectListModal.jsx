@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import { prospectsApi } from '../../api/prospects';
 import { listsApi, errorMessage } from '../../api/contacts';
+import { useDialog } from '../common/useDialog';
+import DialogPanel from '../common/DialogPanel';
 
 // ── Add selected prospects to another static list, or a new one (DF-03) ──
 function AddToListPanel({ ids, currentListId, onDone, onCancel }) {
@@ -210,6 +212,7 @@ export default function ProspectListModal({ list, onClose }) {
     const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
     const [showAddToList, setShowAddToList] = useState(false);
     const [listNotice, setListNotice] = useState(null);
+    const { titleId, dialogProps } = useDialog({ onClose });
 
     // Fetch prospects for this list
     const { data, isLoading, refetch } = useQuery({
@@ -345,16 +348,17 @@ export default function ProspectListModal({ list, onClose }) {
             onClick={onClose}
         >
             <motion.div
+                {...dialogProps}
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col outline-none"
             >
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-bold text-slate-800">{list.list_name}</h2>
+                        <h2 id={titleId} className="text-lg font-bold text-slate-800">{list.list_name}</h2>
                         <p className="text-sm text-slate-500">{total.toLocaleString()} prospects</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -379,6 +383,7 @@ export default function ProspectListModal({ list, onClose }) {
                         </button>
                         <button
                             onClick={onClose}
+                            aria-label="Close"
                             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                         >
                             <X className="w-5 h-5 text-slate-500" />
@@ -755,7 +760,10 @@ export default function ProspectListModal({ list, onClose }) {
                     className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]"
                     onClick={() => setDeleteConfirmId(null)}
                 >
-                    <motion.div
+                    <DialogPanel
+                        as={motion.div}
+                        onClose={() => setDeleteConfirmId(null)}
+                        labelledBy="prospect-delete-confirm-title"
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         onClick={(e) => e.stopPropagation()}
@@ -766,7 +774,7 @@ export default function ProspectListModal({ list, onClose }) {
                                 <Trash2 className="w-5 h-5 text-rose-600" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-slate-800">Delete Prospect</h3>
+                                <h3 id="prospect-delete-confirm-title" className="font-semibold text-slate-800">Delete Prospect</h3>
                                 <p className="text-sm text-slate-500">This action cannot be undone</p>
                             </div>
                         </div>
@@ -790,7 +798,7 @@ export default function ProspectListModal({ list, onClose }) {
                                 {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
                             </button>
                         </div>
-                    </motion.div>
+                    </DialogPanel>
                 </motion.div>
             )}
 
@@ -802,7 +810,10 @@ export default function ProspectListModal({ list, onClose }) {
                     className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]"
                     onClick={() => setShowBulkDeleteConfirm(false)}
                 >
-                    <motion.div
+                    <DialogPanel
+                        as={motion.div}
+                        onClose={() => setShowBulkDeleteConfirm(false)}
+                        labelledBy="prospect-bulk-delete-confirm-title"
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         onClick={(e) => e.stopPropagation()}
@@ -813,7 +824,7 @@ export default function ProspectListModal({ list, onClose }) {
                                 <Trash2 className="w-5 h-5 text-rose-600" />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-slate-800">Delete {selectedIds.length} Prospects</h3>
+                                <h3 id="prospect-bulk-delete-confirm-title" className="font-semibold text-slate-800">Delete {selectedIds.length} Prospects</h3>
                                 <p className="text-sm text-slate-500">This action cannot be undone</p>
                             </div>
                         </div>
@@ -840,7 +851,7 @@ export default function ProspectListModal({ list, onClose }) {
                                 }
                             </button>
                         </div>
-                    </motion.div>
+                    </DialogPanel>
                 </motion.div>
             )}
         </motion.div>

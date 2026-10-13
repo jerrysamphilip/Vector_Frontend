@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import { campaignApi } from '../../../api/campaigns';
 import KpiTile from '../../ui/KpiTile';
+import DialogPanel from '../../common/DialogPanel';
 import SubjectVariantsStats from '../SubjectVariantsStats';
 
 // Dashboard Theme Colors
@@ -552,16 +553,20 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
             <AnimatePresence>
                 {selectedStep !== null && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-                        <motion.div
+                        <DialogPanel
+                            as={motion.div}
+                            onClose={() => setSelectedStep(null)}
+                            labelledBy="analytics-step-details-title"
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
                         >
                             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                                <h3 className="font-semibold text-lg text-slate-800">Sequence Step {selectedStep} Details</h3>
+                                <h3 id="analytics-step-details-title" className="font-semibold text-lg text-slate-800">Sequence Step {selectedStep} Details</h3>
                                 <button
                                     onClick={() => setSelectedStep(null)}
+                                    aria-label="Close"
                                     className="p-1 hover:bg-slate-200 rounded-lg transition-colors text-slate-500"
                                 >
                                     <X className="w-5 h-5" />
@@ -629,7 +634,7 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
                                     <div className="text-center text-red-500 p-8">Failed to load data.</div>
                                 )}
                             </div>
-                        </motion.div>
+                        </DialogPanel>
                     </div>
                 )}
             </AnimatePresence>

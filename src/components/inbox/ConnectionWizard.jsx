@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, CheckCircle2, Loader2, AlertTriangle, X, Shield, Activity } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input, FormGroup, Label } from '../ui/Input';
+import DialogPanel from '../common/DialogPanel';
 
 const PROVIDER_PRESETS = {
     Google:  { smtp_host: 'smtp.gmail.com',     smtp_port: 587, imap_host: 'imap.gmail.com',         imap_port: 993 },
@@ -113,7 +114,10 @@ export default function ConnectionWizard({ isOpen, onClose, onSubmit, isSubmitti
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <motion.div
+            <DialogPanel
+                as={motion.div}
+                onClose={onClose}
+                labelledBy="connection-wizard-title"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
@@ -121,7 +125,7 @@ export default function ConnectionWizard({ isOpen, onClose, onSubmit, isSubmitti
                 {/* Header */}
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <div>
-                        <h2 className="text-xl font-bold text-slate-800">
+                        <h2 id="connection-wizard-title" className="text-xl font-bold text-slate-800">
                             {initialData ? 'Edit sending & receiving settings' : 'Connect Private Inbox'}
                         </h2>
                         <div className="flex items-center gap-2 mt-1 text-xs font-medium text-slate-500">
@@ -132,7 +136,7 @@ export default function ConnectionWizard({ isOpen, onClose, onSubmit, isSubmitti
                             <span className={step >= 3 ? 'text-blue-600' : ''}>Verify</span>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
+                    <button onClick={onClose} aria-label="Close" className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -347,7 +351,7 @@ export default function ConnectionWizard({ isOpen, onClose, onSubmit, isSubmitti
                         <Button variant="outline" onClick={onClose}>Cancel</Button>
                     )}
                 </div>
-            </motion.div>
+            </DialogPanel>
         </div>
     );
 }

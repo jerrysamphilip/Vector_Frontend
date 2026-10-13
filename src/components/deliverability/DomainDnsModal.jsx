@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, Server, Loader2, Plus } from 'lucide-react';
 import deliverabilityApi from '../../api/deliverability';
 import DnsRecordsPanel from './DnsRecordsPanel';
+import { useDialog } from '../common/useDialog';
 
 const LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const TLD = /^(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/;
@@ -27,6 +28,7 @@ const detail = (err, fallback) => {
  */
 export default function DomainDnsModal({ domainName: initialName = null, canManage, onClose, onChanged }) {
     const [domainName, setDomainName] = useState(initialName);
+    const { dialogProps } = useDialog({ onClose });
     const [input, setInput] = useState('');
     const [info, setInfo] = useState(null);       // { dns_records, dkim_tokens_available, *_status }
     const [loading, setLoading] = useState(!!initialName);
@@ -76,10 +78,12 @@ export default function DomainDnsModal({ domainName: initialName = null, canMana
         }
     };
 
+    // The accessible name stays the aria-label ("DNS records for <domain>" / "Add sending domain"); useDialog adds
+    // aria-modal, the focus trap, Escape and focus return.
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div role="dialog" aria-label={domainName ? `DNS records for ${domainName}` : 'Add sending domain'}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div {...dialogProps} aria-labelledby={undefined} aria-label={domainName ? `DNS records for ${domainName}` : 'Add sending domain'}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto outline-none">
                 <div className="px-6 py-5 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center"><Server className="w-4 h-4 text-white" /></div>

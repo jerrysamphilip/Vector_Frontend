@@ -330,7 +330,8 @@ export default function Sidebar({ drawer = null }) {
     {isDrawer && drawerOpen && (
       <div className="fixed top-0 right-0 bottom-0 left-0 z-40 bg-slate-900/50 lg:hidden" onClick={drawer.closeDrawer} aria-hidden="true" />
     )}
-    <aside id="app-sidebar" ref={drawer?.drawerRef} aria-label="Main navigation" inert={isDrawer && !drawerOpen ? true : undefined}
+    <aside id="app-sidebar" ref={drawer?.drawerRef} aria-label={drawerOpen ? 'Navigation' : 'Main navigation'} inert={isDrawer && !drawerOpen ? true : undefined}
+      role={drawerOpen ? 'dialog' : undefined} aria-modal={drawerOpen ? 'true' : undefined}
       className={`fixed top-0 left-0 w-60 h-screen h-[100dvh] lg:h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-blue-600 text-white transition-transform duration-200 lg:translate-x-0 lg:z-40 ${drawerOpen ? 'translate-x-0 z-50 shadow-2xl' : '-translate-x-full z-40'}`}>
       <div className="h-14 flex items-center gap-2.5 px-4 shrink-0 border-b border-white/10">
         <img src={logoMark} alt="" className="w-7 h-7" />

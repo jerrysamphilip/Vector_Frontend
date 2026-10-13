@@ -15,6 +15,7 @@ import Loading from '../components/common/Loading';
 import { apiClient as api } from '../api/http';
 import deliverabilityApi from '../api/deliverability';
 import KpiTile from '../components/ui/KpiTile';
+import DialogPanel from '../components/common/DialogPanel';
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
 const getInboxes       = async ()     => (await api.get('/inboxes')).data;
@@ -992,19 +993,20 @@ export default function EmailAccounts() {
                 {verificationData && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                        <DialogPanel as={motion.div} onClose={() => setVerificationData(null)} labelledBy="verify-domain-title"
+                            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                             className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
                             <div className="flex items-start justify-between p-5 text-white"
                                  style={{ background: 'linear-gradient(135deg,#0046FF,#73C8D2)' }}>
                                 <div>
-                                    <h2 className="flex items-center gap-2 text-lg font-bold">
+                                    <h2 id="verify-domain-title" className="flex items-center gap-2 text-lg font-bold">
                                         <ShieldCheck size={18}/> Verify Domain Ownership
                                     </h2>
                                     <p className="mt-1 text-sm text-white/80">
                                         Add these DNS records to activate sending for <strong>{verificationData.domain}</strong>.
                                     </p>
                                 </div>
-                                <button onClick={() => setVerificationData(null)} className="text-white/70 hover:text-white transition">
+                                <button onClick={() => setVerificationData(null)} aria-label="Close" className="text-white/70 hover:text-white transition">
                                     <X size={20}/>
                                 </button>
                             </div>
@@ -1036,7 +1038,7 @@ export default function EmailAccounts() {
                                     Done
                                 </button>
                             </div>
-                        </motion.div>
+                        </DialogPanel>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -1046,12 +1048,13 @@ export default function EmailAccounts() {
                 {inboxToDelete && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                        <DialogPanel as={motion.div} onClose={() => setInboxToDelete(null)} labelledBy="delete-mailbox-title"
+                            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                             className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6 text-center">
                             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
                                 <AlertTriangle size={22} className="text-red-600"/>
                             </div>
-                            <h3 className="text-base font-bold text-gray-900">Delete Mailbox?</h3>
+                            <h3 id="delete-mailbox-title" className="text-base font-bold text-gray-900">Delete Mailbox?</h3>
                             <p className="mt-2 text-sm text-gray-500">
                                 Remove <strong>{inboxToDelete.email_address}</strong>? This also removes it from the warmup pool.
                             </p>
@@ -1067,7 +1070,7 @@ export default function EmailAccounts() {
                                     {deleteMutation.isPending ? <Loader2 size={14} className="animate-spin"/> : 'Delete'}
                                 </button>
                             </div>
-                        </motion.div>
+                        </DialogPanel>
                     </motion.div>
                 )}
             </AnimatePresence>

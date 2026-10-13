@@ -11,6 +11,7 @@ import {
     X, ShieldAlert, Mail, CheckCircle, AlertCircle, Loader2, AlertTriangle
 } from 'lucide-react';
 import { campaignApi } from '../../api/campaigns';
+import { useDialog } from '../common/useDialog';
 
 export default function RevalidateModal({ prospect, onClose, onSuccess }) {
     const [newEmail, setNewEmail] = useState('');
@@ -18,6 +19,7 @@ export default function RevalidateModal({ prospect, onClose, onSuccess }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [done, setDone] = useState(null);
+    const { titleId, dialogProps } = useDialog({ onClose });
 
     async function handleSubmit(e) {
         e.preventDefault();
@@ -47,11 +49,12 @@ export default function RevalidateModal({ prospect, onClose, onSuccess }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <motion.div
+                {...dialogProps}
                 initial={{ opacity: 0, scale: 0.95, y: 16 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 16 }}
                 transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+                className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden outline-none"
             >
                 {/* Header */}
                 <div className="px-6 py-4 flex items-center justify-between"
@@ -61,7 +64,7 @@ export default function RevalidateModal({ prospect, onClose, onSuccess }) {
                             <ShieldAlert className="w-4 h-4 text-white" />
                         </div>
                         <div>
-                            <p className="text-white font-semibold text-sm">Re-validate Bounced Contact</p>
+                            <p id={titleId} className="text-white font-semibold text-sm">Re-validate Bounced Contact</p>
                             <p className="text-white/70 text-xs">Admin action — audit logged</p>
                         </div>
                     </div>

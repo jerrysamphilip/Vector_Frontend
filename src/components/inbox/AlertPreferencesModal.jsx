@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2, Mail, Settings2, X } from 'lucide-react';
+import DialogPanel from '../common/DialogPanel';
 
 const LABELS = {
     DOMAIN_REPUTATION: 'Domain Reputation Alerts',
@@ -101,7 +102,10 @@ export default function AlertPreferencesModal({
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
                 >
-                    <motion.div
+                    <DialogPanel
+                        as={motion.div}
+                        onClose={onClose}
+                        labelledBy="alert-preferences-title"
                         initial={{ scale: 0.96, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.96, opacity: 0 }}
@@ -109,13 +113,14 @@ export default function AlertPreferencesModal({
                     >
                         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
                             <div>
-                                <p className="text-sm font-semibold text-gray-900">Alert Preferences</p>
+                                <p id="alert-preferences-title" className="text-sm font-semibold text-gray-900">Alert Preferences</p>
                                 <p className="text-xs text-gray-400">
                                     Configure which alerts are shown and which send email notifications.
                                 </p>
                             </div>
                             <button
                                 onClick={onClose}
+                                aria-label="Close"
                                 className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
                             >
                                 <X size={16} />
@@ -259,7 +264,7 @@ export default function AlertPreferencesModal({
                                 Save Preferences
                             </button>
                         </div>
-                    </motion.div>
+                    </DialogPanel>
                 </motion.div>
             )}
         </AnimatePresence>

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { campaignApi } from '../../api/campaigns';
 import RevalidateModal from '../campaigns/RevalidateModal';
+import { useDialog } from '../common/useDialog';
 
 function formatDate(value) {
     if (!value) return '-';
@@ -26,6 +27,7 @@ function formatDate(value) {
 export default function BouncedRevalidationModal({ onClose }) {
     const [selectedProspect, setSelectedProspect] = useState(null);
     const [successMessage, setSuccessMessage] = useState('');
+    const { titleId, dialogProps } = useDialog({ onClose });
 
     const {
         data: candidates = [],
@@ -45,11 +47,12 @@ export default function BouncedRevalidationModal({ onClose }) {
         <>
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                 <motion.div
+                    {...dialogProps}
                     initial={{ opacity: 0, scale: 0.96, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96, y: 10 }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden"
+                    className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden outline-none"
                 >
                     <div
                         className="px-6 py-4 flex items-center justify-between"
@@ -60,12 +63,13 @@ export default function BouncedRevalidationModal({ onClose }) {
                                 <ShieldCheck className="w-4 h-4 text-white" />
                             </div>
                             <div>
-                                <p className="text-white font-semibold text-sm">Bounced Prospect Revalidation</p>
+                                <p id={titleId} className="text-white font-semibold text-sm">Bounced Prospect Revalidation</p>
                                 <p className="text-white/75 text-xs">Admin/Super Admin compliance-safe recovery flow</p>
                             </div>
                         </div>
                         <button
                             onClick={onClose}
+                            aria-label="Close"
                             className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
                         >
                             <X className="w-4 h-4" />

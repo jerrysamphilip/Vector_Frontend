@@ -53,6 +53,7 @@ import ProspectTable from '../components/prospects/ProspectTable';
 import Loading from '../components/common/Loading';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import EnrollmentResultModal from '../components/campaigns/EnrollmentResultModal';
+import DialogPanel from '../components/common/DialogPanel';
 import { sanitizeHtml } from '../lib/sanitizeHtml';
 
 const INITIAL_FORM_DATA = {
@@ -1638,16 +1639,17 @@ function CreateCampaignContent() {
                                                 {isContextOpen && (
                                                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
                                                         onClick={() => setIsContextOpen(false)}>
-                                                        <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden"
+                                                        <DialogPanel onClose={() => setIsContextOpen(false)} labelledBy="campaign-context-title"
+                                                            className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden"
                                                             onClick={e => e.stopPropagation()}>
                                                             <div className="h-1 w-full" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }} />
                                                             <div className="p-6">
                                                                 <div className="flex items-center justify-between mb-4">
                                                                     <div className="flex items-center gap-2">
                                                                         <Sparkles className="w-4 h-4" style={{ color: '#2d6bbf' }} />
-                                                                        <h3 className="text-base font-bold text-gray-900">Campaign Context for AI</h3>
+                                                                        <h3 id="campaign-context-title" className="text-base font-bold text-gray-900">Campaign Context for AI</h3>
                                                                     </div>
-                                                                    <button onClick={() => setIsContextOpen(false)}
+                                                                    <button onClick={() => setIsContextOpen(false)} aria-label="Close"
                                                                         className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
                                                                         <XIcon className="w-4 h-4" />
                                                                     </button>
@@ -1676,7 +1678,7 @@ function CreateCampaignContent() {
                                                                     </button>
                                                                 </div>
                                                             </div>
-                                                        </div>
+                                                        </DialogPanel>
                                                     </div>
                                                 )}
 
@@ -2739,7 +2741,10 @@ function CreateCampaignContent() {
                                                                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
                                                                 onClick={() => setDeleteConfirmProspectId(null)}
                                                             >
-                                                                <motion.div
+                                                                <DialogPanel
+                                                                    as={motion.div}
+                                                                    onClose={() => setDeleteConfirmProspectId(null)}
+                                                                    labelledBy="campaign-delete-prospect-title"
                                                                     initial={{ scale: 0.95 }}
                                                                     animate={{ scale: 1 }}
                                                                     exit={{ scale: 0.95 }}
@@ -2750,7 +2755,7 @@ function CreateCampaignContent() {
                                                                         <div className="p-2 bg-red-100 rounded-lg">
                                                                             <Trash2 className="w-5 h-5 text-red-600" />
                                                                         </div>
-                                                                        <h3 className="text-lg font-bold text-slate-900">Delete Prospect?</h3>
+                                                                        <h3 id="campaign-delete-prospect-title" className="text-lg font-bold text-slate-900">Delete Prospect?</h3>
                                                                     </div>
                                                                     <p className="text-sm text-slate-600 mb-6">
                                                                         This will permanently remove this prospect from all lists and campaigns. This action cannot be undone.
@@ -2775,7 +2780,7 @@ function CreateCampaignContent() {
                                                                             Delete
                                                                         </Button>
                                                                     </div>
-                                                                </motion.div>
+                                                                </DialogPanel>
                                                             </motion.div>
                                                         )}
                                                     </AnimatePresence>

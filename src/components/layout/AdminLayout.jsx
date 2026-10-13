@@ -198,7 +198,9 @@ export default function AdminLayout() {
             <motion.aside
                 id="admin-sidebar"
                 ref={drawer.drawerRef}
-                aria-label="Platform admin navigation"
+                aria-label={drawerOpen ? 'Navigation' : 'Platform admin navigation'}
+                role={drawerOpen ? 'dialog' : undefined}
+                aria-modal={drawerOpen ? 'true' : undefined}
                 inert={isDrawer && !drawerOpen ? true : undefined}
                 className={`fixed top-0 left-0 w-64 h-screen h-[100dvh] lg:h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-blue-600 text-white transition-[translate] duration-200 lg:translate-x-0 lg:z-40 ${drawerOpen ? 'translate-x-0 z-50 shadow-2xl' : '-translate-x-full z-40'}`}
                 variants={sidebarVariants}
