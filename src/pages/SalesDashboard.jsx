@@ -5,6 +5,7 @@ import { Loader2, AlertTriangle, Trophy } from 'lucide-react';
 import { dealsApi, moneyShort, pct, salesReportsApi } from '../api/sales';
 import { Avatar, formatDateTime } from '../components/contacts/shared';
 import { HBar, MemberFilter, PageHeader, PeriodFilter, StatTile, card, cardShadow, periodRange } from '../components/sales/shared';
+import { CrmKpisCard } from '../components/sales/KpiCards';
 
 const VIEW_TITLE = {
     SALES_HEAD: ['Sales head dashboard', 'Every team, every rep'],
@@ -87,6 +88,7 @@ export default function SalesDashboard() {
                     </div>
                     <Attention data={data} />
                 </div>
+                {data.role_view === 'SALES_HEAD' && <CrmKpisCard member={member} range={range} />}
                 {data.teams.length > 0 && (
                     <div className={`${card} overflow-hidden`} style={cardShadow}>
                         <div className="flex items-baseline justify-between px-5 pt-4 pb-2">

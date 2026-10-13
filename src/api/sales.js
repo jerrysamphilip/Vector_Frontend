@@ -72,6 +72,7 @@ export const salesReportsApi = {
     leaderboard: (params) => get('/sales-reports/leaderboard', params),
     campaignRoi: (params) => get('/sales-reports/campaign-roi', params),
     // KPI reports (BRD v2.0 section 8)
+    kpis: (params) => get('/sales-reports/kpis', params),
     sqlToWin: (params) => get('/sales-reports/sql-to-win', params),
     forecastAccuracy: (params) => get('/sales-reports/forecast-accuracy', params),
     takeForecastSnapshot: (payload) => post('/sales-reports/forecast-snapshots', payload),
