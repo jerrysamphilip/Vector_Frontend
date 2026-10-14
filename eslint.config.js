@@ -5,7 +5,7 @@ import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 
 export default [
-    { ignores: ['dist/**', 'node_modules/**', 'src - ExistUI/**', 'docker/**', 'manifests/**', 'public/**'] },
+    { ignores: ['dist/**', 'node_modules/**', 'docker/**', 'manifests/**', 'public/**'] },
     js.configs.recommended,
     {
         files: ['**/*.{js,jsx}'],
