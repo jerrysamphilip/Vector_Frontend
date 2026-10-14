@@ -6,7 +6,7 @@ import { money, moneyShort, pct, salesReportsApi } from '../api/sales';
 import { ClientTypeFilter, HBar, MemberFilter, PERIODS, PageHeader, PeriodFilter, Seg, StatTile, card, cardShadow, periodRange, selectSm } from '../components/sales/shared';
 import { Funnel } from './SalesDashboard';
 import CustomReports from '../components/sales/CustomReports';
-import { ForecastAccuracyCard, SqlToWinCard } from '../components/sales/KpiCards';
+import { CrmKpisCard, ForecastAccuracyCard, SqlToWinCard } from '../components/sales/KpiCards';
 
 const WON = '#059669';
 const WEIGHTED = '#2d6bbf';
@@ -337,9 +337,9 @@ export default function SalesReports() {
         <div className="w-full space-y-6">
             <PageHeader title="Sales reports" subtitle="Leads, SQLs, pipeline, forecast, targets and team performance for you and your team">
                 {tab !== 'custom' && <MemberFilter value={member} onChange={setMember} />}
-                {['leads', 'team', 'targets', 'roi'].includes(tab) && <PeriodFilter value={period} onChange={setPeriod} />}
+                {['leads', 'team', 'targets', 'roi', 'kpis'].includes(tab) && <PeriodFilter value={period} onChange={setPeriod} />}
             </PageHeader>
-            <Seg options={[['leads', 'Leads & SQLs'], ['pipeline', 'Pipeline'], ['forecast', 'Forecast'], ['targets', 'Targets & leaderboard'], ['team', 'Team performance'], ['roi', 'Campaign ROI'], ['custom', 'Custom reports']]}
+            <Seg options={[['leads', 'Leads & SQLs'], ['pipeline', 'Pipeline'], ['forecast', 'Forecast'], ['targets', 'Targets & leaderboard'], ['team', 'Team performance'], ['roi', 'Campaign ROI'], ['kpis', 'CRM KPIs'], ['custom', 'Custom reports']]}
                 value={tab} onChange={v => setParams({ tab: v })} />
             {tab === 'leads' && <LeadsTab member={member} period={period} />}
             {tab === 'pipeline' && <PipelineTab member={member} />}
@@ -347,6 +347,7 @@ export default function SalesReports() {
             {tab === 'team' && <TeamTab member={member} period={period} />}
             {tab === 'targets' && <TargetsTab member={member} period={period} />}
             {tab === 'roi' && <RoiTab member={member} period={period} />}
+            {tab === 'kpis' && <CrmKpisCard member={member} range={periodRange(period)} />}
             {tab === 'custom' && <CustomReports />}
         </div>
     );

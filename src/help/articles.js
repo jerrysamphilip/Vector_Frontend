@@ -347,9 +347,27 @@ const SALES = [
         related: ['deals', 'forecasting'],
     },
     {
+        id: 'crm-kpis', category: 'Sales', title: 'CRM KPIs explained',
+        summary: 'Duplicate rate, reply-to-lead, lead-to-SQL, SQL-to-win, forecast accuracy and CRM adoption: how each is measured.',
+        keywords: ['kpi', 'kpis', 'success metrics', 'duplicate rate', 'reply to lead', 'lead to sql', 'sql to win', 'forecast accuracy', 'adoption', 'active users'],
+        body: [
+            { p: 'Sales reports → **CRM KPIs** (and the Sales head dashboard) show the six success measures for the chosen period and team member. Each tile shows the percentage, the two numbers behind it and, where the requirements set one, the target.' },
+            { list: [
+                { term: 'Duplicate contact rate', text: 'contacts in an unresolved duplicate group ÷ live contacts × 100. Target: below 1%. A group is the same email apart from case, dots or +tags in personal addresses, the same or a similar name at the same company, or the same phone number (the same rules as the Duplicates page). Merging the group resolves it.' },
+                { term: 'Reply-to-lead conversion', text: 'leads created from replies ÷ contacts who replied positively × 100. A lead counts when it was made with **Create lead** from a reply (source "Campaign reply") or its contact replied positively in the 30 days before. Positive replies are recognised by the AI reply classifier; without it the KPI shows "—" with a note.' },
+                { term: 'Lead-to-SQL conversion', text: 'leads created in the period that reached SQL ÷ leads created × 100 (the same figure as Leads & SQLs).' },
+                { term: 'SQL-to-win rate', text: 'leads that reached SQL in the period whose deal was won ÷ those SQLs × 100.' },
+                { term: 'Forecast accuracy', text: 'revenue won in the fiscal quarter ÷ the committed forecast stored at its start × 100 (won to date + open Commit deals). For a date range it is the last quarter that ended; pick a financial year and quarter for another one. It can exceed 100%.' },
+                { term: 'CRM adoption', text: 'users who signed in or used the app in the week (Monday–Sunday, UTC) ÷ active users of the workspace × 100. The current week is "so far"; the bars show the last 9 weeks.' },
+            ] },
+            { p: 'Who sees what: lead, SQL, reply and forecast KPIs cover your own records and your team\'s, like every sales report. Duplicate contact rate and CRM adoption describe the whole workspace, so only admins and the Sales Head see them. Revenue figures follow your workspace\'s amount-hiding setting; the percentages stay visible.' },
+        ],
+        related: ['sales-reports', 'forecasting', 'contacts'],
+    },
+    {
         id: 'forecasting', category: 'Sales', title: 'Forecasts and targets explained',
         summary: 'How weighted pipeline, forecast categories and targets fit together.',
-        keywords: ['forecast', 'commit', 'best case', 'weighted', 'quarter', 'financial year', 'target', 'attainment', 'forecast accuracy', 'sql to win'],
+        keywords: ['forecast', 'commit', 'best case', 'weighted', 'quarter', 'financial year', 'target', 'attainment', 'forecast accuracy', 'committed forecast', 'sql to win'],
         body: [
             { list: [
                 { term: 'Weighted', text: 'amount × stage probability. A $100K deal at Proposal (50%) counts $50K.' },
@@ -360,7 +378,7 @@ const SALES = [
             ] },
             { p: 'Forecast categories are set from the stage probability (70% and above: Commit; 40% and above: Best case; otherwise Pipeline). Reps can override a deal\'s category on the deal page.' },
             { p: 'The financial year starts in April: Q1 is April–June.' },
-            { p: '**Forecast accuracy** (Sales reports → Forecast): at the start of every month and quarter the forecast is stored automatically; when the period ends it is compared with revenue actually won: accuracy = 1 − |actual − forecast| ÷ forecast. Admins can store it by hand with **Take snapshot now**.' },
+            { p: '**Forecast accuracy** (Sales reports → Forecast): at the start of every month and quarter the **committed forecast** is stored automatically: deals already won plus open deals in the **Commit** category with a close date in the period. When the period ends it is compared with the revenue actually won: accuracy = actual ÷ committed × 100. 100% means the team won exactly what it committed; above 100% it won more, below less. The weighted-forecast column (won + probability-weighted pipeline) is shown alongside for reference. Admins can store the forecast by hand with **Take snapshot now**.' },
             { p: '**SQL to win** (Sales reports → Leads & SQLs): of the leads that reached SQL in the period, the share whose deal was won.' },
         ],
         related: ['sales-reports', 'targets', 'deal-page'],
@@ -377,11 +395,12 @@ const SALES = [
                 { term: 'Targets & leaderboard', text: 'target against won, commit and best case per rep, and the leaderboard for the chosen period.' },
                 { term: 'Team performance', text: 'activities, calls, meetings, emails, leads, SQLs, deals and conversion rates per rep.' },
                 { term: 'Campaign ROI', text: 'for each campaign: contacts emailed, replies, leads, SQLs, opportunities, pipeline and revenue won.' },
+                { term: 'CRM KPIs', text: 'the six success measures from the requirements, with targets and definitions (click ⓘ on a tile). See "CRM KPIs explained".' },
                 { term: 'Custom reports', text: 'build your own; see "Custom reports".' },
             ] },
             { p: 'The team picker and period picker at the top apply to every tab.' },
         ],
-        related: ['custom-reports', 'forecasting', 'targets'],
+        related: ['custom-reports', 'forecasting', 'crm-kpis', 'targets'],
     },
     {
         id: 'custom-reports', category: 'Sales', title: 'Custom reports', routes: ['/app/sales-reports?tab=custom'],
