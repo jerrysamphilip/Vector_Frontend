@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { clearAuthSession, getCsrfToken, setAuthSession, updateStoredUser } from '../lib/authStorage';
 import { currentReturnPath } from '../lib/returnTo';
+import { activityHeaders, startActivityTracking } from './activity';
 
 // BASE_URL is Vite's `base` ('/' by default, e.g. '/vector/' when served under a path prefix)
 const APP_BASE = import.meta.env.BASE_URL;
@@ -23,10 +24,23 @@ const COMMON = {
 
 let refreshPromise = null;
 
+// User interaction is what keeps a session alive (idle timeout); polling is not. See activity.js.
+startActivityTracking();
+
+// Refresh refusals the API explains with a code (backend app/services/session_limits.py)
+const SESSION_IDLE_TIMEOUT = 'SESSION_IDLE_TIMEOUT';
+const REFRESH_TOKEN_SUPERSEDED = 'REFRESH_TOKEN_SUPERSEDED';
+
+function refreshErrorCode(error) {
+    const detail = error?.response?.data?.detail;
+    return detail && typeof detail === 'object' ? detail.code : undefined;
+}
+
 /**
  * Full-page redirect to the login page, keeping the page in use (path + query + hash) in ?next= so signing in
  * again returns there (validated as an internal /app or /admin path by Login, see lib/returnTo.js).
- * reason: 'expired' (session could not be refreshed) or 'suspended' (the workspace was suspended); Login shows it.
+ * reason: 'expired' (session could not be refreshed: absolute session limit, revoked, ...), 'idle' (signed out
+ * after the inactivity limit) or 'suspended' (the workspace was suspended); Login shows it.
  */
 function redirectToLogin(reason) {
     if (typeof window === 'undefined') return;
@@ -65,7 +79,10 @@ function withCsrf(config) {
 }
 
 async function refreshSession() {
-    const response = await axios.post(`${API_V1_BASE}/auth/refresh`, null, withCsrf({ ...COMMON, method: 'post', headers: { ...COMMON.headers } }));
+    // X-User-Activity only when the user interacted within the idle window: a refresh triggered by
+    // background polling alone does not extend the session.
+    const headers = { ...COMMON.headers, ...activityHeaders() };
+    const response = await axios.post(`${API_V1_BASE}/auth/refresh`, null, withCsrf({ ...COMMON, method: 'post', headers }));
     setAuthSession({ user: response.data?.user });
     return response.data;
 }
@@ -122,8 +139,16 @@ function attachAuthInterceptors(client) {
                 // The refresh issued a new csrf_token cookie; send the current one on the retry
                 return client(withCsrf(originalRequest));
             } catch (refreshError) {
+                const code = refreshErrorCode(refreshError);
+                // Another tab exchanged the same refresh token a moment earlier; the shared cookies
+                // already hold the new session, so just retry with them.
+                if (code === REFRESH_TOKEN_SUPERSEDED) {
+                    return client(withCsrf(originalRequest));
+                }
                 clearAuthSession();
-                redirectToLogin(isTenantSuspended(refreshError) ? 'suspended' : 'expired');
+                const reason = isTenantSuspended(refreshError) ? 'suspended'
+                    : code === SESSION_IDLE_TIMEOUT ? 'idle' : 'expired';
+                redirectToLogin(reason);
                 return Promise.reject(refreshError);
             }
         },

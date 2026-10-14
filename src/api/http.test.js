@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient, isTenantSuspended, normalizeError } from './http';
+import { ACTIVITY_STORAGE_KEY, SESSION_IDLE_MINUTES, resetActivity } from './activity';
 
 const httpError = (status, data, config = {}) => {
     const error = new Error(`Request failed with status code ${status}`);
@@ -144,5 +145,79 @@ describe('apiClient interceptors', () => {
         await expect(apiClient.get('/campaigns')).rejects.toBeTruthy();
         const target = new URL(assign.mock.calls[0][0], 'http://localhost');
         expect(target.searchParams.get('reason')).toBe('expired');
+    });
+
+    describe('session limits', () => {
+        const expiredThenOk = () => {
+            let calls = 0;
+            respond = (config) => {
+                calls += 1;
+                if (calls === 1) return Promise.reject(httpError(401, { detail: 'expired' }, config));
+                return Promise.resolve({ data: { ok: 'retried' }, status: 200, statusText: 'OK', headers: {}, config });
+            };
+        };
+
+        beforeEach(() => resetActivity());
+        afterEach(() => resetActivity());
+
+        it('reports recent user interaction in X-User-Activity on refresh', async () => {
+            const refresh = vi.spyOn(axios, 'post').mockResolvedValue({ data: {} });
+            expiredThenOk();
+            window.dispatchEvent(new Event('keydown')); // http.js tracks interaction on window
+            await apiClient.get('/campaigns');
+            const headers = refresh.mock.calls[0][2].headers;
+            expect(headers['X-User-Activity']).toMatch(/^\d+$/);
+            expect(Number(headers['X-User-Activity'])).toBeLessThan(5);
+            expect(headers['X-Auth-Mode']).toBe('cookie');
+        });
+
+        it('sends no activity header when the refresh comes from background polling alone', async () => {
+            const refresh = vi.spyOn(axios, 'post').mockResolvedValue({ data: {} });
+            expiredThenOk();
+            await apiClient.get('/campaigns');
+            expect(refresh.mock.calls[0][2].headers).not.toHaveProperty('X-User-Activity');
+        });
+
+        it('sends no activity header when the last interaction is older than the idle window', async () => {
+            const refresh = vi.spyOn(axios, 'post').mockResolvedValue({ data: {} });
+            expiredThenOk();
+            localStorage.setItem(ACTIVITY_STORAGE_KEY, String(Date.now() - (SESSION_IDLE_MINUTES * 60 + 5) * 1000));
+            await apiClient.get('/campaigns');
+            expect(refresh.mock.calls[0][2].headers).not.toHaveProperty('X-User-Activity');
+        });
+
+        it('sends the user to login with reason=idle when the session timed out from inactivity', async () => {
+            vi.spyOn(axios, 'post').mockRejectedValue(httpError(401, {
+                detail: { code: 'SESSION_IDLE_TIMEOUT', message: 'Signed out after 30 minutes of inactivity' },
+            }));
+            respond = (config) => Promise.reject(httpError(401, { detail: 'expired' }, config));
+            await expect(apiClient.get('/campaigns')).rejects.toBeTruthy();
+            const target = new URL(assign.mock.calls[0][0], 'http://localhost');
+            expect(target.searchParams.get('reason')).toBe('idle');
+            expect(target.searchParams.get('next')).toBe('/app/deals?stage=won');
+        });
+
+        it('uses reason=expired for the absolute session limit and a revoked session', async () => {
+            for (const code of ['SESSION_EXPIRED', 'REFRESH_TOKEN_REUSED']) {
+                assign.mockClear();
+                vi.spyOn(axios, 'post').mockRejectedValue(httpError(401, { detail: { code, message: 'x' } }));
+                respond = (config) => Promise.reject(httpError(401, { detail: 'expired' }, config));
+                await expect(apiClient.get('/campaigns')).rejects.toBeTruthy();
+                const target = new URL(assign.mock.calls[0][0], 'http://localhost');
+                expect(target.searchParams.get('reason')).toBe('expired');
+            }
+        });
+
+        it('retries without signing out when another tab already exchanged the refresh token', async () => {
+            localStorage.setItem('user', JSON.stringify({ first_name: 'Ann' }));
+            vi.spyOn(axios, 'post').mockRejectedValue(httpError(401, {
+                detail: { code: 'REFRESH_TOKEN_SUPERSEDED', message: 'Refresh token already exchanged' },
+            }));
+            expiredThenOk();
+            const res = await apiClient.get('/campaigns');
+            expect(res.data).toEqual({ ok: 'retried' });
+            expect(assign).not.toHaveBeenCalled();
+            expect(localStorage.getItem('user')).not.toBeNull();
+        });
     });
 });
