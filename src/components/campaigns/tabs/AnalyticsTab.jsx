@@ -1,17 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Info, TrendingUp, TrendingDown, ChevronDown, Plus, Mail, AlertCircle, Download, X, Loader2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Info, TrendingUp, Mail, AlertCircle, X, Loader2 } from 'lucide-react';
 import {
-    ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell,
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    Tooltip,
-    CartesianGrid,
-    Legend
+    ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';

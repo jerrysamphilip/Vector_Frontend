@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, FileText, Plus, History, Trash2, AlertTriangle, Megaphone, ListOrdered } from 'lucide-react';
+import { ArrowLeft, Loader2, FileText, Plus, Trash2, AlertTriangle, Megaphone, ListOrdered } from 'lucide-react';
 import { errorMessage } from '../api/contacts';
 import { dealsApi, money, moneyExact, proposalsApi, stagesApi } from '../api/sales';
-import { ErrorNote, Field, OwnerSelect, PrimaryButton, formatDateTime, inputClass, relativeDate } from '../components/contacts/shared';
+import { ErrorNote, Field, OwnerSelect, PrimaryButton, inputClass, relativeDate } from '../components/contacts/shared';
 import { ClientTypeBadge, DealStatusBadge, card, cardShadow, useLeadsMeta, useTeamOwners } from '../components/sales/shared';
 import CloseReasonModal from '../components/sales/CloseReasonModal';
 import { DealTimeline, QuoteModal, StageHistory } from '../components/sales/DealExtras';

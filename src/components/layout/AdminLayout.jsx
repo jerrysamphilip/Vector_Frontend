@@ -184,7 +184,7 @@ export default function AdminLayout() {
 
     const queryClient = useQueryClient();
     const handleLogout = async () => {
-        try { await authApi.logout(); } catch {}
+        try { await authApi.logout(); } catch { /* sign out locally anyway */ }
         clearAuthSession();
         queryClient.clear();
         navigate('/login', { replace: true });

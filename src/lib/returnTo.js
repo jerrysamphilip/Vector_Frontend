@@ -11,6 +11,7 @@ const ALLOWED = /^\/(app|admin)(?:[/?#]|$)/;
 export function safeReturnPath(raw) {
     if (!raw || typeof raw !== 'string') return null;
     let p = raw.trim();
+    // eslint-disable-next-line no-control-regex -- control characters are exactly what is rejected here
     if (/[\u0000-\u001f\\]/.test(p)) return null;
     if (APP_BASE && (p === APP_BASE || p.startsWith(`${APP_BASE}/`))) p = p.slice(APP_BASE.length) || '/';
     if (!p.startsWith('/') || p.startsWith('//')) return null;

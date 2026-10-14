@@ -25,7 +25,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build (tsc + vite)
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests (Vitest)
+        run: npm run test
+
+      - name: Build
         run: npm run build
 
       - name: Dependency audit (advisory)

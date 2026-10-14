@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, CheckCircle2, Loader2, AlertTriangle, X, Shield, Activity } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Loader2, AlertTriangle, X, Activity } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input, FormGroup, Label } from '../ui/Input';
 import DialogPanel from '../common/DialogPanel';

@@ -1,4 +1,3 @@
-import React from 'react';
 
 const MetricItem = ({ label, value, valueColor = "text-slate-900", isLast }) => (
     <div className="flex items-baseline gap-2.5">

@@ -1,14 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
-    Search, Upload, Loader2, X, FileSpreadsheet,
-    ChevronLeft, ChevronRight, Trash2, Users, AlertTriangle,
-    UserCheck, UserX, Target, Plus, CheckCircle2, ShieldCheck,
-    TrendingUp, TrendingDown,
+    Search, Upload, Loader2, X, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, Users, AlertTriangle, Plus, CheckCircle2, ShieldCheck,
 } from 'lucide-react';
 import { prospectsApi } from '../api/prospects';
-import { apiClient as api } from '../api/http';
+import { uploadsApi } from '../api/uploads';
 import { getStoredUser, hasPermission } from '../lib/authStorage';
 import Loading from '../components/common/Loading';
 import ProspectListsTable from '../components/prospects/ProspectListsTable';
@@ -98,16 +95,12 @@ function UploadModal({ onClose }) {
         setError(null);
         setLoading(true);
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            const res = await api.post('/uploads/validations', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
+            const validation = await uploadsApi.validateFile(file);
             // Pass data via React Router navigation state to avoid sessionStorage
             // 5 MB quota limit which breaks on large files (10k+ rows).
             onClose();
             navigate('/app/prospects/validate', {
-                state: { ...res.data, title: name },
+                state: { ...validation, title: name },
             });
         } catch (err) {
             setError(err.response?.data?.detail || err.message || 'Upload failed. Try again.');

@@ -1,4 +1,3 @@
-import React from 'react';
 import EditorialMetricBlock from '../ui/EditorialMetricBlock';
 
 /**

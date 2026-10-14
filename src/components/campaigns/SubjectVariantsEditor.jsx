@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FlaskConical, Plus, Trash2, Save, X, Edit2, Trophy, AlertTriangle } from 'lucide-react';
 import { subjectVariantsApi } from '../../api/subjectVariants';

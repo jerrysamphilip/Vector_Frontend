@@ -1,21 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Zap,
-    Plus,
-    Trash2,
-    Clock,
-    Mail,
-    PauseCircle,
-    PlayCircle,
-    ChevronRight,
-    Search,
-    Filter,
-    LayoutList,
-    Activity,
-    CheckCircle2,
-    X
+    Zap, Plus, Trash2, Clock, Mail, PauseCircle, PlayCircle, ChevronRight, Search, Filter, LayoutList, Activity, CheckCircle2, X,
 } from 'lucide-react';
 import automationApi from '../api/automation';
 import { campaignApi } from '../api/campaigns';

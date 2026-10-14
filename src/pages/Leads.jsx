@@ -5,7 +5,7 @@ import { Plus, Search, Loader2, Target, LayoutGrid, List, AlertCircle, MessageSq
 import { LeadPanel } from './LeadDetail';
 import { contactsApi, errorMessage } from '../api/contacts';
 import { leadsApi } from '../api/sales';
-import { Avatar, ErrorNote, Field, Modal, PrimaryButton, SecondaryButton, inputClass, relativeDate, BRAND_GRADIENT } from '../components/contacts/shared';
+import { Avatar, ErrorNote, Field, Modal, PrimaryButton, SecondaryButton, inputClass, relativeDate } from '../components/contacts/shared';
 import { Empty, LeadStageBadge, OwnerFilter, PageHeader, Seg, card, cardShadow, selectSm, useLeadsMeta } from '../components/sales/shared';
 
 /** Pick a contact and create a lead for it (BR-LD-01). */

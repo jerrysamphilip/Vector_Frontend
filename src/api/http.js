@@ -40,7 +40,7 @@ function redirectToLogin(reason) {
 }
 
 /** 403 "Tenant suspended": the user's workspace was suspended by the platform admin (app/core/auth.py). */
-function isTenantSuspended(error) {
+export function isTenantSuspended(error) {
     return error?.response?.status === 403 && /^tenant suspended$/i.test(String(error?.response?.data?.detail || '').trim());
 }
 
@@ -71,7 +71,7 @@ async function refreshSession() {
 }
 
 /** FastAPI errors: a validation list becomes text; {code, message} becomes detail text + data.code. */
-function normalizeError(error) {
+export function normalizeError(error) {
     const data = error?.response?.data;
     if (!data) return;
     if (Array.isArray(data.detail)) {

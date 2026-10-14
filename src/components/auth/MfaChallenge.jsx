@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ShieldCheck, KeyRound, ArrowLeft } from "lucide-react";
 import { authApi } from "../../api/auth";
 

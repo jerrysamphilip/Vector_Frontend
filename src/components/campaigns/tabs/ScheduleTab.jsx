@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { campaignApi } from '../../../api/campaigns';
-import { Calendar, Mail, Clock, Users, CheckCircle, Edit2, X, Save, Loader2, AlertTriangle } from 'lucide-react';
+import { Calendar, Mail, Users, Edit2, X, Save, Loader2, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import Loading from '../../common/Loading';

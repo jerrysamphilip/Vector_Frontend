@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import {
-    ArrowLeft, Pause, Play, Loader2
-} from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Pause, Play, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { campaignApi } from '../api/campaigns';
 import StatusBadge from '../components/campaigns/StatusBadge';
@@ -26,9 +24,6 @@ export default function CampaignDetails() {
     const [activeTab, setActiveTab] = useState('Analytics');
     const [chartFilter, setChartFilter] = useState('Daily');
 
-    // Mappings for the filter to number of days (used by AnalyticsTab slice logic now)
-    const daysMap = { 'Daily': 7, 'Weekly': 30, 'Monthly': 180 };
-    const selectedDays = daysMap[chartFilter] || 7;
     // Queries
     // Fetch all in parallel for speed
     const { data: campaign, isLoading: campaignLoading } = useQuery({
@@ -49,7 +44,7 @@ export default function CampaignDetails() {
     });
 
     // Schedule data — same cache key as ScheduleTab so both stay in sync
-    const { data: scheduleData, isLoading: scheduleLoading, refetch: refetchSchedule } = useQuery({
+    const { refetch: refetchSchedule } = useQuery({
         queryKey: ['campaign-schedule', id],
         queryFn: () => campaignApi.getSchedule(id),
         staleTime: 0,

@@ -262,7 +262,6 @@ export default function ProspectTable({
                         {filteredRecords.map((record, idx) => {
                             const rejected = record.status === 'REJECTED';
                             const isEdited = editedRows.has(record.row);
-                            const fullName = [record.first_name, record.last_name].filter(Boolean).join(' ');
 
                             return (
                                 <tr

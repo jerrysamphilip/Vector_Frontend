@@ -1,10 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Play, Pause, Trash2, Mail, ExternalLink, Loader2,
-    Send, MailOpen, MessageSquare, AlertTriangle, TrendingUp,
-    VolumeX, ThumbsUp, Settings2, X, Check
+    Play, Pause, Trash2, Mail, ExternalLink, Loader2, Send, MailOpen, MessageSquare, AlertTriangle, TrendingUp, VolumeX, ThumbsUp, X, Check,
 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
@@ -22,15 +20,6 @@ const ALL_COLUMNS = [
 ];
 
 const DEFAULT_VISIBLE = ['inProgress', 'sent', 'opened', 'replied', 'bounced', 'senderBounced', 'positive', 'repliedNoOOO'];
-const LS_KEY = 'campaigns_visible_columns';
-
-function loadVisibleCols() {
-    try {
-        const raw = localStorage.getItem(LS_KEY);
-        if (raw) return JSON.parse(raw);
-    } catch (_) { }
-    return DEFAULT_VISIBLE;
-}
 
 // ── Gradient <th> ─────────────────────────────────────────────────────────────
 function GradientTh({ children, className = '' }) {

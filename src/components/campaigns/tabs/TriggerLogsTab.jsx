@@ -1,4 +1,3 @@
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Activity, CheckCircle, Clock, Zap } from 'lucide-react';
 import { campaignApi } from '../../../api/campaigns';

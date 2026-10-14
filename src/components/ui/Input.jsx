@@ -51,3 +51,6 @@ export const Select = React.forwardRef(({ className = '', children, error, ...pr
         </div>
     );
 });
+
+Input.displayName = 'Input';
+Select.displayName = 'Select';

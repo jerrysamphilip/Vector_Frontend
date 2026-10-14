@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function EditorialMetricBlock({ label, value, subtext, accentColor = "text-slate-900" }) {
     return (

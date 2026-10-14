@@ -1,21 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-    Plus,
-    Search,
-    Mail
-} from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { campaignApi } from '../api/campaigns';
-import { campaignDraftsApi } from '../api/campaignDrafts';
 import Loading from '../components/common/Loading';
 import PageTransition, { containerVariants, itemVariants } from '../components/layout/PageTransition';
 import CampaignsTable from '../components/campaigns/CampaignsTable';
-import { Input, FormGroup } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { ColumnPicker } from '../components/campaigns/CampaignsTable';
-import { ALL_COLUMNS, loadVisibleCols, LS_KEY } from '../components/campaigns/campaignColumns';
+import { loadVisibleCols, LS_KEY } from '../components/campaigns/campaignColumns';
 import BulkActionBar from '../components/campaigns/BulkActionBar';
 import { AnimatePresence } from 'framer-motion';
 import { Settings2 } from 'lucide-react';
@@ -44,10 +38,10 @@ const Campaigns = () => {
 
     function handleColChange(next) {
         setVisibleCols(next);
-        try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch (_) { }
+        try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch (_) { /* storage unavailable */ }
     }
 
-    const { data, isLoading, isFetching, error } = useQuery({
+    const { data, isLoading, error } = useQuery({
         queryKey: ['campaigns', debouncedSearch],
         queryFn: () => campaignApi.list({
             campaign_name: debouncedSearch || undefined,
@@ -125,13 +119,6 @@ const Campaigns = () => {
 
     const campaigns = data?.items || [];
 
-    // Calculate stats
-    const totalCampaigns = campaigns.length;
-    const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE').length;
-    const totalSent = campaigns.reduce((acc, c) => acc + (c.sent_count || 0), 0);
-    const avgOpenRate = totalSent > 0
-        ? (campaigns.reduce((acc, c) => acc + (c.opened_count || 0), 0) / totalSent * 100).toFixed(1)
-        : '0.0';
 
     const handleAction = (action, campaign, e) => {
         e.stopPropagation();

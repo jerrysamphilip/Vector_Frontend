@@ -186,12 +186,6 @@ export const campaignApi = {
         return response.data;
     },
 
-    // Get schedule timeline for a campaign
-    getSchedule: async (campaignId) => {
-        const response = await api.get(`/campaigns/${campaignId}/schedule`);
-        return response.data;
-    },
-
     // Get Inboxes
     getInboxes: async () => {
         const response = await api.get('/inboxes');

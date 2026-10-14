@@ -1,4 +1,3 @@
-import React from 'react';
 import { Mail, AlertTriangle, CheckCircle2, Pencil, Trash2, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function MetricsCard({ title, value, icon: Icon, type, subtext }) {
     // Color Mapping based on strict requirements

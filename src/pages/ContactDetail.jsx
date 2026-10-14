@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    ArrowLeft, Mail, Phone, Smartphone, Building2, Linkedin, MapPin, Pencil, Trash2, Loader2,
-    StickyNote, PhoneCall, CalendarDays, Send, Inbox, Eye, MousePointerClick, AlertOctagon,
-    MailX, Megaphone, ListPlus, Check, X, Globe2, History, CheckSquare, Square, AlertTriangle, ListTodo, Plus,
+    ArrowLeft, Mail, Phone, Smartphone, Building2, Linkedin, MapPin, Pencil, Trash2, Loader2, StickyNote, PhoneCall, CalendarDays, Send, Inbox, Eye, MousePointerClick, AlertOctagon, MailX, Megaphone, ListPlus, Check, Globe2, History, CheckSquare, Square, AlertTriangle, ListTodo,
 } from 'lucide-react';
 import { contactsApi, tasksApi, errorMessage } from '../api/contacts';
 import { dealsApi, leadsApi, moneyShort } from '../api/sales';
@@ -12,9 +10,7 @@ import { NewLeadModal } from './Leads';
 import { DealFormModal } from './Deals';
 import { DealStatusBadge, LeadStageBadge } from '../components/sales/shared';
 import {
-    Avatar, TagInput, OwnerSelect, CustomFieldInput, Field, inputClass, ErrorNote,
-    PrimaryButton, SecondaryButton, formatDateTime, relativeDate, parseDate, useCrmMeta,
-    StageBadge, StatusBadge, formatCustomValue,
+    Avatar, TagInput, OwnerSelect, CustomFieldInput, Field, inputClass, ErrorNote, PrimaryButton, SecondaryButton, formatDateTime, relativeDate, parseDate, useCrmMeta, StageBadge, StatusBadge, formatCustomValue,
 } from '../components/contacts/shared';
 import MentionTextarea, { MentionText, activeMentions } from '../components/contacts/MentionTextarea';
 import ContactCompaniesCard from '../components/contacts/ContactCompaniesCard';

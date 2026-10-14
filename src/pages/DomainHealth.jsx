@@ -1,10 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Activity, ShieldCheck, ShieldAlert, AlertTriangle,
-    RefreshCcw, CheckCircle2, XCircle, Info,
-    Trash2, Loader2, Server, Mail,
-    TrendingUp, TrendingDown, Plus, FileText,
+    Activity, AlertTriangle, RefreshCcw, CheckCircle2, XCircle, Info, Trash2, Loader2, Server, Mail, Plus, FileText,
 } from 'lucide-react';
 import deliverabilityApi from '../api/deliverability';
 import ReputationGauge from '../components/deliverability/ReputationGauge';
@@ -224,7 +221,7 @@ function DomainHealthGhost() {
 
 export default function DomainHealth() {
     const [domains, setDomains]             = useState([]);
-    const [alerts, setAlerts]               = useState([]);
+    const [, setAlerts]                     = useState([]);
     const [loading, setLoading]             = useState(true);
     const [scanning, setScanning]           = useState(null);
     const [expandedDomain, setExpandedDomain] = useState(null);

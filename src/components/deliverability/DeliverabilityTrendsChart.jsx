@@ -1,16 +1,8 @@
 
-import React, { useEffect, useState } from 'react';
-import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer
-} from 'recharts';
-import { apiClient as api } from '../../api/http';
-import { Loader2, AlertCircle, BarChart3 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import deliverabilityApi from '../../api/deliverability';
+import { AlertCircle, BarChart3 } from 'lucide-react';
 
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -56,8 +48,8 @@ export default function DeliverabilityTrendsChart({ domains = [] }) {
         try {
             setLoading(true);
             const params = selectedDomain !== "ALL" ? { domain: selectedDomain } : {};
-            const res = await api.get('/deliverability/statistics', { params });
-            const formattedData = res.data.data_points.map(p => ({
+            const stats = await deliverabilityApi.getStatistics(params);
+            const formattedData = stats.data_points.map(p => ({
                 ...p,
                 delivered: Math.max(
                     (p.DeliveryAttempts || 0) - (p.Bounces || 0) - (p.Complaints || 0) - (p.Rejects || 0),

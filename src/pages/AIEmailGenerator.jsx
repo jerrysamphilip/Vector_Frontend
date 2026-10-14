@@ -2,21 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Sparkles,
-    Mail,
-    User,
-    Building2,
-    Briefcase,
-    Copy,
-    Check,
-    RefreshCw,
-    Layers,
-    Target,
-    AlertTriangle,
-    Shield,
-    Calendar,
-    ChevronDown,
-    ChevronUp
+    Sparkles, Mail, User, Building2, Briefcase, Copy, Check, RefreshCw, Layers, Target, Shield, Calendar, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { aiEmailApi } from '../api/aiEmail';
 import PageTransition, { containerVariants, itemVariants } from '../components/layout/PageTransition';
@@ -26,7 +12,6 @@ export default function AIEmailGenerator() {
     const [designation, setDesignation] = useState('');
     const [companyName, setCompanyName] = useState('');
     const [productName, setProductName] = useState('OutreachAI');
-    const [productDescription, setProductDescription] = useState('');
     const [classification, setClassification] = useState(null);
     const [sequence, setSequence] = useState(null);
     const [compliance, setCompliance] = useState(null);
