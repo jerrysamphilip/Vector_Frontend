@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2, Mail, Settings2, X } from 'lucide-react';
 import DialogPanel from '../common/DialogPanel';

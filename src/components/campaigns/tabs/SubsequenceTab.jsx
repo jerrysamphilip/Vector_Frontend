@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sequenceApi, campaignApi, templateApi } from '../../../api/campaigns';
-import { Clock, Mail, MoreHorizontal, RefreshCw, Sparkles, Check, X, ChevronDown, ChevronUp, AlertCircle, Edit2, Plus, Trash2, Save } from 'lucide-react';
+import { Clock, Mail, MoreHorizontal, RefreshCw, Sparkles, Check, X, ChevronDown, ChevronUp, Edit2, Save } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import Loading from '../../common/Loading';

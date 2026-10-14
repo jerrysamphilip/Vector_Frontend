@@ -21,6 +21,6 @@ export function loadVisibleCols() {
     try {
         const raw = localStorage.getItem(LS_KEY);
         if (raw) return JSON.parse(raw);
-    } catch (_) { }
+    } catch (_) { /* storage unavailable: use the defaults */ }
     return DEFAULT_VISIBLE;
 }

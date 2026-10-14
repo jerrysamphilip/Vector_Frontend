@@ -1,9 +1,9 @@
-import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 export function Button({
     children,
     variant = 'primary',
+    // eslint-disable-next-line no-unused-vars -- accepted for API compatibility, not passed to the DOM
     size = 'md',
     isLoading = false,
     className = '',

@@ -55,6 +55,12 @@ const deliverabilityApi = {
         await api.delete(`/deliverability/domains/${domainName}`);
     },
 
+    // Daily sending statistics (SES), optionally for one domain: { data_points: [...] }
+    getStatistics: async (params = {}) => {
+        const response = await api.get('/deliverability/statistics', { params });
+        return response.data;
+    },
+
     getIntegrationStatus: async () => {
         const response = await api.get('/deliverability/integrations/status');
         return response.data;

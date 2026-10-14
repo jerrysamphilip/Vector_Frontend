@@ -1,4 +1,3 @@
-import React from 'react';
 import { Mail, Zap, BarChart3, Activity } from 'lucide-react';
 
 const StatCard = ({ label, value, subtext, type = 'neutral', icon: Icon }) => {

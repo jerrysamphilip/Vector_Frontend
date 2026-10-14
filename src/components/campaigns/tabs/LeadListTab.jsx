@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import EnrollmentResultModal from '../EnrollmentResultModal';
-import { Search, Download, Mail, Users, ChevronLeft, ChevronRight, Edit2, Save, X, Loader2, UserPlus, UserMinus } from 'lucide-react';
+import { Search, Download, Users, ChevronLeft, ChevronRight, Edit2, Save, X, Loader2, UserPlus, UserMinus } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { campaignApi } from '../../../api/campaigns';

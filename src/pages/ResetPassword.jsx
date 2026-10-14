@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Eye, EyeOff, Lock } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { authApi } from "../api/auth";

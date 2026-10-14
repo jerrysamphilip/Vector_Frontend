@@ -1,4 +1,3 @@
-import React from 'react';
 import PageTransition from '../components/layout/PageTransition';
 import InboxTab from '../components/campaigns/tabs/InboxTab';
 

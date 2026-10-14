@@ -12,7 +12,7 @@ import {
     RefreshCw,
 } from 'lucide-react';
 import PageTransition from '../components/layout/PageTransition';
-import { apiClient as api } from '../api/http';
+import { uploadsApi } from '../api/uploads';
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function ProspectValidate() {
@@ -62,8 +62,8 @@ export default function ProspectValidate() {
         setRevalidating(true);
         setError(null);
         try {
-            const res = await api.post(`/uploads/${data.upload_id}/revalidations`, { records: updated });
-            setRecords(res.data.records || updated);
+            const result = await uploadsApi.revalidate(data.upload_id, updated);
+            setRecords(result.records || updated);
         } catch (err) {
             setError(err.response?.data?.detail || err.message);
             setRecords(updated);
@@ -89,8 +89,7 @@ export default function ProspectValidate() {
         setError(null);
 
         try {
-            const res = await api.post(`/uploads/${data.upload_id}/revalidations`, { records });
-            const result = res.data;
+            const result = await uploadsApi.revalidate(data.upload_id, records);
             setRecords(result.records || []);
         } catch (err) {
             setError(err.response?.data?.detail || err.message);
@@ -107,10 +106,9 @@ export default function ProspectValidate() {
         setError(null);
 
         try {
-            await api.post(`/uploads/${data.upload_id}/confirmations`, {
-                    upload_id: data.upload_id,
-                    title: data.title,
-                    records: records.filter(r => r.status === 'ACCEPTED'),
+            await uploadsApi.confirm(data.upload_id, {
+                title: data.title,
+                records: records.filter(r => r.status === 'ACCEPTED'),
             });
             queryClient.invalidateQueries({ queryKey: ['prospect-lists'] });
             queryClient.invalidateQueries({ queryKey: ['prospect-stats'] });

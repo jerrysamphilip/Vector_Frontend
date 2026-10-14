@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Mail, Shield, AlertTriangle, Clock, Settings, RefreshCw, Save, X, CheckCircle2, Zap } from 'lucide-react';
-import { apiClient as api } from '../../../api/http';
+import { useState } from 'react';
+import { Mail, Shield, Clock, Settings, RefreshCw, Save, X, CheckCircle2, Zap } from 'lucide-react';
+import { inboxesApi } from '../../../api/inboxes';
 import { motion } from 'framer-motion';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';
 
@@ -37,8 +37,8 @@ export default function SendingInboxesTab({ campaign }) {
 
     const handleSave = async (inboxId) => {
         try {
-            const res = await api.put(`/inboxes/${inboxId}`, formData);
-            setInboxes(inboxes.map(i => i.inbox_id === inboxId ? res.data : i));
+            const updated = await inboxesApi.update(inboxId, formData);
+            setInboxes(inboxes.map(i => i.inbox_id === inboxId ? updated : i));
             setEditingInbox(null);
         } catch (error) {
             console.error('Failed to update inbox', error);
@@ -49,9 +49,9 @@ export default function SendingInboxesTab({ campaign }) {
     const handleSync = async (inboxId) => {
         setSyncing(inboxId);
         try {
-            await api.post(`/inboxes/${inboxId}/sync`, { days: 30 });
-            const res = await api.get(`/inboxes/${inboxId}`);
-            setInboxes(inboxes.map(i => i.inbox_id === inboxId ? res.data : i));
+            await inboxesApi.sync(inboxId, 30);
+            const refreshed = await inboxesApi.get(inboxId);
+            setInboxes(inboxes.map(i => i.inbox_id === inboxId ? refreshed : i));
         } catch (error) {
             console.error('Sync failed', error);
             alert('Sync failed - check your IMAP credentials');

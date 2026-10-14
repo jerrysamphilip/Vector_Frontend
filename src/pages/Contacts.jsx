@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
-    Search, Plus, Users, GitMerge, SlidersHorizontal, ChevronLeft, ChevronRight, Phone, Mail, X, Trash2,
-    Tag, UserCheck, Loader2, Filter, Columns3, LayoutGrid, Table2, Download, Upload, Save, Star, Share2,
-    ListPlus, Megaphone, PencilLine, Archive, AlertCircle,
+    Search, Plus, Users, GitMerge, SlidersHorizontal, ChevronLeft, ChevronRight, Phone, Mail, X, Trash2, Tag, UserCheck, Loader2, Filter, Columns3, LayoutGrid, Table2, Download, Upload, Save, ListPlus, Megaphone, PencilLine, Archive, AlertCircle,
 } from 'lucide-react';
 import { contactsApi, accountsApi, viewsApi, errorMessage } from '../api/contacts';
 import { BUILT_IN_VIEWS } from '../lib/contactViews';
@@ -18,8 +16,7 @@ import { GRADES } from '../api/contactScoring';
 import EnrollmentResultModal from '../components/campaigns/EnrollmentResultModal';
 import ListRenameModal from '../components/contacts/ListRenameModal';
 import {
-    Avatar, TagChips, OwnerSelect, relativeDate, BRAND_GRADIENT, Modal, PrimaryButton, SecondaryButton,
-    ErrorNote, Field, inputClass, CustomFieldInput, useCrmMeta, StageBadge, StatusBadge, formatCustomValue,
+    Avatar, TagChips, OwnerSelect, relativeDate, BRAND_GRADIENT, Modal, PrimaryButton, SecondaryButton, ErrorNote, Field, inputClass, CustomFieldInput, useCrmMeta, StageBadge, StatusBadge, formatCustomValue,
 } from '../components/contacts/shared';
 
 const PAGE_SIZE = 25;

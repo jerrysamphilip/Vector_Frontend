@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Trash2, X, CheckSquare } from 'lucide-react';
 import { Button } from '../ui/Button';
