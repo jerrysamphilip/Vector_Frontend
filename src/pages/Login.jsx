@@ -5,6 +5,7 @@ import { authApi } from "../api/auth";
 import { isAuthenticated, consumeFirstLogin, getStoredUser } from "../lib/authStorage";
 import MfaChallenge from "../components/auth/MfaChallenge";
 import { safeReturnPath } from "../lib/returnTo";
+import { SESSION_IDLE_MINUTES } from "../api/activity";
 
 import bg from "../assets/bg.png";
 import logo from "../assets/logo.png";
@@ -24,7 +25,8 @@ const LoginPage = () => {
     const reason = params.get("reason");
     const notice = reason === "suspended"
         ? "Your workspace is suspended. Contact your administrator to restore access."
-        : reason === "expired" ? "Your session has expired. Sign in again to continue where you left off." : "";
+        : reason === "idle" ? `Signed out after ${SESSION_IDLE_MINUTES} minutes of inactivity. Sign in again to continue where you left off.`
+        : reason === "expired" ? "Session expired, please sign in again to continue where you left off." : "";
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
