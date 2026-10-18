@@ -5,6 +5,7 @@ import { Plus, Loader2, Briefcase, LayoutGrid, List, Settings2, X, AlertTriangle
 import { accountsApi, errorMessage } from '../api/contacts';
 import { dealsApi, money, moneyShort, stagesApi } from '../api/sales';
 import { getStoredUser } from '../lib/authStorage';
+import { withVersion } from '../lib/staleVersion';
 import { ErrorNote, Field, Modal, OwnerSelect, PrimaryButton, SecondaryButton, inputClass, BRAND_GRADIENT } from '../components/contacts/shared';
 import { ClientTypeBadge, ClientTypeFilter, DealStatusBadge, Empty, OwnerFilter, PageHeader, Seg, card, cardShadow, selectSm, useLeadsMeta, useTeamOwners } from '../components/sales/shared';
 import CloseReasonModal from '../components/sales/CloseReasonModal';
@@ -147,18 +148,18 @@ export default function Deals() {
     const list = useQuery({ queryKey: ['deals', 'list', filters, status, closeFrom, closeTo, staleOnly], enabled: mode === 'list', placeholderData: keepPreviousData,
         queryFn: () => dealsApi.list({ ...filters, status, close_from: closeFrom, close_to: closeTo, stale: staleOnly || undefined, page_size: 500 }) });
     const move = useMutation({
-        mutationFn: ({ deal, stage_id, closed_reason }) => dealsApi.update(deal.opportunity_id, closed_reason ? { stage_id, closed_reason } : { stage_id }),
+        mutationFn: ({ deal, stage_id, closed_reason }) => dealsApi.update(deal.opportunity_id, withVersion(closed_reason ? { stage_id, closed_reason } : { stage_id }, deal)),
         onSuccess: () => { setClosing(null); setError(null); queryClient.invalidateQueries({ queryKey: ['deals'] }); }, onError: e => { setClosing(null); setError(errorMessage(e)); },
     });
-    const onDragStart = (e, deal) => e.dataTransfer.setData('text/plain', JSON.stringify({ id: deal.opportunity_id, stage: deal.stage_id, name: deal.name }));
+    const onDragStart = (e, deal) => e.dataTransfer.setData('text/plain', JSON.stringify({ id: deal.opportunity_id, stage: deal.stage_id, name: deal.name, version: deal.row_version }));
     const onDrop = (e, stageId) => {
         e.preventDefault();
         try {
             const d = JSON.parse(e.dataTransfer.getData('text/plain'));
             if (d.stage === stageId) return;
             const target = allStages.find(s => s.stage_id === stageId);
-            if (target && (target.is_won || target.is_lost)) setClosing({ deal: { opportunity_id: d.id, name: d.name }, stage: target });
-            else move.mutate({ deal: { opportunity_id: d.id }, stage_id: stageId });
+            if (target && (target.is_won || target.is_lost)) setClosing({ deal: { opportunity_id: d.id, name: d.name, row_version: d.version }, stage: target });
+            else move.mutate({ deal: { opportunity_id: d.id, row_version: d.version }, stage_id: stageId }); // T-3: the board's version
         } catch { /* not a deal */ }
     };
 

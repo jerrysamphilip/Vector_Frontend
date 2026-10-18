@@ -10,10 +10,8 @@ export default function SetPassword() {
     const navigate = useNavigate();
     const currentUser = getStoredUser();
 
-    const [currentPw, setCurrentPw] = useState("");
     const [newPw, setNewPw] = useState("");
     const [confirmPw, setConfirmPw] = useState("");
-    const [showCurrent, setShowCurrent] = useState(false);
     const [showNew, setShowNew] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -26,7 +24,8 @@ export default function SetPassword() {
         if (newPw !== confirmPw) { setError("Passwords do not match"); return; }
         setLoading(true);
         try {
-            await authApi.changePassword(currentPw, newPw);
+            // Invited accounts have no password yet (rule I-13): the emailed link signed them in
+            await authApi.setInitialPassword(newPw);
             setSuccess(true);
             setTimeout(() => navigate("/app/dashboard", { replace: true }), 2000);
         } catch (err) {
@@ -59,34 +58,12 @@ export default function SetPassword() {
                         Welcome, {currentUser?.first_name || "there"}!
                     </h1>
                     <p className="text-sm text-white/70">
-                        You've been invited to join. Please set your own password to continue.
+                        You've been invited to join. Choose your password to continue.
                     </p>
                 </div>
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="px-8 pb-8 space-y-4">
-                    {/* Current (temp) password */}
-                    <div>
-                        <label className="block text-sm font-medium text-white/80 mb-1.5">
-                            Temporary password
-                            <span className="ml-1.5 text-white/50 font-normal text-xs">(from your invite email)</span>
-                        </label>
-                        <div className="relative">
-                            <input
-                                type={showCurrent ? "text" : "password"}
-                                value={currentPw}
-                                onChange={(e) => setCurrentPw(e.target.value)}
-                                required
-                                placeholder="Enter the password from your invite email"
-                                className="w-full px-4 py-3 pr-11 text-sm bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40"
-                            />
-                            <button type="button" onClick={() => setShowCurrent(v => !v)}
-                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80">
-                                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                        </div>
-                    </div>
-
                     {/* New password */}
                     <div>
                         <label className="block text-sm font-medium text-white/80 mb-1.5">New password</label>
@@ -141,7 +118,7 @@ export default function SetPassword() {
 
                     <button
                         type="submit"
-                        disabled={loading || !currentPw || !newPw || !confirmPw}
+                        disabled={loading || !newPw || !confirmPw}
                         className="w-full py-3 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl transition-colors mt-2"
                     >
                         {loading ? "Setting password..." : "Set Password & Continue"}

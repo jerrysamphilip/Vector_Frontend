@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Pause, Play, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { campaignApi } from '../api/campaigns';
+import { isStaleVersion } from '../lib/staleVersion';
 import StatusBadge from '../components/campaigns/StatusBadge';
 import Loading from '../components/common/Loading';
 import PageTransition, { containerVariants, itemVariants } from '../components/layout/PageTransition';
@@ -84,23 +85,26 @@ export default function CampaignDetails() {
 
     // Pause / Resume Mutations
     const pauseMutation = useMutation({
-        mutationFn: (id) => campaignApi.pause(id),
+        // T-3: the version on screen; a campaign changed meanwhile gets 409 (StaleVersionBanner)
+        mutationFn: (id) => campaignApi.pause(id, null, campaign?.row_version),
         onSuccess: () => {
             queryClient.invalidateQueries(['campaign', id]);
             queryClient.invalidateQueries({ queryKey: ['campaigns'], exact: false });
         },
         onError: (error) => {
+            if (isStaleVersion(error)) return;
             alert(`❌ Error pausing campaign: ${error.response?.data?.detail || error.message}`);
         }
     });
 
     const resumeMutation = useMutation({
-        mutationFn: (id) => campaignApi.resume(id),
+        mutationFn: (id) => campaignApi.resume(id, campaign?.row_version),
         onSuccess: () => {
             queryClient.invalidateQueries(['campaign', id]);
             queryClient.invalidateQueries({ queryKey: ['campaigns'], exact: false });
         },
         onError: (error) => {
+            if (isStaleVersion(error)) return;
             alert(`❌ Error resuming campaign: ${error.response?.data?.detail || error.message}`);
         }
     });

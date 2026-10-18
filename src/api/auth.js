@@ -82,6 +82,12 @@ export const authApi = {
         return response.data;
     },
 
+    // First password of an invited account (it has none; no current password is asked)
+    setInitialPassword: async (newPassword) => {
+        const response = await apiV1Client.post('/auth/me/set-password', { new_password: newPassword });
+        return response.data;
+    },
+
     updateProfile: async (payload) => {
         const response = await apiV1Client.put('/auth/me', payload);
         return response.data;

@@ -19,21 +19,32 @@ spec:
       labels:
         app: frontend
     spec:
+      # Pod Security `restricted` (P-1): non-root nginx (nginx-unprivileged, uid 101), no
+      # service-account token (nginx never calls the Kubernetes API).
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: frontend
-          image: frontend:latest   # replaced by CI/CD
+          # CI/CD replaces this with the pushed image by digest (P-2), never a tag
+          image: <ECR_IMAGE_URI>
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 80
+            - name: http
+              containerPort: 8080
           readinessProbe:
             httpGet:
               path: /index.html
-              port: 80
+              port: 8080
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /index.html
-              port: 80
+              port: 8080
             initialDelaySeconds: 10
             periodSeconds: 20
           resources:
@@ -43,7 +54,13 @@ spec:
             limits:
               memory: 256Mi
           securityContext:
+            runAsNonRoot: true
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
 
           # ✅ Inject namespace automatically
           env:
@@ -60,11 +77,23 @@ spec:
             - name: env-config
               mountPath: /usr/share/nginx/html/env-config.js
               subPath: env-config.js
+            # Read-only root filesystem: nginx's pid file and temp dirs (nginx.conf) live here
+            - name: tmp
+              mountPath: /tmp
+            # nginx's compiled-in cache dir; unused by nginx.conf but kept writable for modules
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
 
       volumes:
         - name: env-config
           configMap:
             name: frontend-env-config  # same name in each namespace
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: nginx-cache
+          emptyDir:
+            sizeLimit: 64Mi
 
 ---
 apiVersion: v1
@@ -79,6 +108,6 @@ spec:
     app: frontend
   ports:
     - name: http
-      port: 80
-      targetPort: 80
+      port: 80            # unchanged for the ingress
+      targetPort: http    # container port 8080 (non-root nginx)
 

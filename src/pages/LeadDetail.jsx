@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, Loader2, Rocket, Ban, History, Trash2 } from 'lucide-react';
 import { errorMessage } from '../api/contacts';
 import { leadsApi } from '../api/sales';
+import { useRecordVersion, versionedSave } from '../lib/useRecordVersion';
 import { Avatar, ErrorNote, Field, Modal, OwnerSelect, PrimaryButton, SecondaryButton, formatDateTime, inputClass, relativeDate } from '../components/contacts/shared';
 import { LeadStageBadge, card, cardShadow, useLeadsMeta, useTeamOwners } from '../components/sales/shared';
 
@@ -64,6 +65,7 @@ export function LeadPanel({ id, embedded = false, onRemoved }) {
     const meta = useLeadsMeta();
     const owners = useTeamOwners();
     const { data: lead, isLoading, error: loadError } = useQuery({ queryKey: ['lead', id], queryFn: () => leadsApi.get(id), retry: false });
+    const version = useRecordVersion(lead);
     const [error, setError] = useState(null);
     const [next, setNext] = useState({ next_step: '', next_step_at: '' });
     const [notes, setNotes] = useState('');
@@ -78,7 +80,9 @@ export function LeadPanel({ id, embedded = false, onRemoved }) {
 
     const refresh = () => ['lead', 'leads', 'contacts', 'contact'].forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
     const save = useMutation({
-        mutationFn: payload => leadsApi.update(id, payload),
+        // T-3: the lead's version as loaded / last saved here; one save at a time
+        mutationFn: versionedSave(version, payload => leadsApi.update(id, payload)),
+        scope: { id: `lead-${id}` },
         onSuccess: data => { queryClient.setQueryData(['lead', id], data); setError(null); refresh(); },
         onError: err => setError(errorMessage(err)),
     });

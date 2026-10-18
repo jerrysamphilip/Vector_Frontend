@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Shield, RotateCw, Fingerprint, Clock, AlertTriangle, Save, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { campaignApi } from '../../../api/campaigns';
 import { itemVariants } from '../../layout/PageTransition';
+import { versionedSave } from '../../../lib/useRecordVersion';
 
 export default function SettingsTab({ campaign }) {
     const queryClient = useQueryClient();
@@ -18,16 +19,23 @@ export default function SettingsTab({ campaign }) {
         batch_gap_minutes: campaign.batch_gap_minutes ?? 30,
     });
     const [scheduleSaved, setScheduleSaved] = useState(false);
+    // T-3: the campaign's row_version when this tab loaded, then after each own save; a campaign
+    // someone else changed meanwhile gets 409 STALE_VERSION (StaleVersionBanner offers a reload)
+    const version = useRef(campaign.row_version ?? null);
+    const save = versionedSave(version, (data) => campaignApi.update(campaign.campaign_id, data));
+    const scope = { id: `campaign-${campaign.campaign_id}` };
 
     const updateMutation = useMutation({
-        mutationFn: (data) => campaignApi.update(campaign.campaign_id, data),
+        mutationFn: save,
+        scope,
         onSuccess: () => {
             queryClient.invalidateQueries(['campaign', campaign.campaign_id]);
         }
     });
 
     const scheduleUpdateMutation = useMutation({
-        mutationFn: (data) => campaignApi.update(campaign.campaign_id, data),
+        mutationFn: save,
+        scope,
         onSuccess: () => {
             queryClient.invalidateQueries(['campaign', campaign.campaign_id]);
             setScheduleSaved(true);

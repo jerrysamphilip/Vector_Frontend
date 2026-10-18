@@ -1,6 +1,7 @@
 // Phase 2 sales API: hierarchy, leads, SQL queue, deals, proposals, pipeline, reports (BRD v2.0 5.4 - 5.10)
 
 import { apiClient as api } from './http';
+import { withVersion } from '../lib/staleVersion';
 
 function toParams(filters = {}) {
     const params = new URLSearchParams();
@@ -128,7 +129,8 @@ export const productsApi = {
 
 export const quotesApi = {
     get: (proposalId) => get(`/proposals/${proposalId}/lines`),
-    save: (proposalId, lines) => put(`/proposals/${proposalId}/lines`, { lines }),
+    // expectedVersion: the proposal's row_version when the editor opened (T-3, lib/staleVersion.js)
+    save: (proposalId, lines, expectedVersion) => put(`/proposals/${proposalId}/lines`, withVersion({ lines }, expectedVersion)),
     pdf: async (proposalId, name = 'proposal') => {
         const res = await api.get(`/proposals/${proposalId}/pdf`, { responseType: 'blob' });
         const url = URL.createObjectURL(res.data);
@@ -142,9 +144,10 @@ export const quoteApprovalsApi = {
     settings: () => get('/quotes/approval-settings'),
     saveSettings: (threshold) => put('/quotes/approval-settings', { discount_approval_threshold: threshold }),
     get: (proposalId) => get(`/proposals/${proposalId}/approval`),
-    submit: (proposalId, note) => post(`/proposals/${proposalId}/approval/submit`, { note: note || null }),
-    approve: (proposalId, reason) => post(`/proposals/${proposalId}/approval/approve`, { reason: reason || null }),
-    reject: (proposalId, reason) => post(`/proposals/${proposalId}/approval/reject`, { reason }),
+    // expectedVersion: the proposal's row_version the screen shows (T-3)
+    submit: (proposalId, note, expectedVersion) => post(`/proposals/${proposalId}/approval/submit`, withVersion({ note: note || null }, expectedVersion)),
+    approve: (proposalId, reason, expectedVersion) => post(`/proposals/${proposalId}/approval/approve`, withVersion({ reason: reason || null }, expectedVersion)),
+    reject: (proposalId, reason, expectedVersion) => post(`/proposals/${proposalId}/approval/reject`, withVersion({ reason }, expectedVersion)),
     list: (params) => get('/quotes/approvals', params),
 };
 

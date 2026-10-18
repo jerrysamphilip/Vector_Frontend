@@ -1,4 +1,5 @@
 import { apiClient as api } from './http';
+import { withVersion } from '../lib/staleVersion';
 
 // Campaign API
 export const campaignApi = {
@@ -31,23 +32,26 @@ export const campaignApi = {
         await api.delete(`/campaigns/${id}`);
     },
 
+    // State changes send the campaign's row_version the screen shows (T-3, lib/staleVersion.js);
+    // a stale one gets 409 STALE_VERSION
+
     // Launch campaign
-    launch: async (id) => {
-        const response = await api.post(`/campaigns/${id}/launch`);
+    launch: async (id, expectedVersion) => {
+        const response = await api.post(`/campaigns/${id}/launch`, withVersion({}, expectedVersion));
         return response.data;
     },
 
     // Pause campaign
-    pause: async (id, reason = null) => {
-        const response = await api.post(`/campaigns/${id}/pause`, null, {
+    pause: async (id, reason = null, expectedVersion) => {
+        const response = await api.post(`/campaigns/${id}/pause`, withVersion({}, expectedVersion), {
             params: reason ? { reason } : {},
         });
         return response.data;
     },
 
     // Resume campaign
-    resume: async (id) => {
-        const response = await api.post(`/campaigns/${id}/resume`);
+    resume: async (id, expectedVersion) => {
+        const response = await api.post(`/campaigns/${id}/resume`, withVersion({}, expectedVersion));
         return response.data;
     },
 

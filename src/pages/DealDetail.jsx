@@ -10,6 +10,8 @@ import CloseReasonModal from '../components/sales/CloseReasonModal';
 import { DealTimeline, QuoteModal, StageHistory } from '../components/sales/DealExtras';
 import { ApprovalBadge } from '../components/sales/QuoteApproval';
 import { useMediaQuery } from '../components/layout/useNavDrawer';
+import { withVersion } from '../lib/staleVersion';
+import { useRecordVersion, versionedSave } from '../lib/useRecordVersion';
 
 const PROPOSAL_TONE = { DRAFT: 'bg-slate-100 text-slate-600', SENT: 'bg-sky-50 text-sky-700', UNDER_REVIEW: 'bg-amber-50 text-amber-700',
     ACCEPTED: 'bg-emerald-50 text-emerald-700', REJECTED: 'bg-red-50 text-red-700' };
@@ -23,7 +25,8 @@ function Proposals({ deal, onChanged }) {
     const canSee = meta?.can_see_amounts !== false;
     const create = useMutation({ mutationFn: () => proposalsApi.create({ opportunity_id: deal.opportunity_id, title: title || undefined, amount: amount || undefined }),
         onSuccess: () => { setTitle(''); setAmount(''); onChanged(); }, onError: e => setError(errorMessage(e)) });
-    const update = useMutation({ mutationFn: ({ id, payload }) => proposalsApi.update(id, payload), onSuccess: onChanged, onError: e => setError(errorMessage(e)) });
+    // T-3: the proposal's version as listed
+    const update = useMutation({ mutationFn: ({ proposal, payload }) => proposalsApi.update(proposal.proposal_id, withVersion(payload, proposal)), onSuccess: onChanged, onError: e => setError(errorMessage(e)) });
     const remove = useMutation({ mutationFn: proposalsApi.remove, onSuccess: onChanged });
     return (
         <div className={`${card} p-5`} style={cardShadow}>
@@ -37,7 +40,7 @@ function Proposals({ deal, onChanged }) {
                         </div>
                         <p className="text-xs text-slate-500 mt-0.5">{canSee ? moneyExact(p.amount) : 'Amount hidden'}{p.line_count ? ` · ${p.line_count} line${p.line_count === 1 ? '' : 's'}` : ''}{p.sent_at ? ` · sent ${relativeDate(p.sent_at)}` : ''}{p.decided_at ? ` · decided ${relativeDate(p.decided_at)}` : ''}</p>
                         <div className="flex items-center gap-2 mt-2">
-                            <select value={p.status} onChange={e => update.mutate({ id: p.proposal_id, payload: { status: e.target.value } })}
+                            <select value={p.status} onChange={e => update.mutate({ proposal: p, payload: { status: e.target.value } })}
                                 className={`h-7 px-2 rounded-md text-xs font-semibold border-0 ${PROPOSAL_TONE[p.status]}`} aria-label="Proposal status">
                                 {(meta?.proposal_statuses || []).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                             </select>
@@ -73,6 +76,7 @@ export default function DealDetail() {
     const [closing, setClosing] = useState(null);
     const { data: stages = [] } = useQuery({ queryKey: ['sales-stages'], queryFn: () => stagesApi.list() });
     const { data: deal, isLoading, error: loadError } = useQuery({ queryKey: ['deal', id], queryFn: () => dealsApi.get(id), retry: false });
+    const version = useRecordVersion(deal);
     const [form, setForm] = useState(null);
     const [error, setError] = useState(null);
     useEffect(() => {
@@ -81,7 +85,9 @@ export default function DealDetail() {
     }, [deal]);
     const refresh = () => ['deal', 'deals', 'proposals', 'leads', 'deal-timeline'].forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
     const save = useMutation({
-        mutationFn: payload => dealsApi.update(id, payload),
+        // T-3: the deal's version as loaded / last saved here; one save at a time
+        mutationFn: versionedSave(version, payload => dealsApi.update(id, payload)),
+        scope: { id: `deal-${id}` },
         onSuccess: data => { queryClient.setQueryData(['deal', id], data); setError(null); setClosing(null); refresh(); },
         onError: e => setError(errorMessage(e)),
     });

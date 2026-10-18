@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Building2, ChevronLeft, ChevronRight, Loader2, Wand2, X } from 'lucide-react';
 import { accountsApi, errorMessage } from '../api/contacts';
 import { hasPermission } from '../lib/authStorage';
+import { withVersion } from '../lib/staleVersion';
 import {
     Avatar, Modal, Field, inputClass, ErrorNote, PrimaryButton, SecondaryButton, relativeDate, BRAND_GRADIENT,
     StageBadge, useCrmMeta,
@@ -22,13 +23,14 @@ export function AccountFormModal({ account, onClose, onSaved }) {
         annual_revenue: account?.annual_revenue ?? '', lifecycle_stage: account?.lifecycle_stage || '',
         description: account?.description || '',
     });
+    const [version] = useState(() => account?.row_version); // as loaded when the form opened (T-3)
     const { meta } = useCrmMeta();
     const [error, setError] = useState(null);
     const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }));
     const save = useMutation({
         mutationFn: () => {
             const payload = { ...form, annual_revenue: form.annual_revenue === '' || form.annual_revenue == null ? null : String(form.annual_revenue), lifecycle_stage: form.lifecycle_stage || null };
-            return account ? accountsApi.update(account.account_id, payload) : accountsApi.create(payload);
+            return account ? accountsApi.update(account.account_id, withVersion(payload, version)) : accountsApi.create(payload);
         },
         onSuccess: onSaved,
         onError: err => setError(errorMessage(err)),

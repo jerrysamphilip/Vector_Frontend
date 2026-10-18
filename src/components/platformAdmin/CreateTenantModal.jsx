@@ -5,7 +5,8 @@ import { AlertTriangle, Building2, CheckCircle2, Copy, X } from 'lucide-react';
 import { platformAdminApi } from '../../api/platformAdmin';
 import { useDialog } from '../common/useDialog';
 
-// Platform admin: create a tenant with its first admin; shows the one-time activation link.
+// Platform admin: create a tenant with its first admin. The admin gets a set-password link by email
+// (never a password); the API returns the link here once only on local development without email.
 
 export default function CreateTenantModal({ onClose, onCreated }) {
     const queryClient = useQueryClient();
@@ -89,7 +90,7 @@ export default function CreateTenantModal({ onClose, onCreated }) {
                                     <div>
                                         <p className="text-sm font-semibold text-emerald-800">Tenant created successfully</p>
                                         <p className="mt-0.5 text-xs text-emerald-700">
-                                            Email delivery failed — share this activation link with the admin manually.
+                                            Email delivery failed (local development) — share this set-password link with the admin. It is shown only once.
                                         </p>
                                     </div>
                                 </div>

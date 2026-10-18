@@ -31,7 +31,7 @@ const usersApi = {
         return response.data;
     },
 
-    // New temporary password + sign-in link for a still-pending invite (at most once a minute)
+    // New set-password sign-in link for a still-pending invite (at most once a minute; old links revoked)
     resendInvite: async (userId) => {
         const response = await apiV1Client.post(`/users/${userId}/resend-invite`);
         return response.data;
