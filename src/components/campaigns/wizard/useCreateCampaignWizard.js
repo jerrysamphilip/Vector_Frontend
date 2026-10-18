@@ -9,7 +9,8 @@ import { useCampaignDraft } from './useCampaignDraft';
 import { useListProspects } from './useListProspects';
 import { useProspectUpload } from './useProspectUpload';
 import { useTemplateEditor } from './useTemplateEditor';
-import { useWizardMutations } from './useWizardMutations';
+import { trackVersion, useWizardMutations } from './useWizardMutations';
+import { withVersion } from '../../../lib/staleVersion';
 
 // All state and actions of the create/edit campaign wizard (pages/CreateCampaign.jsx), returned as one
 // object the step components read from. Concerns live in their own hooks:
@@ -53,6 +54,9 @@ export function useCreateCampaignWizard() {
 
     const [currentStep, setCurrentStep] = useState(1);
     const [campaignId, setCampaignId] = useState(null);
+    // The draft campaign's row_version (T-3): set when it is created or loaded, sent as expected_version
+    // on update and launch, and advanced from each response, so a change made elsewhere gets a 409.
+    const campaignVersionRef = useRef(null);
     const [selectedLists, setSelectedLists] = useState([]);
     const [enrollReport, setEnrollReport] = useState(null); // {enrolled, rejected, launched}
     // Contacts deselected from the currently-selected existing list (exclusion set —
@@ -102,6 +106,7 @@ export function useCreateCampaignWizard() {
     const draft = useCampaignDraft({
         editCampaignId,
         isFreshStart,
+        campaignVersionRef,
         state: {
             campaignId, currentStep, formData, selectedLists, sequenceSteps, selectedProfileId,
             uploadMode, processingResult, selectedPersona, customInstruction, creativeEmail,
@@ -185,7 +190,7 @@ export function useCreateCampaignWizard() {
     const mutations = useWizardMutations({
         campaignId, formData, selectedLists, sequenceSteps, creativeEmail, excludedProspectIds,
         setCampaignId, setCurrentStep, setErrors, setProcessingResult, setSelectedPersona, setPreviewProspect,
-        setIsGeneratingTemplates, setGenerationStatus, setEnrollReport, queryClient, navigate,
+        setIsGeneratingTemplates, setGenerationStatus, setEnrollReport, queryClient, navigate, campaignVersionRef,
     });
 
     const handleStep1Submit = (e) => {
@@ -201,8 +206,10 @@ export function useCreateCampaignWizard() {
 
         // If editing an existing campaign, update it and go to step 2
         if (campaignId) {
-            campaignApi.update(campaignId, { ...formData, send_window_end: formData.send_window_end || null })
-                .then(() => {
+            campaignApi.update(campaignId, withVersion(
+                { ...formData, send_window_end: formData.send_window_end || null }, campaignVersionRef.current))
+                .then((updated) => {
+                    trackVersion(campaignVersionRef, updated);
                     setCurrentStep(2);
                     queryClient.invalidateQueries({ queryKey: ['campaigns'] });
                 })

@@ -1,4 +1,5 @@
 import { apiClient as api } from './http';
+import { withVersion } from '../lib/staleVersion';
 
 // Campaign Wizard API
 export const campaignWizardApi = {
@@ -117,10 +118,11 @@ export const campaignWizardApi = {
     },
 
     // Step 4: Activate campaign
-    activateCampaign: async (campaignId) => {
-        const response = await api.post(`/campaigns/${campaignId}/activations`, {
+    // expectedVersion: the campaign's row_version the wizard loaded (T-3); stale -> 409 STALE_VERSION
+    activateCampaign: async (campaignId, expectedVersion) => {
+        const response = await api.post(`/campaigns/${campaignId}/activations`, withVersion({
             campaign_id: campaignId,
-        });
+        }, expectedVersion));
         return response.data;
     },
 

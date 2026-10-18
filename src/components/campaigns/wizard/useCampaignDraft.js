@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { campaignApi, sequenceApi } from '../../../api/campaigns';
 import { campaignDraftsApi } from '../../../api/campaignDrafts';
 import { INITIAL_FORM_DATA } from './constants';
+import { trackVersion } from './useWizardMutations';
 
 // Draft persistence of the create-campaign wizard:
 //   - edit mode (?edit=<id>): restore the per-campaign localStorage cache instantly, then the campaign
@@ -48,7 +49,7 @@ export function setCachedDraft(cId, step, state) {
  * @param {object} opts.setters  the matching state setters (setCampaignId, setCurrentStep, setFormData, ...)
  * @returns {{ draftLoaded: boolean, lastSaved: Date|null, isSavingDraft: boolean }}
  */
-export function useCampaignDraft({ editCampaignId, isFreshStart, state, setters }) {
+export function useCampaignDraft({ editCampaignId, isFreshStart, campaignVersionRef, state, setters }) {
     const [draftLoaded, setDraftLoaded] = useState(false);
     const [lastSaved, setLastSaved] = useState(null);
     const [isSavingDraft, setIsSavingDraft] = useState(false);
@@ -115,6 +116,7 @@ export function useCampaignDraft({ editCampaignId, isFreshStart, state, setters 
                         // 2. Fetch campaign data from API (for form fields)
                         const campaign = await campaignApi.get(editCampaignId);
                         setCampaignId(editCampaignId);
+                        trackVersion(campaignVersionRef, campaign);
                         setFormData(prev => ({
                             ...prev,
                             campaign_name: campaign.campaign_name || '',
@@ -183,8 +185,9 @@ export function useCampaignDraft({ editCampaignId, isFreshStart, state, setters 
                     // If the draft references a campaignId, verify the campaign still exists
                     if (data.campaignId) {
                         try {
-                            await campaignApi.get(data.campaignId);
+                            const campaign = await campaignApi.get(data.campaignId);
                             setCampaignId(data.campaignId);
+                            trackVersion(campaignVersionRef, campaign);
                         } catch {
                             // Campaign was deleted — discard stale draft and start fresh
                             console.warn('[DRAFT] Campaign', data.campaignId, 'no longer exists — starting fresh');

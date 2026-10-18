@@ -1,4 +1,5 @@
 import { AlertTriangle, Check, Edit2, Loader2, ShieldCheck, Trash2, XCircle, X as XIcon } from 'lucide-react';
+import { withVersion } from '../../../lib/staleVersion';
 
 // Step 3: one prospect of the selected list - include checkbox, inline edit, validation status, delete.
 export default function ListProspectRow({ prospect, wizard }) {
@@ -205,7 +206,8 @@ export default function ListProspectRow({ prospect, wizard }) {
                         <button
                             onClick={() => {
                                 setEditingProspectId(prospect.prospect_id);
-                                setEditProspectValues({
+                                // Saved with the row_version seen when editing started (T-3)
+                                setEditProspectValues(withVersion({
                                     first_name: prospect.first_name,
                                     last_name: prospect.last_name,
                                     email: prospect.email,
@@ -213,7 +215,7 @@ export default function ListProspectRow({ prospect, wizard }) {
                                     designation: prospect.designation,
                                     poc_city: prospect.poc_city,
                                     poc_state: prospect.poc_state,
-                                });
+                                }, prospect));
                             }}
                             className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                             title="Edit"
