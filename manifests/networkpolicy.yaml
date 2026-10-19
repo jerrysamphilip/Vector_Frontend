@@ -1,0 +1,57 @@
+# NetworkPolicies for the frontend pods (rule P-3; see Vector_Backend docs/adr/0008-internal-transport.md).
+# No namespace here: CICD.yaml applies it with `kubectl apply -n $NAMESPACE` when the repository
+# variable APPLY_NETWORK_POLICIES is `true`. Needs a CNI that enforces NetworkPolicy.
+#
+# DECISION NEEDED before enabling: the ingress source. `ingress-nginx` is assumed; with the AWS Load
+# Balancer Controller in IP mode replace it with the VPC CIDR (ipBlock) of the ALB subnets.
+
+# Namespace-wide default deny. Identical to the one in Vector_Backend/manifests/networkpolicy.yaml
+# (both repos deploy into the same namespace; keep them in sync).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  labels:
+    app.kubernetes.io/part-of: outreach360
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]
+
+---
+# nginx (8080) only from the ingress controller. Kubelet probes are not subject to policies.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-ingress
+  labels:
+    app.kubernetes.io/part-of: outreach360
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        # ALB (AWS Load Balancer Controller, IP targets) instead of ingress-nginx:
+        # - ipBlock:
+        #     cidr: <VPC_CIDR>
+      ports:
+        - protocol: TCP
+          port: 8080
+
+---
+# nginx only serves static files (no proxy_pass in nginx.conf), so it needs no egress at all.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-deny-egress
+  labels:
+    app.kubernetes.io/part-of: outreach360
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes: ["Egress"]

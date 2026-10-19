@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import StaleVersionBanner from './components/common/StaleVersionBanner';
+import { handleStaleVersionError } from './lib/staleVersion';
 import Layout from './components/layout/Layout';
 import AdminLayout from './components/layout/AdminLayout';
 import { ProtectedRoute, PublicRoute, PlatformAdminRoute, PermissionRoute } from './components/auth/ProtectedRoute';
@@ -55,7 +57,11 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 import ErrorBoundary from './components/common/ErrorBoundary';
 import './index.css';
 
+// 409 STALE_VERSION from any edit (rule T-3): refetch and show StaleVersionBanner
+const mutationCache = new MutationCache({ onError: (error) => handleStaleVersionError(queryClient)(error) });
+
 const queryClient = new QueryClient({
+    mutationCache,
     defaultOptions: {
         queries: {
             refetchOnWindowFocus: false,
@@ -199,6 +205,7 @@ function App() {
                     <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
                 </Routes>
                 </Suspense>
+                <StaleVersionBanner />
             </BrowserRouter>
         </QueryClientProvider>
     );

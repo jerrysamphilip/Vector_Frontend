@@ -130,10 +130,11 @@ export function useTeamManagement() {
         changeRoleMutation.mutate({ userId: user.user_id, role: nextRole });
     };
 
-    const copyCredentials = async () => {
-        const c = inviteResult?.manual_credentials;
-        if (!c) return;
-        await navigator.clipboard.writeText(`Email: ${c.email}\nPassword: ${c.password}\nLogin: ${c.magic_login_link}`);
+    // Local development without email only: the API returns the set-password link once (never a password)
+    const copySignInLink = async () => {
+        const link = inviteResult?.show_once_link?.magic_login_link;
+        if (!link) return;
+        await navigator.clipboard.writeText(link);
     };
 
     return {
@@ -148,6 +149,6 @@ export function useTeamManagement() {
         inviteMutation, resendMutation, hierarchyMutation, changeRoleMutation, deactivateMutation,
         reactivateMutation, permanentDeleteMutation, updatePermsMutation, resetPermsMutation,
         users, filteredUsers, activeUsers, invitedUsers, inactiveUsers,
-        handleInvite, handleRoleSave, copyCredentials,
+        handleInvite, handleRoleSave, copySignInLink,
     };
 }

@@ -25,13 +25,15 @@ export function ApprovalBadge({ status, required }) {
 }
 
 /** Approval box inside the quote editor. `approval` comes with GET/PUT /proposals/{id}/lines. */
-export function ApprovalPanel({ proposalId, approval, onChanged }) {
+// version / onVersion: the proposal's row_version the quote editor holds (T-3); each action sends it and
+// hands back the new one
+export function ApprovalPanel({ proposalId, approval, onChanged, version, onVersion }) {
     const [text, setText] = useState('');
     const [error, setError] = useState(null);
-    const done = () => { setText(''); setError(null); onChanged(); };
-    const submit = useMutation({ mutationFn: () => quoteApprovalsApi.submit(proposalId, text.trim()), onSuccess: done, onError: e => setError(errorMessage(e)) });
-    const approve = useMutation({ mutationFn: () => quoteApprovalsApi.approve(proposalId, text.trim()), onSuccess: done, onError: e => setError(errorMessage(e)) });
-    const reject = useMutation({ mutationFn: () => quoteApprovalsApi.reject(proposalId, text.trim()), onSuccess: done, onError: e => setError(errorMessage(e)) });
+    const done = (data) => { setText(''); setError(null); if (onVersion && data?.row_version != null) onVersion(data.row_version); onChanged(); };
+    const submit = useMutation({ mutationFn: () => quoteApprovalsApi.submit(proposalId, text.trim(), version), onSuccess: done, onError: e => setError(errorMessage(e)) });
+    const approve = useMutation({ mutationFn: () => quoteApprovalsApi.approve(proposalId, text.trim(), version), onSuccess: done, onError: e => setError(errorMessage(e)) });
+    const reject = useMutation({ mutationFn: () => quoteApprovalsApi.reject(proposalId, text.trim(), version), onSuccess: done, onError: e => setError(errorMessage(e)) });
     if (!approval || (approval.approval_threshold == null && approval.approval_status === 'NOT_REQUIRED')) return null;
     const a = approval;
     if (!a.approval_required && a.approval_status === 'NOT_REQUIRED') {
@@ -75,8 +77,9 @@ function ApprovalRow({ item, onChanged }) {
     const [reason, setReason] = useState('');
     const [error, setError] = useState(null);
     const done = () => { setReason(''); setError(null); onChanged(); };
-    const approve = useMutation({ mutationFn: () => quoteApprovalsApi.approve(item.proposal_id, reason.trim()), onSuccess: done, onError: e => setError(errorMessage(e)) });
-    const reject = useMutation({ mutationFn: () => quoteApprovalsApi.reject(item.proposal_id, reason.trim()), onSuccess: done, onError: e => setError(errorMessage(e)) });
+    // T-3: the quote's version as listed; one changed meanwhile gets 409 STALE_VERSION
+    const approve = useMutation({ mutationFn: () => quoteApprovalsApi.approve(item.proposal_id, reason.trim(), item.row_version), onSuccess: done, onError: e => setError(errorMessage(e)) });
+    const reject = useMutation({ mutationFn: () => quoteApprovalsApi.reject(item.proposal_id, reason.trim(), item.row_version), onSuccess: done, onError: e => setError(errorMessage(e)) });
     return (
         <tr className="align-top" data-testid="approval-row">
             <td className="pl-5 py-3">

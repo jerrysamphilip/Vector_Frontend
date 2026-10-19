@@ -5,6 +5,8 @@ import {
     ArrowLeft, Mail, Phone, Smartphone, Building2, Linkedin, MapPin, Pencil, Trash2, Loader2, StickyNote, PhoneCall, CalendarDays, Send, Inbox, Eye, MousePointerClick, AlertOctagon, MailX, Megaphone, ListPlus, Check, Globe2, History, CheckSquare, Square, AlertTriangle, ListTodo,
 } from 'lucide-react';
 import { contactsApi, tasksApi, errorMessage } from '../api/contacts';
+import { withVersion } from '../lib/staleVersion';
+import { useRecordVersion, versionedSave } from '../lib/useRecordVersion';
 import { dealsApi, leadsApi, moneyShort } from '../api/sales';
 import { NewLeadModal } from './Leads';
 import { DealFormModal } from './Deals';
@@ -290,8 +292,10 @@ function CrmCard({ contact, meta, onUpdate, error }) {
 function DetailsCard({ contact, fields, onSaved }) {
     const [editing, setEditing] = useState(false);
     const [form, setForm] = useState({});
+    const [version, setVersion] = useState(null); // row_version when editing started (T-3)
     const [error, setError] = useState(null);
     const start = () => {
+        setVersion(contact.row_version);
         setForm({
             first_name: contact.first_name || '', last_name: contact.last_name || '', email: contact.email || '',
             phone: contact.phone || '', mobile_phone: contact.mobile_phone || '', designation: contact.designation || '',
@@ -308,7 +312,7 @@ function DetailsCard({ contact, fields, onSaved }) {
             const payload = { ...form };
             if (payload.company_name === (contact.company_name || '')) delete payload.company_name;
             if (!payload.email) delete payload.email;
-            return contactsApi.update(contact.prospect_id, payload);
+            return contactsApi.update(contact.prospect_id, withVersion(payload, version));
         },
         onSuccess: (data) => { setEditing(false); onSaved(data); },
         onError: err => setError(errorMessage(err)),
@@ -496,6 +500,7 @@ export default function ContactDetail() {
     const [quickError, setQuickError] = useState(null);
 
     const { data: contact, isLoading, error } = useQuery({ queryKey: ['contact', id], queryFn: () => contactsApi.get(id), retry: false });
+    const version = useRecordVersion(contact);
     const { data: timeline, isFetching: timelineLoading } = useQuery({
         queryKey: ['contact-timeline', id, timelineFilter, timelineUser],
         queryFn: () => contactsApi.timeline(id, { types: timelineFilter, user_id: timelineUser }),
@@ -521,7 +526,9 @@ export default function ContactDetail() {
     };
 
     const quickUpdate = useMutation({
-        mutationFn: payload => contactsApi.update(id, payload),
+        // T-3: the contact's version as loaded / last saved here; one quick edit at a time
+        mutationFn: versionedSave(version, payload => contactsApi.update(id, payload)),
+        scope: { id: `contact-${id}` },
         onSuccess: data => { setQuickError(null); onSaved(data); },
         onError: err => setQuickError(errorMessage(err)),
     });

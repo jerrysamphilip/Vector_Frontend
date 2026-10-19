@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Plus, Search } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { campaignApi } from '../api/campaigns';
+import { reportStaleVersion } from '../lib/staleVersion';
 import Loading from '../components/common/Loading';
 import PageTransition, { containerVariants, itemVariants } from '../components/layout/PageTransition';
 import CampaignsTable from '../components/campaigns/CampaignsTable';
@@ -57,21 +58,22 @@ const Campaigns = () => {
         setPerformingActionId(null);
     };
 
-    // Mutations
+    // Mutations: state changes send the row_version the list shows (T-3); a campaign changed
+    // meanwhile gets 409 STALE_VERSION
     const launchMutation = useMutation({
-        mutationFn: (id) => campaignApi.launch(id),
+        mutationFn: (c) => campaignApi.launch(c.campaign_id, c.row_version),
         onSuccess: onMutationSettled,
         onError: showErr
     });
 
     const pauseMutation = useMutation({
-        mutationFn: (id) => campaignApi.pause(id),
+        mutationFn: (c) => campaignApi.pause(c.campaign_id, null, c.row_version),
         onSuccess: onMutationSettled,
         onError: showErr
     });
 
     const resumeMutation = useMutation({
-        mutationFn: (id) => campaignApi.resume(id),
+        mutationFn: (c) => campaignApi.resume(c.campaign_id, c.row_version),
         onSuccess: onMutationSettled,
         onError: showErr
     });
@@ -127,15 +129,15 @@ const Campaigns = () => {
         switch (action) {
             case 'launch':
                 setPerformingActionId(campaign.campaign_id);
-                launchMutation.mutate(campaign.campaign_id);
+                launchMutation.mutate(campaign);
                 break;
             case 'pause':
                 setPerformingActionId(campaign.campaign_id);
-                pauseMutation.mutate(campaign.campaign_id);
+                pauseMutation.mutate(campaign);
                 break;
             case 'resume':
                 setPerformingActionId(campaign.campaign_id);
-                resumeMutation.mutate(campaign.campaign_id);
+                resumeMutation.mutate(campaign);
                 break;
             case 'delete':
                 if (confirm(`Delete "${campaign.campaign_name}"?`)) {
@@ -164,11 +166,18 @@ const Campaigns = () => {
 
         // One useMutation observer only tracks its latest mutate() call, so a loop of mutate() sent a single
         // request; call the API directly for every selected campaign.
-        const fn = { pause: campaignApi.pause, resume: campaignApi.resume, delete: campaignApi.delete }[action];
+        // Pause / resume send each campaign's row_version as listed (T-3)
+        const version = id => campaigns.find(c => c.campaign_id === id)?.row_version;
+        const fn = {
+            pause: id => campaignApi.pause(id, null, version(id)),
+            resume: id => campaignApi.resume(id, version(id)),
+            delete: campaignApi.delete,
+        }[action];
         if (!fn) return;
         const results = await Promise.allSettled(selectedIds.map(id => fn(id)));
         const failed = results.filter(r => r.status === 'rejected');
         if (failed.length) showErr(failed[0].reason);
+        failed.some(r => reportStaleVersion(r.reason)); // these calls bypass the MutationCache
         queryClient.invalidateQueries({ queryKey: ['campaigns'], exact: false });
         setSelectedIds([]);
     };

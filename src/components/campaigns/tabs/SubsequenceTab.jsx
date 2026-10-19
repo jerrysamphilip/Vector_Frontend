@@ -8,6 +8,7 @@ import Loading from '../../common/Loading';
 import RichTextEditor from '../../common/RichTextEditor';
 import AttachmentManager from '../../common/AttachmentManager';
 import { sanitizeHtml, htmlToText } from '../../../lib/sanitizeHtml';
+import { withVersion } from '../../../lib/staleVersion';
 import SubjectVariantsEditor from '../SubjectVariantsEditor';
 
 export default function SubsequenceTab({ campaignId }) {
@@ -68,7 +69,8 @@ export default function SubsequenceTab({ campaignId }) {
 
     // Update sequence mutation
     const updateSequenceMutation = useMutation({
-        mutationFn: ({ sequenceId, waitDays }) => sequenceApi.update(sequenceId, { wait_days: waitDays }),
+        // T-3: the step's row_version as listed; a step changed meanwhile gets 409 STALE_VERSION
+        mutationFn: ({ sequenceId, waitDays, version }) => sequenceApi.update(sequenceId, withVersion({ wait_days: waitDays }, version)),
         onSuccess: () => {
             queryClient.invalidateQueries(['campaign-sequences', campaignId]);
         },
@@ -323,7 +325,8 @@ export default function SubsequenceTab({ campaignId }) {
                                                         if (newDays !== step.wait_days) {
                                                             updateSequenceMutation.mutate({
                                                                 sequenceId: step.sequence_id,
-                                                                waitDays: newDays
+                                                                waitDays: newDays,
+                                                                version: step.row_version,
                                                             });
                                                         }
                                                     }}

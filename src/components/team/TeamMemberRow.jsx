@@ -100,7 +100,7 @@ export default function TeamMemberRow({ u, i, team }) {
                     {canResend && (
                         <button onClick={() => resendMutation.mutate(u.user_id)}
                             disabled={resendMutation.isPending && resendMutation.variables === u.user_id}
-                            title="Send a new sign-in link and temporary password"
+                            title="Email a new set-password link (the old one stops working)"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors disabled:opacity-50">
                             <Send className="w-3.5 h-3.5" />Resend invite
                         </button>

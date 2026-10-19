@@ -2,11 +2,19 @@ import { useMutation } from '@tanstack/react-query';
 import { campaignApi, sequenceApi } from '../../../api/campaigns';
 import { campaignWizardApi } from '../../../api/campaignWizard';
 import { campaignDraftsApi } from '../../../api/campaignDrafts';
+import { versionOf } from '../../../lib/staleVersion';
 import { OUR_COMPANY } from './emailPreview';
+
+/** Keep the draft campaign's latest row_version (T-3) from a create / get / update / launch response. */
+export function trackVersion(versionRef, record) {
+    const v = versionOf(record);
+    if (versionRef && v !== null) versionRef.current = v;
+}
 
 // Server actions of the create-campaign wizard, one per step:
 //   1 create campaign, 2 save sequence, 3 process list + generate persona templates
 //   (and on demand for an undetected persona), 5 enroll the selected lists and launch.
+// The launch sends the draft's row_version (ctx.campaignVersionRef) as expected_version (T-3).
 
 /**
  * @param {object} ctx  wizard state (campaignId, formData, selectedLists, sequenceSteps, creativeEmail,
@@ -18,7 +26,7 @@ export function useWizardMutations(ctx) {
     const {
         campaignId, formData, selectedLists, sequenceSteps, creativeEmail, excludedProspectIds,
         setCampaignId, setCurrentStep, setErrors, setProcessingResult, setSelectedPersona, setPreviewProspect,
-        setIsGeneratingTemplates, setGenerationStatus, setEnrollReport, queryClient, navigate,
+        setIsGeneratingTemplates, setGenerationStatus, setEnrollReport, queryClient, navigate, campaignVersionRef,
     } = ctx;
     const exclusions = () => (excludedProspectIds.length > 0 ? excludedProspectIds : null);
 
@@ -27,6 +35,7 @@ export function useWizardMutations(ctx) {
         mutationFn: (data) => campaignApi.create(data),
         onSuccess: (result) => {
             setCampaignId(result.campaign_id);
+            trackVersion(campaignVersionRef, result);
             setCurrentStep(2);
             queryClient.invalidateQueries({ queryKey: ['campaigns'], });
         },
@@ -167,7 +176,9 @@ export function useWizardMutations(ctx) {
                 error.report = { enrolled, rejected, launched: false };
                 throw error;
             }
-            await campaignApi.launch(campaignId);
+            // Launch with the version the wizard last saw: an edit made elsewhere meanwhile gets a 409 (T-3)
+            const launched = await campaignApi.launch(campaignId, campaignVersionRef?.current);
+            trackVersion(campaignVersionRef, launched);
             return { enrolled, rejected, launched: true };
         },
         onSuccess: async (report) => {

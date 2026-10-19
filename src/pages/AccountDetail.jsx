@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Globe, Phone, MapPin, Users, Pencil, Trash2, Loader2, Plus, Mail, History, DollarSign } from 'lucide-react';
 import { accountsApi, contactsApi } from '../api/contacts';
 import { hasPermission } from '../lib/authStorage';
+import { withVersion } from '../lib/staleVersion';
 import { AccountFormModal, formatRevenue } from './Accounts';
 import ContactFormModal from '../components/contacts/ContactFormModal';
 import AccountDeals from '../components/sales/AccountDeals';
@@ -27,7 +28,7 @@ export default function AccountDetail() {
         queryClient.invalidateQueries({ queryKey: ['accounts'] });
         queryClient.invalidateQueries({ queryKey: ['contacts'] });
     };
-    const setOwner = useMutation({ mutationFn: owner_id => accountsApi.update(id, { owner_id }), onSuccess: refresh });
+    const setOwner = useMutation({ mutationFn: owner_id => accountsApi.update(id, withVersion({ owner_id }, account)), onSuccess: refresh });
     const remove = useMutation({
         mutationFn: () => accountsApi.remove(id),
         onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['accounts'] }); navigate('/app/accounts'); },

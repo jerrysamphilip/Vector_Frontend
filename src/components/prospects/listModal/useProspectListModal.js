@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { prospectsApi } from '../../../api/prospects';
+import { withVersion } from '../../../lib/staleVersion';
 
 // State and actions of the prospect list dialog (ProspectListModal): paged / searchable prospects of
 // one list, inline edit and per-list note, revalidation, selection with bulk edit / delete / add to list.
@@ -96,7 +97,8 @@ export function useProspectListModal(list) {
 
     const startEdit = (prospect) => {
         setEditingId(prospect.prospect_id);
-        setEditValues({
+        // The version is captured when editing starts and saved as expected_version (T-3, lib/staleVersion.js)
+        setEditValues(withVersion({
             first_name: prospect.first_name || '',
             last_name: prospect.last_name || '',
             designation: prospect.designation || '',
@@ -106,7 +108,7 @@ export function useProspectListModal(list) {
             poc_state: prospect.poc_state || '',
             poc_country: prospect.poc_country || '',
             notes: prospect.notes || '',
-        });
+        }, prospect));
     };
 
     const saveEdit = () => {

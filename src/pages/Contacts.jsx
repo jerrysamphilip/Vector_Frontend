@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { contactsApi, accountsApi, viewsApi, errorMessage } from '../api/contacts';
 import { BUILT_IN_VIEWS } from '../lib/contactViews';
+import { withVersion } from '../lib/staleVersion';
 import { getStoredUser } from '../lib/authStorage';
 import ContactFormModal from '../components/contacts/ContactFormModal';
 import MergeDuplicatesModal from '../components/contacts/MergeDuplicatesModal';
@@ -214,7 +215,9 @@ function Board({ params, groupBy, setGroupBy, onOpen }) {
     const [dragId, setDragId] = useState(null);
     const { data, isLoading } = useQuery({ queryKey: ['contacts-board', groupBy, params], queryFn: () => contactsApi.board({ ...params, group_by: groupBy }) });
     const move = useMutation({
-        mutationFn: ({ id, value }) => contactsApi.update(id, { [groupBy]: value }),
+        // The card's row_version as the board loaded it (T-3): a card someone else moved gets 409
+        mutationFn: ({ id, value }) => contactsApi.update(id, withVersion({ [groupBy]: value },
+            (data?.lanes || []).flatMap(l => l.items || []).find(c => c.prospect_id === id))),
         onSuccess: () => { setError(null); queryClient.invalidateQueries({ queryKey: ['contacts-board'] }); queryClient.invalidateQueries({ queryKey: ['contacts'] }); },
         onError: err => setError(errorMessage(err)),
     });

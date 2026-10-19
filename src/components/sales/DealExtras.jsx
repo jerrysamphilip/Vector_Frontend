@@ -187,9 +187,17 @@ export function QuoteModal({ proposal, onClose, onSaved }) {
     const { data: quote, isLoading } = useQuery({ queryKey: ['quote', proposal.proposal_id], queryFn: () => quotesApi.get(proposal.proposal_id) });
     const { data: products = [] } = useQuery({ queryKey: ['products'], queryFn: () => productsApi.list() });
     const [lines, setLines] = useState(null);
+    // The proposal's row_version when these lines were loaded, then after each own save (T-3): a quote
+    // someone else changed meanwhile gets 409 instead of being overwritten by this editor
+    const [version, setVersion] = useState(null);
     const [error, setError] = useState(null);
     const [pdfBusy, setPdfBusy] = useState(false);
-    useEffect(() => { if (quote && lines === null) setLines(quote.lines.length ? quote.lines.map(l => ({ ...l, product_id: l.product_id || '' })) : [{ ...blankLine }]); }, [quote, lines]);
+    useEffect(() => {
+        if (quote && lines === null) {
+            setLines(quote.lines.length ? quote.lines.map(l => ({ ...l, product_id: l.product_id || '' })) : [{ ...blankLine }]);
+            setVersion(quote.row_version ?? null);
+        }
+    }, [quote, lines]);
     const setLine = (i, patch) => setLines(ls => ls.map((l, j) => (j === i ? { ...l, ...patch } : l)));
     const pickProduct = (i, id) => {
         const p = products.find(x => x.product_id === id);
@@ -199,8 +207,8 @@ export function QuoteModal({ proposal, onClose, onSaved }) {
         mutationFn: () => quotesApi.save(proposal.proposal_id, lines.filter(l => l.description || l.product_id).map(l => ({
             product_id: l.product_id || null, description: l.description, quantity: Number(l.quantity) || 0,
             unit_price: Number(l.unit_price) || 0, discount_pct: Number(l.discount_pct) || 0,
-        }))),
-        onSuccess: (data) => { qc.setQueryData(['quote', proposal.proposal_id], data); onSaved(); setError(null); },
+        })), version),
+        onSuccess: (data) => { qc.setQueryData(['quote', proposal.proposal_id], data); setVersion(data?.row_version ?? null); onSaved(); setError(null); },
         onError: e => setError(errorMessage(e)),
     });
     const downloadPdf = async () => {
@@ -220,7 +228,7 @@ export function QuoteModal({ proposal, onClose, onSaved }) {
             {isLoading || !lines ? <Loader2 className="w-5 h-5 animate-spin text-indigo-500" /> : (
                 <div className="space-y-3">
                     <ErrorNote message={error} />
-                    <ApprovalPanel proposalId={proposal.proposal_id} approval={quote?.approval}
+                    <ApprovalPanel proposalId={proposal.proposal_id} approval={quote?.approval} version={version} onVersion={setVersion}
                         onChanged={() => { qc.invalidateQueries({ queryKey: ['quote', proposal.proposal_id] }); qc.invalidateQueries({ queryKey: ['quote-approvals'] }); onSaved(); }} />
                     <table className="w-full text-sm">
                         <thead><tr className="text-left text-[11px] text-slate-400 uppercase tracking-wide">
