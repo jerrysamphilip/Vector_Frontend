@@ -2,11 +2,13 @@ import { motion } from 'framer-motion';
 import { Button } from '../../ui/Button';
 import { TIMEZONE_OPTIONS } from './timezones';
 import { stepVariants } from './constants';
+import EnrollmentCheckPanel from './EnrollmentCheckPanel';
 import { ArrowLeft, Calendar, Globe, Rocket } from 'lucide-react';
 
 // Wizard step 5 (Launch): configuration summary, daily batch schedule, sequence timeline and launch.
 export default function StepLaunch({ wizard }) {
     const {
+        campaignId, selectedLists, excludedProspectIds,
         errors, formData, launchMutation, processingResult, scheduleLoading, schedulePreview, sequenceSteps,
         setCurrentStep, setErrors
     } = wizard;
@@ -167,6 +169,13 @@ export default function StepLaunch({ wizard }) {
                         </div>
                     </div>
                 </div>
+
+                {campaignId && selectedLists?.length > 0 && (
+                    <div className="mt-8">
+                        <EnrollmentCheckPanel campaignId={campaignId} selectedLists={selectedLists}
+                            excludedProspectIds={excludedProspectIds} />
+                    </div>
+                )}
 
                 {errors.launch && (
                     <p className="text-red-500 text-center mt-6 text-sm font-medium">{errors.launch}</p>

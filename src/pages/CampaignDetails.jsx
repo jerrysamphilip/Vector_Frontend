@@ -19,6 +19,9 @@ import TriggerLogsTab from '../components/campaigns/tabs/TriggerLogsTab';
 import ScheduleTab from '../components/campaigns/tabs/ScheduleTab';
 import SendingInboxesTab from '../components/campaigns/tabs/SendingInboxesTab';
 import InboxTab from '../components/campaigns/tabs/InboxTab';
+import SettingsTab from '../components/campaigns/tabs/SettingsTab';
+import CampaignActionsMenu from '../components/campaigns/actions/CampaignActionsMenu';
+import { useCampaignDialogs } from '../components/campaigns/actions/useCampaignDialogs';
 
 export default function CampaignDetails() {
     const { id } = useParams();
@@ -118,6 +121,50 @@ export default function CampaignDetails() {
         }
     });
 
+    const launchMutation = useMutation({
+        mutationFn: (id) => campaignApi.launch(id, campaign?.row_version),
+        onSuccess: () => {
+            setBanner(null);
+            queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+            queryClient.invalidateQueries({ queryKey: ['campaigns'], exact: false });
+        },
+        onError: (error) => {
+            if (isStaleVersion(error)) return;
+            setBanner({ tone: 'error', text: `Error launching campaign: ${errorMessage(error)}` });
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id) => campaignApi.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['campaigns'], exact: false });
+            navigate('/app/campaigns');
+        },
+        onError: (error) => setBanner({ tone: 'error', text: `Error deleting campaign: ${errorMessage(error)}` }),
+    });
+
+    // ⋮ menu: Rename / Duplicate dialogs, Launch, Pause / Resume, Delete (confirmed)
+    const { openDialog, dialogs } = useCampaignDialogs({
+        onOpenCopy: (copy) => { setActiveTab('Analytics'); navigate(`/app/campaigns/${copy.campaign_id}`); },
+    });
+    const handleMenuAction = (action) => {
+        switch (action) {
+            case 'rename':
+            case 'duplicate':
+                openDialog(action, campaign);
+                break;
+            case 'launch': launchMutation.mutate(id); break;
+            case 'pause': pauseMutation.mutate(id); break;
+            case 'resume': resumeMutation.mutate(id); break;
+            case 'delete':
+                if (window.confirm(`Delete "${campaign.campaign_name}"? This removes the campaign and its data.`)) {
+                    deleteMutation.mutate(id);
+                }
+                break;
+            default: break;
+        }
+    };
+
     // Decoupled loading states for better UX
     // We only block the whole page if basic campaign info is missing
     const isInitialLoading = campaignLoading;
@@ -187,13 +234,15 @@ export default function CampaignDetails() {
                 return <SendingInboxesTab campaign={campaign} />;
             case 'Inbox':
                 return <InboxTab campaignId={id} onTabChange={setActiveTab} />;
+            case 'Settings':
+                return <SettingsTab key={`${campaign.campaign_id}-${campaign.row_version}`} campaign={campaign} />;
             default:
                 return <div>Tab not implemented</div>;
         }
     };
 
     // Build tabs dynamically with prospect count
-    const tabs = ['Analytics', 'Inbox', 'Prospects', 'Subsequence', 'Schedule', 'Trigger logs', 'Sending Accounts'];
+    const tabs = ['Analytics', 'Inbox', 'Prospects', 'Subsequence', 'Schedule', 'Trigger logs', 'Sending Accounts', 'Settings'];
 
     return (
         <PageTransition>
@@ -256,6 +305,11 @@ export default function CampaignDetails() {
                                         {sendNowMutation.isPending ? (sendProgress || 'Sending...') : '⚡ Send Now'}
                                     </button>
                                 )}
+                                <CampaignActionsMenu
+                                    campaign={campaign}
+                                    onAction={handleMenuAction}
+                                    disabled={launchMutation.isPending || deleteMutation.isPending}
+                                />
                             </div>
                         </div>
 
@@ -279,6 +333,8 @@ export default function CampaignDetails() {
                         </nav>
                     </div>
                 </motion.header>
+
+                {dialogs}
 
                 {banner && (
                     <div role={banner.tone === 'error' ? 'alert' : 'status'} className={`mt-4 flex items-start justify-between gap-3 rounded-lg border px-4 py-2.5 text-sm ${banner.tone === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>

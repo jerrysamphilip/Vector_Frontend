@@ -117,6 +117,20 @@ export const campaignWizardApi = {
         return response.data;
     },
 
+    // Dry run of enrollProspects with the same arguments: { would_enroll_count, would_enroll,
+    // rejected_count, rejected_summary, rejected: [{prospect_id, email, name, reason_code, reason}] }
+    checkEnrollment: async (campaignId, listId, personaTypes = null, excludePersonalEmails = true, coolOffDays = 7, excludedProspectIds = null) => {
+        const response = await api.post(`/campaigns/${campaignId}/enrollments/checks`, {
+            path: 'wizard',
+            list_id: listId,
+            persona_types: personaTypes,
+            exclude_personal_emails: excludePersonalEmails,
+            cool_off_days: coolOffDays,
+            excluded_prospect_ids: excludedProspectIds,
+        });
+        return response.data;
+    },
+
     // Step 4: Activate campaign
     // expectedVersion: the campaign's row_version the wizard loaded (T-3); stale -> 409 STALE_VERSION
     activateCampaign: async (campaignId, expectedVersion) => {

@@ -14,6 +14,7 @@ import LoadError from '../components/ui/LoadError';
 import { ColumnPicker } from '../components/campaigns/CampaignsTable';
 import { loadVisibleCols, LS_KEY } from '../components/campaigns/campaignColumns';
 import BulkActionBar from '../components/campaigns/BulkActionBar';
+import { useCampaignDialogs } from '../components/campaigns/actions/useCampaignDialogs';
 import { AnimatePresence } from 'framer-motion';
 import { Settings2 } from 'lucide-react';
 
@@ -30,6 +31,9 @@ const Campaigns = () => {
     const [actionError, setActionError] = useState('');
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(20);
+    const { openDialog, dialogs } = useCampaignDialogs({
+        onOpenCopy: (copy) => navigate(`/app/campaigns/${copy.campaign_id}`),
+    });
     const showErr = (err) => { setPerformingActionId(null); setActionError(err?.response?.data?.detail || err?.message || 'Action failed'); };
 
     // Debounce: update debouncedSearch 300ms after user stops typing
@@ -159,6 +163,10 @@ const Campaigns = () => {
                     setPerformingActionId(campaign.campaign_id);
                     deleteMutation.mutate(campaign.campaign_id);
                 }
+                break;
+            case 'rename':
+            case 'duplicate':
+                openDialog(action, campaign);
                 break;
             case 'view': navigate(`/app/campaigns/${campaign.campaign_id}`); break;
         }
@@ -295,6 +303,8 @@ const Campaigns = () => {
                         />
                     )}
                 </motion.div>
+
+                {dialogs}
 
                 <BulkActionBar
                     selectedCount={selectedIds.length}

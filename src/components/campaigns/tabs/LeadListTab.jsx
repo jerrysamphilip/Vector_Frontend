@@ -10,6 +10,7 @@ import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import Loading from '../../common/Loading';
 import LoadError from '../../ui/LoadError';
 import DialogPanel from '../../common/DialogPanel';
+import LeadTimingCells, { LeadTimingHeaders } from './LeadTimingCells';
 
 // Status badge colors matching theme.
 // Real backend CampaignProspect statuses: ACTIVE, OPENED, COMPLETED, PAUSED,
@@ -60,9 +61,11 @@ export default function LeadListTab({ campaignId }) {
     const [selectedListId, setSelectedListId] = useState('');
 
     // Fetch prospects
+    // Contacts removed from the campaign are hidden unless asked for (S-21)
+    const [showRemoved, setShowRemoved] = useState(false);
     const { data: prospects, isLoading, error: loadError, refetch } = useQuery({
-        queryKey: ['campaign-prospects', campaignId],
-        queryFn: () => campaignApi.getProspects(campaignId),
+        queryKey: ['campaign-prospects', campaignId, { showRemoved }],
+        queryFn: () => campaignApi.getProspects(campaignId, { includeRemoved: showRemoved }),
     });
 
     // Prospect lists for the "Add prospects" picker (only fetched once the modal opens)
@@ -76,7 +79,8 @@ export default function LeadListTab({ campaignId }) {
     const updateMutation = useMutation({
         mutationFn: ({ prospectId, updates }) => prospectsApi.updateProspect(prospectId, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries(['campaign-prospects', campaignId]);
+            queryClient.invalidateQueries({ queryKey: ['campaign-prospects', campaignId] });
+            queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
             setEditingId(null);
             setEditValues({});
         },
@@ -87,7 +91,8 @@ export default function LeadListTab({ campaignId }) {
     const enrollMutation = useMutation({
         mutationFn: (listId) => campaignApi.enrollProspects(campaignId, [listId]),
         onSuccess: (result) => {
-            queryClient.invalidateQueries(['campaign-prospects', campaignId]);
+            queryClient.invalidateQueries({ queryKey: ['campaign-prospects', campaignId] });
+            queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
             setShowAddModal(false);
             setSelectedListId('');
             setEnrollReport({ enrolled: result?.enrolled_count || 0, rejected: result?.rejected || [], rejectedCount: result?.rejected_count, limitNotice: result?.daily_limit_notice });
@@ -98,7 +103,8 @@ export default function LeadListTab({ campaignId }) {
     const removeMutation = useMutation({
         mutationFn: (prospectId) => campaignApi.removeProspect(campaignId, prospectId),
         onSuccess: () => {
-            queryClient.invalidateQueries(['campaign-prospects', campaignId]);
+            queryClient.invalidateQueries({ queryKey: ['campaign-prospects', campaignId] });
+            queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
         },
     });
 
@@ -263,6 +269,12 @@ export default function LeadListTab({ campaignId }) {
                             ))}
                         </div>
 
+                        <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 cursor-pointer select-none">
+                            <input type="checkbox" checked={showRemoved} onChange={e => setShowRemoved(e.target.checked)}
+                                className="rounded border-gray-300" />
+                            Show removed
+                        </label>
+
                         {/* Add Prospects Button */}
                         <button
                             onClick={() => setShowAddModal(true)}
@@ -325,6 +337,7 @@ export default function LeadListTab({ campaignId }) {
                                         <th className="text-left px-5 py-3.5 text-[11px] font-bold text-white/90 uppercase tracking-wider">Country</th>
                                         <th className="text-left px-5 py-3.5 text-[11px] font-bold text-white/90 uppercase tracking-wider">Sender</th>
                                         <th className="text-left px-5 py-3.5 text-[11px] font-bold text-white/90 uppercase tracking-wider">Status</th>
+                                        <LeadTimingHeaders className="text-left px-5 py-3.5 text-[11px] font-bold text-white/90 uppercase tracking-wider whitespace-nowrap" />
                                         <th className="text-left px-5 py-3.5 text-[11px] font-bold text-white/90 uppercase tracking-wider">Note</th>
                                         <th className="text-center px-5 py-3.5 text-[11px] font-bold text-white/90 uppercase tracking-wider w-24 sticky right-0" style={{ background: 'linear-gradient(90deg, #4ba0d8, #73C8D2)' }}>Actions</th>
                                     </tr>
@@ -430,6 +443,7 @@ export default function LeadListTab({ campaignId }) {
                                                     <td className="px-6 py-3">
                                                         <ProspectStatusBadge status={p.status} />
                                                     </td>
+                                                    <LeadTimingCells prospect={p} cellClassName="px-6 py-3" />
                                                     {/* Note — editable */}
                                                     <td className="px-6 py-3">
                                                         <div className="relative">
@@ -536,7 +550,9 @@ export default function LeadListTab({ campaignId }) {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <ProspectStatusBadge status={p.status} />
+                                                        {p.removed && <span className="ml-1.5 text-[11px] font-medium text-slate-400">Removed</span>}
                                                     </td>
+                                                    <LeadTimingCells prospect={p} />
                                                     <td className="px-6 py-4 max-w-[200px]">
                                                         {(p.notes || p.validation_note || p.note) ? (
                                                             <span
@@ -558,14 +574,14 @@ export default function LeadListTab({ campaignId }) {
                                                             >
                                                                 <Edit2 className="w-4 h-4" />
                                                             </button>
-                                                            <button
+                                                            {!p.removed && <button
                                                                 onClick={() => handleRemove(p)}
                                                                 disabled={removeMutation.isPending}
                                                                 className="p-1.5 hover:bg-red-100 text-red-600 rounded-lg transition-colors disabled:opacity-40"
                                                                 title="Remove from campaign"
                                                             >
                                                                 <UserMinus className="w-4 h-4" />
-                                                            </button>
+                                                            </button>}
                                                         </div>
                                                     </td>
                                                 </>

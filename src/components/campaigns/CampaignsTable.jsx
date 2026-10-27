@@ -2,8 +2,9 @@ import { useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Play, Pause, Trash2, Mail, ExternalLink, Loader2, Send, MailOpen, MessageSquare, AlertTriangle, TrendingUp, VolumeX, ThumbsUp, X, Check,
+    Play, Pause, Mail, ExternalLink, Loader2, Send, MailOpen, MessageSquare, AlertTriangle, TrendingUp, VolumeX, ThumbsUp, X, Check,
 } from 'lucide-react';
+import CampaignActionsMenu from './actions/CampaignActionsMenu';
 import StatusBadge from './StatusBadge';
 
 
@@ -413,13 +414,7 @@ export default function CampaignsTable({
                                                                 {campaign.status === 'ACTIVE' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                                                             </button>
                                                         )}
-                                                        <button
-                                                            onClick={e => onAction('delete', campaign, e)}
-                                                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                        <CampaignActionsMenu campaign={campaign} onAction={onAction} />
                                                         <button
                                                             onClick={() => navigate(`/app/campaigns/${campaign.campaign_id}`)}
                                                             className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors lg:hidden"

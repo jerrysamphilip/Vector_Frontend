@@ -94,17 +94,37 @@ export const campaignApi = {
         return response.data;
     },
 
-    // Get Enrolled Prospects
-    getProspects: async (id) => {
-        // TODO: Implement backend endpoint GET /campaigns/{id}/prospects
-        // For now this will likely 404, but we add it for the UI structure.
-        try {
-            const response = await api.get(`/campaigns/${id}/prospects`);
-            return response.data;
-        } catch (e) {
-            console.warn("getProspects failed (backend missing?)", e);
-            return [];
-        }
+    // Enrolled prospects with the lead-list timing columns (last_sent_at, delivered_at, bounce_reason,
+    // ooo, steps_sent, steps_total, next_email_at, stopped_reason). Contacts removed from the campaign
+    // are left out unless includeRemoved. Errors propagate so the tab can show a load error.
+    getProspects: async (id, { includeRemoved = false } = {}) => {
+        const response = await api.get(`/campaigns/${id}/prospects`, {
+            params: includeRemoved ? { include_removed: true } : {},
+        });
+        return response.data;
+    },
+
+    // Duplicate a campaign as a new DRAFT (POST /campaigns/{id}/duplicates). data: optional overrides
+    // { campaign_name, start_date, end_date, send_window_start, send_window_end, campaign_timezone,
+    //   inbox_ids, list_ids, prospect_ids, skip_source_prospects }. Returns
+    // { campaign, source_campaign_id, copied, skipped_inboxes, enrollment, persona_gaps }.
+    duplicate: async (id, data = {}) => {
+        const response = await api.post(`/campaigns/${id}/duplicates`, data);
+        return response.data;
+    },
+
+    // Rename (PUT with the row_version on screen; a stale one gets 409 STALE_VERSION)
+    rename: async (id, name, expectedVersion) => {
+        const response = await api.put(`/campaigns/${id}`, withVersion({ campaign_name: name }, expectedVersion));
+        return response.data;
+    },
+
+    // Enrolment dry run: who would be enrolled and why the others would not. Nothing is written.
+    // body: { list_ids, prospect_ids } (campaign page rules) or
+    //       { path: 'wizard', list_id, persona_types, exclude_personal_emails, cool_off_days, excluded_prospect_ids }
+    checkEnrollment: async (campaignId, body) => {
+        const response = await api.post(`/campaigns/${campaignId}/enrollments/checks`, body);
+        return response.data;
     },
 
     // --- New Methods for 6-Stage Workflow ---
