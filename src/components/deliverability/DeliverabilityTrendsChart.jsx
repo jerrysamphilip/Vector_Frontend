@@ -1,8 +1,9 @@
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import deliverabilityApi from '../../api/deliverability';
 import { AlertCircle, BarChart3 } from 'lucide-react';
+import { useApiQuery } from '../../lib/useApiQuery';
 
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -34,41 +35,30 @@ const CustomTooltip = ({ active, payload, label }) => {
     return null;
 };
 
+// SES data points -> chart rows (delivered = attempts minus bounces, complaints and rejects)
+export function formatDataPoints(stats) {
+    return (stats?.data_points || []).map(p => ({
+        ...p,
+        delivered: Math.max(
+            (p.DeliveryAttempts || 0) - (p.Bounces || 0) - (p.Complaints || 0) - (p.Rejects || 0),
+            0
+        ),
+        complaints: p.Complaints || 0,
+        rejects: p.Rejects || 0,
+        bounces: p.Bounces || 0,
+        date: new Date(p.Timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        fullDate: new Date(p.Timestamp).toLocaleString()
+    }));
+}
+
 export default function DeliverabilityTrendsChart({ domains = [] }) {
     const [selectedDomain, setSelectedDomain] = useState("ALL");
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    useEffect(() => {
-        fetchStats();
-    }, [selectedDomain]);
-
-    const fetchStats = async () => {
-        try {
-            setLoading(true);
-            const params = selectedDomain !== "ALL" ? { domain: selectedDomain } : {};
-            const stats = await deliverabilityApi.getStatistics(params);
-            const formattedData = stats.data_points.map(p => ({
-                ...p,
-                delivered: Math.max(
-                    (p.DeliveryAttempts || 0) - (p.Bounces || 0) - (p.Complaints || 0) - (p.Rejects || 0),
-                    0
-                ),
-                complaints: p.Complaints || 0,
-                rejects: p.Rejects || 0,
-                bounces: p.Bounces || 0,
-                date: new Date(p.Timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-                fullDate: new Date(p.Timestamp).toLocaleString()
-            }));
-            setData(formattedData);
-        } catch (err) {
-            console.error("Failed to fetch deliverability stats:", err);
-            setError("Failed to load chart data");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { data = [], isLoading: loading, error: loadError, refetch } = useApiQuery(
+        ['deliverability-statistics', selectedDomain],
+        async () => formatDataPoints(await deliverabilityApi.getStatistics(selectedDomain !== "ALL" ? { domain: selectedDomain } : {})),
+        { retry: false },
+    );
+    const error = loadError ? "Failed to load chart data" : null;
 
     if (loading) {
         // Premium Skeleton Loader
@@ -102,7 +92,7 @@ export default function DeliverabilityTrendsChart({ domains = [] }) {
                 </div>
                 <p className="font-medium">{error}</p>
                 <button
-                    onClick={fetchStats}
+                    onClick={() => refetch()}
                     className="mt-4 text-sm bg-white border border-red-200 px-4 py-2 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
                 >
                     Retry

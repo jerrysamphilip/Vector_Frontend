@@ -3,6 +3,7 @@ import { campaignApi, sequenceApi } from '../../../api/campaigns';
 import { campaignDraftsApi } from '../../../api/campaignDrafts';
 import { INITIAL_FORM_DATA } from './constants';
 import { trackVersion } from './useWizardMutations';
+import { useApiQuery } from '../../../lib/useApiQuery';
 
 // Draft persistence of the create-campaign wizard:
 //   - edit mode (?edit=<id>): restore the per-campaign localStorage cache instantly, then the campaign
@@ -38,6 +39,42 @@ export function setCachedDraft(cId, step, state) {
         localStorage.setItem(DRAFT_CACHE_KEY, JSON.stringify(cache));
     } catch (e) {
         console.warn('[DRAFT] localStorage cache write failed:', e);
+    }
+}
+
+/** The step to reopen from the local cache: step >= 4 needs generated templates, else step 3. */
+export function cachedStep(cached) {
+    const step = cached?.step || 1;
+    const hasValidTemplates = cached?.processingResult?.templates_generated?.length > 0;
+    return step >= 4 && !hasValidTemplates ? 3 : step;
+}
+
+/**
+ * The server side of a wizard draft (reads only):
+ *   edit mode: { campaign, sequences } (sequences only when the campaign has any; a failed sequence read is ignored)
+ *   otherwise: { draft } (draft null when there is none), with { campaign } when the draft names one that still
+ *   exists, or { stale: true } when that campaign was deleted.
+ */
+export async function fetchDraftSnapshot({ editCampaignId }) {
+    if (editCampaignId) {
+        const campaign = await campaignApi.get(editCampaignId);
+        let sequences = null;
+        if (campaign.sequence_count > 0) {
+            try {
+                sequences = await sequenceApi.list(editCampaignId);
+            } catch (e) {
+                console.warn('[DRAFT] Could not fetch sequences:', e);
+            }
+        }
+        return { campaign, sequences };
+    }
+    const draft = await campaignDraftsApi.getCurrentDraft();
+    const campaignRef = draft?.draft_data?.campaignId;
+    if (!campaignRef) return { draft: draft || null };
+    try {
+        return { draft, campaign: await campaignApi.get(campaignRef) };
+    } catch {
+        return { draft, stale: true };
     }
 }
 
@@ -78,148 +115,132 @@ export function useCampaignDraft({ editCampaignId, isFreshStart, campaignVersion
         creativeEmail,
     });
 
-    // Load existing draft on mount (skip if fresh start)
+    // The server side of the draft (W-9: read through useApiQuery, applied once below). A fresh start reads nothing.
+    const loadsSnapshot = Boolean(editCampaignId) || !isFreshStart;
+    const snapshot = useApiQuery(['campaign-wizard-draft', editCampaignId || 'current'],
+        () => fetchDraftSnapshot({ editCampaignId }),
+        { enabled: loadsSnapshot, retry: false, staleTime: 0, gcTime: 0 });
+    const appliedRef = useRef(false);
+
+    const finishLoading = () => {
+        setDraftLoaded(true);
+        setTimeout(() => { initialLoadRef.current = false; }, 1500);
+    };
+
+    // On mount: edit mode restores the per-campaign localStorage cache at once (no step 1 flash);
+    // ?fresh=true clears the server-side draft and starts clean.
     useEffect(() => {
-        const loadDraft = async () => {
-            try {
-                // ── EDIT MODE: Load existing campaign by ID ──
-                if (editCampaignId) {
-                    console.log('[DRAFT] Edit mode — loading campaign', editCampaignId);
-
-                    // 1. Instantly check localStorage for cached step (no network wait)
-                    const cached = getCachedDraft(editCampaignId);
-                    let detectedStep = cached?.step || 1;
-
-                    // Validate cached processingResult before using it
-                    const hasValidTemplates = cached?.processingResult?.templates_generated?.length > 0;
-
-                    // If step >= 4 but no valid processingResult, fall back to step 3
-                    if (detectedStep >= 4 && !hasValidTemplates) {
-                        detectedStep = 3;
-                    }
-
-                    // Restore cached state immediately (makes UI feel instant)
-                    if (cached) {
-                        if (cached.selectedLists) setSelectedLists(cached.selectedLists);
-                        if (cached.selectedProfileId) setSelectedProfileId(cached.selectedProfileId);
-                        if (cached.uploadMode) setUploadMode(cached.uploadMode);
-                        if (cached.selectedPersona) setSelectedPersona(cached.selectedPersona);
-                        if (cached.customInstruction) setCustomInstruction(cached.customInstruction);
-                        if (typeof cached.creativeEmail === 'boolean') setCreativeEmail(cached.creativeEmail);
-                        if (hasValidTemplates) setProcessingResult(cached.processingResult);
-                        // Set step immediately so user doesn't see step 1 flash
-                        setCurrentStep(detectedStep);
-                        console.log('[DRAFT] Restored cached step', detectedStep, 'from localStorage');
-                    }
-
-                    try {
-                        // 2. Fetch campaign data from API (for form fields)
-                        const campaign = await campaignApi.get(editCampaignId);
-                        setCampaignId(editCampaignId);
-                        trackVersion(campaignVersionRef, campaign);
-                        setFormData(prev => ({
-                            ...prev,
-                            campaign_name: campaign.campaign_name || '',
-                            campaign_description: campaign.campaign_description || '',
-                            sender_name: campaign.sender_name || '',
-                            sender_title: campaign.sender_title || '',
-                            cta_link: campaign.cta_link || '',
-                            inbox_ids: campaign.inbox_ids || prev.inbox_ids,
-                            send_window_start: campaign.send_window_start || prev.send_window_start,
-                            send_window_end: campaign.send_window_end || prev.send_window_end,
-                            campaign_timezone: campaign.campaign_timezone || prev.campaign_timezone,
-                            sending_mode: campaign.sending_mode || prev.sending_mode,
-                            min_gap_minutes: campaign.min_gap_minutes ?? prev.min_gap_minutes,
-                            batch_size: campaign.batch_size ?? prev.batch_size,
-                            batch_gap_minutes: campaign.batch_gap_minutes ?? prev.batch_gap_minutes,
-                            unsubscribe_mode: campaign.unsubscribe_mode || prev.unsubscribe_mode,
-                        }));
-
-                        // 3. If campaign has sequences, fetch them (user was past step 2)
-                        if (campaign.sequence_count > 0) {
-                            try {
-                                const sequences = await sequenceApi.list(editCampaignId);
-                                if (sequences?.length > 0) {
-                                    setSequenceSteps(sequences.map(s => ({
-                                        step_number: s.step_number,
-                                        wait_days: s.wait_days,
-                                        type: s.step_number === 1 ? 'Initial Email' : `Follow-up ${s.step_number - 1}`
-                                    })));
-                                    detectedStep = Math.max(detectedStep, 2);
-                                }
-                            } catch (e) {
-                                console.warn('[DRAFT] Could not fetch sequences:', e);
-                            }
-                        }
-
-                        // Also restore cached sequenceSteps if no sequences from API
-                        if (cached?.sequenceSteps && !(campaign.sequence_count > 0)) {
-                            setSequenceSteps(cached.sequenceSteps);
-                        }
-
-                        setCurrentStep(detectedStep);
-                        console.log('[DRAFT] Campaign loaded:', campaign.campaign_name, '→ step', detectedStep);
-                    } catch (err) {
-                        console.error('[DRAFT] Failed to load campaign for editing:', err);
-                        // Still use cached step if API failed
-                        setCurrentStep(detectedStep);
-                    }
-                    return;
-                }
-
-                // If fresh start, clear any existing drafts and start clean
-                if (isFreshStart) {
-                    console.log('[DRAFT] Fresh start requested — clearing old drafts');
-                    try {
-                        await campaignDraftsApi.clearAllDrafts();
-                    } catch (e) {
-                        console.warn('[DRAFT] Failed to clear old drafts:', e);
-                    }
-                    return; // Skip loading — use initial state
-                }
-
-                const draft = await campaignDraftsApi.getCurrentDraft();
-                if (draft && draft.draft_data) {
-                    const data = draft.draft_data;
-
-                    // If the draft references a campaignId, verify the campaign still exists
-                    if (data.campaignId) {
-                        try {
-                            const campaign = await campaignApi.get(data.campaignId);
-                            setCampaignId(data.campaignId);
-                            trackVersion(campaignVersionRef, campaign);
-                        } catch {
-                            // Campaign was deleted — discard stale draft and start fresh
-                            console.warn('[DRAFT] Campaign', data.campaignId, 'no longer exists — starting fresh');
-                            try { await campaignDraftsApi.clearAllDrafts(); } catch { /* ignore */ }
-                            return;
-                        }
-                    }
-
-                    // Restore wizard state
-                    if (data.formData) setFormData({ ...INITIAL_FORM_DATA, ...data.formData });
-                    if (data.selectedLists) setSelectedLists(data.selectedLists);
-                    if (data.sequenceSteps) setSequenceSteps(data.sequenceSteps);
-                    if (data.selectedProfileId) setSelectedProfileId(data.selectedProfileId);
-                    if (data.uploadMode) setUploadMode(data.uploadMode);
-                    if (data.processingResult) setProcessingResult(data.processingResult);
-                    if (data.selectedPersona) setSelectedPersona(data.selectedPersona);
-                    if (data.customInstruction) setCustomInstruction(data.customInstruction);
-                    if (typeof data.creativeEmail === 'boolean') setCreativeEmail(data.creativeEmail);
-                    setCurrentStep(draft.current_step);
-                    console.log('[DRAFT] Restored draft from', draft.updated_at);
-                }
-            } catch (error) {
-                console.error('[DRAFT] Failed to load draft:', error);
-            } finally {
-                setDraftLoaded(true);
-                setTimeout(() => { initialLoadRef.current = false; }, 1500);
+        if (editCampaignId) {
+            console.log('[DRAFT] Edit mode — loading campaign', editCampaignId);
+            const cached = getCachedDraft(editCampaignId);
+            if (cached) {
+                const hasValidTemplates = cached.processingResult?.templates_generated?.length > 0;
+                if (cached.selectedLists) setSelectedLists(cached.selectedLists);
+                if (cached.selectedProfileId) setSelectedProfileId(cached.selectedProfileId);
+                if (cached.uploadMode) setUploadMode(cached.uploadMode);
+                if (cached.selectedPersona) setSelectedPersona(cached.selectedPersona);
+                if (cached.customInstruction) setCustomInstruction(cached.customInstruction);
+                if (typeof cached.creativeEmail === 'boolean') setCreativeEmail(cached.creativeEmail);
+                if (hasValidTemplates) setProcessingResult(cached.processingResult);
+                setCurrentStep(cachedStep(cached));
+                console.log('[DRAFT] Restored cached step', cachedStep(cached), 'from localStorage');
             }
-        };
-        loadDraft();
+            return;
+        }
+        if (isFreshStart) {
+            console.log('[DRAFT] Fresh start requested — clearing old drafts');
+            campaignDraftsApi.clearAllDrafts()
+                .catch(e => console.warn('[DRAFT] Failed to clear old drafts:', e))
+                .finally(finishLoading);
+        }
         // Runs once on mount: the URL parameters and setters are fixed for the page's lifetime
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Apply the server snapshot once, when it has arrived (or failed)
+    const { data: snap, error: snapError } = snapshot;
+    useEffect(() => {
+        if (!loadsSnapshot || appliedRef.current || (!snap && !snapError)) return;
+        appliedRef.current = true;
+        try {
+            if (editCampaignId) applyEditSnapshot(snap, snapError);
+            else if (snap) applyDraftSnapshot(snap);
+            else console.error('[DRAFT] Failed to load draft:', snapError);
+        } finally {
+            finishLoading();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [snap, snapError]);
+
+    function applyEditSnapshot(data, error) {
+        const cached = getCachedDraft(editCampaignId);
+        let detectedStep = cachedStep(cached);
+        if (error || !data) {
+            console.error('[DRAFT] Failed to load campaign for editing:', error);
+            setCurrentStep(detectedStep); // still use the cached step if the API failed
+            return;
+        }
+        const { campaign, sequences } = data;
+        setCampaignId(editCampaignId);
+        trackVersion(campaignVersionRef, campaign);
+        setFormData(prev => ({
+            ...prev,
+            campaign_name: campaign.campaign_name || '',
+            campaign_description: campaign.campaign_description || '',
+            sender_name: campaign.sender_name || '',
+            sender_title: campaign.sender_title || '',
+            cta_link: campaign.cta_link || '',
+            inbox_ids: campaign.inbox_ids || prev.inbox_ids,
+            send_window_start: campaign.send_window_start || prev.send_window_start,
+            send_window_end: campaign.send_window_end || prev.send_window_end,
+            campaign_timezone: campaign.campaign_timezone || prev.campaign_timezone,
+            sending_mode: campaign.sending_mode || prev.sending_mode,
+            min_gap_minutes: campaign.min_gap_minutes ?? prev.min_gap_minutes,
+            batch_size: campaign.batch_size ?? prev.batch_size,
+            batch_gap_minutes: campaign.batch_gap_minutes ?? prev.batch_gap_minutes,
+            unsubscribe_mode: campaign.unsubscribe_mode || prev.unsubscribe_mode,
+        }));
+        // The campaign's sequence (the user was past step 2), else the cached one
+        if (sequences?.length > 0) {
+            setSequenceSteps(sequences.map(s => ({
+                step_number: s.step_number,
+                wait_days: s.wait_days,
+                type: s.step_number === 1 ? 'Initial Email' : `Follow-up ${s.step_number - 1}`
+            })));
+            detectedStep = Math.max(detectedStep, 2);
+        }
+        if (cached?.sequenceSteps && !(campaign.sequence_count > 0)) {
+            setSequenceSteps(cached.sequenceSteps);
+        }
+        setCurrentStep(detectedStep);
+        console.log('[DRAFT] Campaign loaded:', campaign.campaign_name, '→ step', detectedStep);
+    }
+
+    function applyDraftSnapshot({ draft, campaign, stale }) {
+        if (stale) {
+            // Campaign was deleted — discard stale draft and start fresh
+            console.warn('[DRAFT] Campaign', draft.draft_data.campaignId, 'no longer exists — starting fresh');
+            campaignDraftsApi.clearAllDrafts().catch(() => { /* ignore */ });
+            return;
+        }
+        if (!draft?.draft_data) return;
+        const data = draft.draft_data;
+        if (data.campaignId) {
+            setCampaignId(data.campaignId);
+            trackVersion(campaignVersionRef, campaign);
+        }
+        if (data.formData) setFormData({ ...INITIAL_FORM_DATA, ...data.formData });
+        if (data.selectedLists) setSelectedLists(data.selectedLists);
+        if (data.sequenceSteps) setSequenceSteps(data.sequenceSteps);
+        if (data.selectedProfileId) setSelectedProfileId(data.selectedProfileId);
+        if (data.uploadMode) setUploadMode(data.uploadMode);
+        if (data.processingResult) setProcessingResult(data.processingResult);
+        if (data.selectedPersona) setSelectedPersona(data.selectedPersona);
+        if (data.customInstruction) setCustomInstruction(data.customInstruction);
+        if (typeof data.creativeEmail === 'boolean') setCreativeEmail(data.creativeEmail);
+        setCurrentStep(draft.current_step);
+        console.log('[DRAFT] Restored draft from', draft.updated_at);
+    }
 
     // Debounced auto-save effect (2 seconds after last change)
     useEffect(() => {

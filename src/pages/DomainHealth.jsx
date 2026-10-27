@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Activity, AlertTriangle, RefreshCcw, CheckCircle2, XCircle, Info, Trash2, Loader2, Server, Mail, Plus, FileText,
@@ -10,6 +11,7 @@ import KpiTile from '../components/ui/KpiTile';
 import DomainDnsModal from '../components/deliverability/DomainDnsModal';
 import DialogPanel from '../components/common/DialogPanel';
 import { getStoredUser } from '../lib/authStorage';
+import { useApiQuery } from '../lib/useApiQuery';
 
 // ── GradientCard ─────────────────────────────────────────────────
 function GradientCard(props) {
@@ -219,44 +221,42 @@ function DomainHealthGhost() {
     );
 }
 
+const DOMAIN_HEALTH_KEY = ['deliverability', 'domain-health'];
+
+// neutrinotechsystem domains first, then by name
+function sortDomains(domainsData) {
+    return [...(domainsData || [])].sort((a, b) => {
+        const an = a.domain_name?.toLowerCase() || '';
+        const bn = b.domain_name?.toLowerCase() || '';
+        const aN = an.includes('neutrinotechsystem');
+        const bN = bn.includes('neutrinotechsystem');
+        if (aN && !bN) return -1;
+        if (!aN && bN) return 1;
+        return an.localeCompare(bn);
+    });
+}
+
 export default function DomainHealth() {
-    const [domains, setDomains]             = useState([]);
-    const [, setAlerts]                     = useState([]);
-    const [loading, setLoading]             = useState(true);
     const [scanning, setScanning]           = useState(null);
     const [expandedDomain, setExpandedDomain] = useState(null);
     const [domainToDelete, setDomainToDelete] = useState(null);
     const [deleting, setDeleting]           = useState(false);
     const [dnsModal, setDnsModal]           = useState(null); // null | { domain: null (add) | name }
     const canManageDomains = ['SUPER_ADMIN', 'ADMIN'].includes(getStoredUser()?.role);
+    const queryClient = useQueryClient();
 
     const toggleExpand = (name) => setExpandedDomain(expandedDomain === name ? null : name);
 
-    useEffect(() => { fetchData(); }, []);
-
-    const fetchData = async () => {
-        try {
-            const [domainsData, alertsData] = await Promise.all([
-                deliverabilityApi.getDomains(),
-                deliverabilityApi.getAlerts(),
-            ]);
-            const sorted = [...domainsData].sort((a, b) => {
-                const an = a.domain_name?.toLowerCase() || '';
-                const bn = b.domain_name?.toLowerCase() || '';
-                const aN = an.includes('neutrinotechsystem');
-                const bN = bn.includes('neutrinotechsystem');
-                if (aN && !bN) return -1;
-                if (!aN && bN) return 1;
-                return an.localeCompare(bn);
-            });
-            setDomains(sorted);
-            setAlerts(alertsData);
-        } catch (err) {
-            console.error('Failed to load domain data', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // A failed load shows the page with no domains (as before); alerts are fetched with the domains
+    const { data, isLoading: loading, refetch } = useApiQuery(DOMAIN_HEALTH_KEY, async () => {
+        const [domainsData, alertsData] = await Promise.all([
+            deliverabilityApi.getDomains(),
+            deliverabilityApi.getAlerts(),
+        ]);
+        return { domains: sortDomains(domainsData), alerts: alertsData };
+    }, { retry: false });
+    const domains = data?.domains || [];
+    const fetchData = () => refetch();
 
     const handleScan = async (domainName) => {
         try {
@@ -275,7 +275,7 @@ export default function DomainHealth() {
         try {
             setDeleting(true);
             await deliverabilityApi.deleteDomain(domainToDelete.domain_name);
-            setDomains(prev => prev.filter(d => d.domain_name !== domainToDelete.domain_name));
+            queryClient.setQueryData(DOMAIN_HEALTH_KEY, old => old && ({ ...old, domains: old.domains.filter(d => d.domain_name !== domainToDelete.domain_name) }));
             setDomainToDelete(null);
         } catch (err) {
             console.error('Delete failed:', err);

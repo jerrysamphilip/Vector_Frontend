@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { campaignApi } from '../../../api/campaigns';
 import { campaignWizardApi } from '../../../api/campaignWizard';
@@ -11,38 +11,28 @@ import { useProspectUpload } from './useProspectUpload';
 import { useTemplateEditor } from './useTemplateEditor';
 import { trackVersion, useWizardMutations } from './useWizardMutations';
 import { withVersion } from '../../../lib/staleVersion';
+import { useApiQuery } from '../../../lib/useApiQuery';
 
 // All state and actions of the create/edit campaign wizard (pages/CreateCampaign.jsx), returned as one
 // object the step components read from. Concerns live in their own hooks:
 //   useCampaignDraft (draft restore + auto-save), useProspectUpload / useListProspects (step 3),
 //   useTemplateEditor (step 4), useWizardMutations (server actions of every step).
 
-/** Backend schedule preview (timezone-aware send dates) of the sequence steps. */
-function useSchedulePreview(sequenceSteps) {
-    const [schedulePreview, setSchedulePreview] = useState([]);
-    const [scheduleLoading, setScheduleLoading] = useState(false);
+/** The part of the steps the schedule preview depends on (also its query key). */
+export function scheduleSteps(sequenceSteps) {
+    return sequenceSteps.map(s => ({ step_number: s.step_number, wait_days: s.wait_days || 0 }));
+}
 
-    // Fetch schedule preview from backend when sequence steps change
-    useEffect(() => {
-        const fetchSchedulePreview = async () => {
-            if (sequenceSteps.length === 0) return;
-
-            setScheduleLoading(true);
-            try {
-                const result = await campaignWizardApi.schedulePreview(sequenceSteps);
-                setSchedulePreview(result.schedule || []);
-            } catch (error) {
-                console.error('Failed to fetch schedule preview:', error);
-                // Fallback: keep existing preview or set empty
-            } finally {
-                setScheduleLoading(false);
-            }
-        };
-
-        fetchSchedulePreview();
-    }, [sequenceSteps]);
-
-    return { schedulePreview, scheduleLoading };
+/**
+ * Backend schedule preview (timezone-aware send dates) of the sequence steps. Refetched when the steps' timing
+ * changes; the superseded request is aborted and the previous preview stays on screen until the new one arrives.
+ */
+export function useSchedulePreview(sequenceSteps) {
+    const steps = scheduleSteps(sequenceSteps);
+    const { data, isFetching } = useApiQuery(['schedule-preview', steps], () => campaignWizardApi.schedulePreview(steps), {
+        enabled: steps.length > 0, placeholderData: keepPreviousData, retry: false, staleTime: 5 * 60 * 1000,
+    });
+    return { schedulePreview: data?.schedule || [], scheduleLoading: isFetching };
 }
 
 export function useCreateCampaignWizard() {

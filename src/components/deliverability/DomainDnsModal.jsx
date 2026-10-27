@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { X, Server, Loader2, Plus } from 'lucide-react';
 import deliverabilityApi from '../../api/deliverability';
 import DnsRecordsPanel from './DnsRecordsPanel';
 import { useDialog } from '../common/useDialog';
+import { useApiQuery } from '../../lib/useApiQuery';
 
 const LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const TLD = /^(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/;
@@ -30,22 +31,23 @@ export default function DomainDnsModal({ domainName: initialName = null, canMana
     const [domainName, setDomainName] = useState(initialName);
     const { dialogProps } = useDialog({ onClose });
     const [input, setInput] = useState('');
-    const [info, setInfo] = useState(null);       // { dns_records, dkim_tokens_available, *_status }
-    const [loading, setLoading] = useState(!!initialName);
+    const [fresh, setInfo] = useState(null);      // { dns_records, dkim_tokens_available, *_status } after add / check
     const [adding, setAdding] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
-    const [error, setError] = useState(null);
+    const [actionError, setError] = useState(null);
+
+    // The records of an existing domain (initialName); add / "Check status" replace them with their own answer
+    const initial = useApiQuery(['deliverability-dns', initialName], () => deliverabilityApi.getDnsRecords(initialName),
+        { enabled: !!initialName, retry: false, staleTime: 0, gcTime: 0 });
+    const info = fresh ?? initial.data ?? null;
+    const loading = !!initialName && initial.isLoading;
+    const error = actionError ?? (!fresh && initial.error ? detail(initial.error, 'Could not load the DNS records') : null);
 
     const load = async (name) => {
         const data = await deliverabilityApi.getDnsRecords(name);
         setInfo(data);
         return data;
     };
-
-    useEffect(() => {
-        if (!initialName) return;
-        load(initialName).catch(err => setError(detail(err, 'Could not load the DNS records'))).finally(() => setLoading(false));
-    }, [initialName]);
 
     const valid = normalizeDomain(input);
 

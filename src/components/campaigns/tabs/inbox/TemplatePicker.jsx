@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { FileText } from 'lucide-react';
 import { templatesApi } from '../../../../api/sales';
 import { stripHtml } from './inboxShared';
+import { useApiQuery } from '../../../../lib/useApiQuery';
 
 /** Pick a library template; it is filled in for this contact and dropped into the reply (BR-SF-10). */
 export default function TemplatePicker({ prospectId, onPick }) {
     const [open, setOpen] = useState(false);
-    const [items, setItems] = useState(null);
     const [q, setQ] = useState('');
     const [busy, setBusy] = useState(null);
-    useEffect(() => {
-        if (open && items === null) templatesApi.list().then(r => setItems(r.items)).catch(() => setItems([]));
-    }, [open, items]);
+    // Loaded the first time the picker opens; a failed load shows "No templates"
+    const templates = useApiQuery(['sales-templates', 'picker'], () => templatesApi.list(), { enabled: open, retry: false });
+    const items = templates.error ? [] : (templates.data ? templates.data.items || [] : null);
     const pick = async (t) => {
         setBusy(t.template_id);
         try {

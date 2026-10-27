@@ -14,6 +14,8 @@ import {
 import PageTransition from '../components/layout/PageTransition';
 import { uploadsApi } from '../api/uploads';
 import { useQueryClient } from '@tanstack/react-query';
+import { confirmOutcome } from '../components/prospects/upload/confirmResult';
+import ConfirmResultPanel from '../components/prospects/upload/ConfirmResultPanel';
 
 export default function ProspectValidate() {
     const navigate = useNavigate();
@@ -26,6 +28,8 @@ export default function ProspectValidate() {
     const [confirming, setConfirming] = useState(false);
     const [revalidating, setRevalidating] = useState(false);
     const [error, setError] = useState(null);
+    // The confirm answer when some rows were not added (shown instead of leaving the page)
+    const [confirmResult, setConfirmResult] = useState(null);
 
     // Load data from React Router navigation state (avoids sessionStorage 5 MB quota).
     // If the user refreshes, location.state is lost — redirect them back gracefully.
@@ -104,16 +108,21 @@ export default function ProspectValidate() {
 
         setConfirming(true);
         setError(null);
+        setConfirmResult(null);
 
         try {
-            await uploadsApi.confirm(data.upload_id, {
+            const result = await uploadsApi.confirm(data.upload_id, {
                 title: data.title,
                 records: records.filter(r => r.status === 'ACCEPTED'),
             });
             queryClient.invalidateQueries({ queryKey: ['prospect-lists'] });
             queryClient.invalidateQueries({ queryKey: ['prospect-stats'] });
             queryClient.invalidateQueries({ queryKey: ['campaign-lists'] });
-            navigate('/app/prospects', { replace: true });
+            // Everything saved (or this upload was already confirmed): back to the prospects. Otherwise stay
+            // and list the rows the API did not add, with the reason.
+            const outcome = confirmOutcome(result);
+            if (outcome.done) navigate('/app/prospects', { replace: true });
+            else setConfirmResult(outcome.summary);
         } catch (err) {
             setError(err.response?.data?.detail || err.message);
         } finally {
@@ -164,7 +173,7 @@ export default function ProspectValidate() {
                         </button>
                         <button
                             onClick={handleConfirm}
-                            disabled={confirming || revalidating || acceptedCount === 0}
+                            disabled={confirming || revalidating || acceptedCount === 0 || (confirmResult?.inserted ?? 0) > 0}
                             className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] btn-pulse active:ring-2 active:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center gap-2"
                         >
                             {confirming ? (
@@ -187,6 +196,10 @@ export default function ProspectValidate() {
                         <span className="text-sm font-medium text-slate-600">{rejectedCount} Needs Attention</span>
                     </div>
                 </div>
+
+                {confirmResult && (
+                    <ConfirmResultPanel summary={confirmResult} onDone={() => navigate('/app/prospects', { replace: true })} />
+                )}
 
                 {/* Error */}
                 {error && (

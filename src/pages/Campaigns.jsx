@@ -65,7 +65,7 @@ const Campaigns = () => {
     });
 
     const onMutationSettled = () => {
-        // queryClient.invalidateQueries(['campaigns']);
+        // queryClient.invalidateQueries({ queryKey: ['campaigns'] });
         queryClient.invalidateQueries({ queryKey: ['campaigns'], exact: false });
         setPerformingActionId(null);
     };

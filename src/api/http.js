@@ -123,7 +123,8 @@ function attachAuthInterceptors(client) {
                 return Promise.reject(error);
             }
 
-            if (!originalRequest || originalRequest.skipAuth || status !== 401 || originalRequest._retry) {
+            if (!originalRequest || originalRequest.skipAuth || status !== 401 || originalRequest._retry
+                || originalRequest.signal?.aborted) {
                 return Promise.reject(error);
             }
 
@@ -155,9 +156,53 @@ function attachAuthInterceptors(client) {
     );
 }
 
+// ── Request cancellation (W-9) ─────────────────────────────────────────────────────────────────────
+// A read that is no longer wanted (the query key changed, the page was left) is aborted with the AbortSignal
+// react-query hands to the query function (lib/useApiQuery.js). Callers can pass `signal` in the axios config
+// themselves; runWithSignal() also hands it to every request the API helpers (src/api/*.js) *start
+// synchronously* inside fn, so the helpers need no extra parameter. A request started after an `await`
+// inside a helper (e.g. page 2 of campaignApi.listAll) does not see it; its late answer is still dropped by
+// useApiQuery. An aborted request rejects with axios' CanceledError (isRequestCanceled), never refreshes the
+// session and is never shown as an error.
+let ambientSignal = null;
+
+/** Run fn() so that the requests it starts synchronously carry `signal` (unless they pass their own). */
+export function runWithSignal(signal, fn) {
+    const previous = ambientSignal;
+    ambientSignal = signal || null;
+    try {
+        return fn();
+    } finally {
+        ambientSignal = previous;
+    }
+}
+
+/** True for a request aborted through its AbortSignal (or axios' own cancel). Not an error to show. */
+export function isRequestCanceled(error) {
+    return axios.isCancel(error) || error?.name === 'CanceledError' || error?.name === 'AbortError' || error?.code === 'ERR_CANCELED';
+}
+
+function withAmbientSignal(config) {
+    if (!ambientSignal || (config && config.signal)) return config;
+    return { ...(config || {}), signal: ambientSignal };
+}
+
+function attachSignalSupport(client) {
+    ['get', 'delete', 'head', 'options'].forEach((method) => {
+        const original = client[method];
+        client[method] = (url, config) => original(url, withAmbientSignal(config));
+    });
+    ['post', 'put', 'patch'].forEach((method) => {
+        const original = client[method];
+        client[method] = (url, data, config) => original(url, data, withAmbientSignal(config));
+    });
+}
+
 export const apiClient = axios.create({ ...COMMON, baseURL: API_BASE });
 
 export const apiV1Client = axios.create({ ...COMMON, baseURL: API_V1_BASE });
 
 attachAuthInterceptors(apiClient);
 attachAuthInterceptors(apiV1Client);
+attachSignalSupport(apiClient);
+attachSignalSupport(apiV1Client);

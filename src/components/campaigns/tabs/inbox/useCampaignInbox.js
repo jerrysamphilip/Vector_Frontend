@@ -5,6 +5,7 @@ import { getStoredUser } from '../../../../lib/authStorage';
 import { conversationsApi, inboxesApi } from '../../../../api/inboxes';
 import { leadsApi } from '../../../../api/sales';
 import { cleanInboxBody } from './inboxShared';
+import { useApiQuery } from '../../../../lib/useApiQuery';
 
 export const POLL_INTERVAL = 30000;
 export const PAGE_SIZE = 30;
@@ -58,8 +59,9 @@ export function useCampaignInbox({ campaignId, inboxIds = [] }) {
     const [syncError, setSyncError]         = useState(null);
     const [searchQuery, setSearchQuery]     = useState('');
     const [labelFilter, setLabelFilter]     = useState('');
-    // null = checking, true = at least one IMAP inbox exists, false = none configured
-    const [imapReady, setImapReady]         = useState(null);
+    // null = checking, true = at least one IMAP inbox exists, false = none configured. The check below gives the
+    // first answer; a sync result or "Dismiss" overrides it (undefined = no override yet).
+    const [imapOverride, setImapReady]      = useState(undefined);
     const navigate = useNavigate();
     const messagesEndRef = useRef(null);
     const search = useDebounced(searchQuery.trim(), SEARCH_DEBOUNCE_MS);
@@ -77,17 +79,13 @@ export function useCampaignInbox({ campaignId, inboxIds = [] }) {
         } finally { setLeadBusy(null); }
     };
 
-    // Check if any inbox has IMAP configured
-    useEffect(() => {
-        // GET /inboxes is admin-only; other roles would just collect a 403
-        if (!['SUPER_ADMIN', 'ADMIN'].includes(getStoredUser()?.role)) { setImapReady(true); return; }
-        inboxesApi.list()
-            .then(data => {
-                const all = data.items || data || [];
-                setImapReady(all.some(i => i.imap_host));
-            })
-            .catch(() => setImapReady(true)); // don't block UI on check failure
-    }, []);
+    // Check if any inbox has IMAP configured. GET /inboxes is admin-only; other roles would just collect a 403
+    const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(getStoredUser()?.role);
+    const inboxCheck = useApiQuery(['inboxes'], () => inboxesApi.list(), { enabled: isAdmin, retry: false });
+    let checkedImap = null;
+    if (!isAdmin || inboxCheck.error) checkedImap = true; // don't block UI on check failure
+    else if (inboxCheck.data) checkedImap = (inboxCheck.data.items || inboxCheck.data || []).some(i => i.imap_host);
+    const imapReady = imapOverride !== undefined ? imapOverride : checkedImap;
 
     const listKey = conversationKeys.list(campaignId, search, labelFilter);
     const list = useInfiniteQuery({

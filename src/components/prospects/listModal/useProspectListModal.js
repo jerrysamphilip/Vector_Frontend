@@ -33,7 +33,7 @@ export function useProspectListModal(list) {
     const updateMutation = useMutation({
         mutationFn: ({ prospectId, updates }) => prospectsApi.updateProspect(prospectId, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries(['list-prospects', list.list_id]);
+            queryClient.invalidateQueries({ queryKey: ['list-prospects', list.list_id] });
             setEditingId(null);
             setEditValues({});
         },
@@ -43,7 +43,7 @@ export function useProspectListModal(list) {
     const notesMutation = useMutation({
         mutationFn: ({ prospectId, notes }) => prospectsApi.updateProspectNote(list.list_id, prospectId, notes),
         onSuccess: () => {
-            queryClient.invalidateQueries(['list-prospects', list.list_id]);
+            queryClient.invalidateQueries({ queryKey: ['list-prospects', list.list_id] });
         },
     });
 
@@ -67,9 +67,9 @@ export function useProspectListModal(list) {
     const deleteMutation = useMutation({
         mutationFn: (prospectId) => prospectsApi.deleteProspect(prospectId),
         onSuccess: () => {
-            queryClient.invalidateQueries(['list-prospects', list.list_id]);
-            queryClient.invalidateQueries(['prospect-lists']);
-            queryClient.invalidateQueries(['prospect-stats']);
+            queryClient.invalidateQueries({ queryKey: ['list-prospects', list.list_id] });
+            queryClient.invalidateQueries({ queryKey: ['prospect-lists'] });
+            queryClient.invalidateQueries({ queryKey: ['prospect-stats'] });
             setDeleteConfirmId(null);
         },
     });

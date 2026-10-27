@@ -12,6 +12,7 @@ import { tasksApi, viewsApi } from '../../api/contacts';
 import { BUILT_IN_VIEWS, contactViewHref } from '../../lib/contactViews';
 import { clearAuthSession, getStoredUser, hasPermission, setAuthSession } from '../../lib/authStorage';
 import { useDialog } from '../common/useDialog';
+import { useApiQuery } from '../../lib/useApiQuery';
 
 // Grouped navigation. permission: null = everyone; admin: admins only.
 const NAV = [
@@ -299,18 +300,18 @@ function ContactViews({ isAdmin }) {
 // ── Sidebar ────────────────────────────────────────────────
 export default function Sidebar({ drawer = null }) {
   const location = useLocation();
-  const [currentUser, setCurrentUser] = useState(() => getStoredUser());
+  const [storedUser] = useState(() => getStoredUser());
+  // A stored session from before tenant_name was kept: fetch the user once to show the workspace name
+  const { data: freshUser } = useApiQuery(['auth-me', 'sidebar'], async () => {
+    const fresh = await authApi.me();
+    if (fresh) setAuthSession({ user: fresh });
+    return fresh || null;
+  }, { enabled: Boolean(storedUser?.tenant_id && !storedUser.tenant_name), retry: false, staleTime: Infinity });
+  const currentUser = freshUser || storedUser;
   const role = currentUser?.role || '';
   const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(role);
   const { data: dueTasks } = useQuery({ queryKey: ['tasks', 'nav-due'], queryFn: () => tasksApi.list({ due: 'today', page_size: 1 }), refetchInterval: 120000 });
   const badges = { tasks: dueTasks?.total || 0 };
-
-  useEffect(() => {
-    const user = getStoredUser();
-    if (user?.tenant_id && !user.tenant_name) {
-      authApi.me().then(fresh => { if (fresh) { setAuthSession({ user: fresh }); setCurrentUser(fresh); } }).catch(() => {});
-    }
-  }, []);
 
   const groups = NAV.map(g => ({ ...g, items: g.items.filter(i => (!i.permission || hasPermission(i.permission)) && (!i.admin || isAdmin)) }))
     .filter(g => g.items.length);
