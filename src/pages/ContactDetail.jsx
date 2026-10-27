@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import LoadError from '../components/ui/LoadError';
+import { isNotFound } from '../lib/apiErrors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     ArrowLeft, Mail, Phone, Smartphone, Building2, Linkedin, MapPin, Pencil, Trash2, Loader2, StickyNote, PhoneCall, CalendarDays, Send, Inbox, Eye, MousePointerClick, AlertOctagon, MailX, Megaphone, ListPlus, Check, Globe2, History, CheckSquare, Square, AlertTriangle, ListTodo,
@@ -499,7 +501,7 @@ export default function ContactDetail() {
     const [timelineUser, setTimelineUser] = useState('');
     const [quickError, setQuickError] = useState(null);
 
-    const { data: contact, isLoading, error } = useQuery({ queryKey: ['contact', id], queryFn: () => contactsApi.get(id), retry: false });
+    const { data: contact, isLoading, error, refetch } = useQuery({ queryKey: ['contact', id], queryFn: () => contactsApi.get(id), retry: false });
     const version = useRecordVersion(contact);
     const { data: timeline, isFetching: timelineLoading } = useQuery({
         queryKey: ['contact-timeline', id, timelineFilter, timelineUser],
@@ -538,6 +540,7 @@ export default function ContactDetail() {
     });
 
     if (isLoading) return <div className="py-32 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-indigo-500" /></div>;
+    if (error && !isNotFound(error)) return <LoadError error={error} onRetry={refetch} title="Couldn't load this contact" />;
     if (error || !contact) {
         return (
             <div className="py-24 text-center">

@@ -10,6 +10,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions follow [SemVer
 Release candidate for BRD v2.0 Phase 1 (R1.0) and Phase 2 (R2.1), released together with backend 1.1.0.
 
 ### Added
+- Campaigns list paging (page size 10/20/50/100); dashboard totals and automation pickers read every
+  campaign (`campaignApi.listAll`), no longer only the first 20.
+- Load-error panel with request reference and Retry on list and detail pages (a 500 no longer looks like
+  "No contacts yet" or "not found"); bulk edit/delete in the list modal reports "X of Y" and keeps failed rows selected.
+- CSV cells guarded against spreadsheet formula injection (`src/lib/csv.js`); report date ranges use the local
+  calendar date instead of UTC (`src/lib/dates.js`).
 - CI gates (backend `docs/CI_GATES.md`): help anchors test (W-13, `src/help/helpAnchors.test.js`: every
   in-app route has a help article and every help link resolves), release identity check, blocking
   `npm audit` (high and critical) with a dated ignore list in `ci/npm_audit_ignore.txt`.

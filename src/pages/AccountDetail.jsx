@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import LoadError from '../components/ui/LoadError';
+import { isNotFound } from '../lib/apiErrors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Globe, Phone, MapPin, Users, Pencil, Trash2, Loader2, Plus, Mail, History, DollarSign } from 'lucide-react';
 import { accountsApi, contactsApi } from '../api/contacts';
@@ -19,7 +21,7 @@ export default function AccountDetail() {
     const [adding, setAdding] = useState(false);
     const { stageLabel } = useCrmMeta();
 
-    const { data: account, isLoading, error } = useQuery({ queryKey: ['account', id], queryFn: () => accountsApi.get(id), retry: false });
+    const { data: account, isLoading, error, refetch } = useQuery({ queryKey: ['account', id], queryFn: () => accountsApi.get(id), retry: false });
     const { data: owners = [] } = useQuery({ queryKey: ['contact-owners'], queryFn: contactsApi.owners });
     const { data: fields = [] } = useQuery({ queryKey: ['contact-fields'], queryFn: contactsApi.fields });
 
@@ -35,6 +37,7 @@ export default function AccountDetail() {
     });
 
     if (isLoading) return <div className="py-32 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-indigo-500" /></div>;
+    if (error && !isNotFound(error)) return <LoadError error={error} onRetry={refetch} title="Couldn't load this company" />;
     if (error || !account) {
         return (
             <div className="py-24 text-center">

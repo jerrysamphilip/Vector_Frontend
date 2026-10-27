@@ -1,3 +1,4 @@
+import { localISODate } from '../../lib/dates';
 import { useQuery } from '@tanstack/react-query';
 import { contactsApi } from '../../api/contacts';
 import { leadsApi } from '../../api/sales';
@@ -86,7 +87,7 @@ export function ClientTypeFilter({ value, onChange }) {
     );
 }
 
-const iso = (d) => d.toISOString().slice(0, 10);
+const iso = localISODate;
 export const PERIODS = {
     '30': 'Last 30 days', '90': 'Last 90 days', '365': 'Last 12 months', month: 'This month', quarter: 'This quarter',
 };

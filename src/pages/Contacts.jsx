@@ -8,6 +8,7 @@ import { contactsApi, accountsApi, viewsApi, errorMessage } from '../api/contact
 import { BUILT_IN_VIEWS } from '../lib/contactViews';
 import { withVersion } from '../lib/staleVersion';
 import { getStoredUser } from '../lib/authStorage';
+import LoadError from '../components/ui/LoadError';
 import ContactFormModal from '../components/contacts/ContactFormModal';
 import MergeDuplicatesModal from '../components/contacts/MergeDuplicatesModal';
 import CustomFieldsModal from '../components/contacts/CustomFieldsModal';
@@ -379,7 +380,7 @@ export default function Contacts() {
     }, [urlQ]);
 
     const query = { q: debouncedSearch, owner, list_id: listId, account_id: accountId, filters, grade, score_min: scoreMin, sort_by: sortBy, sort_order: sortOrder, page, page_size: PAGE_SIZE };
-    const { data, isLoading, isFetching } = useQuery({
+    const { data, isLoading, isFetching, error: loadError, refetch } = useQuery({
         queryKey: ['contacts', query], queryFn: () => contactsApi.list(query), placeholderData: keepPreviousData, enabled: mode === 'table',
     });
     const { data: facets } = useQuery({ queryKey: ['contact-facets'], queryFn: contactsApi.facets });
@@ -546,6 +547,8 @@ export default function Contacts() {
                         <Board params={{ q: debouncedSearch, owner, filters }} groupBy={groupBy} setGroupBy={setGroupBy} onOpen={id => navigate(`/app/contacts/${id}`)} />
                     ) : isLoading ? (
                         <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+                    ) : loadError && !data ? (
+                        <LoadError error={loadError} onRetry={refetch} title="Couldn't load contacts" />
                     ) : items.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
                             <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-50 to-violet-100 flex items-center justify-center mb-5"><Users className="w-9 h-9 text-indigo-400" /></div>

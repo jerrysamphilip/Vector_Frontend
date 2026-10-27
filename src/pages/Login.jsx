@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Mail, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { authApi } from "../api/auth";
 import { isAuthenticated, consumeFirstLogin, getStoredUser } from "../lib/authStorage";
@@ -234,14 +234,6 @@ const LoginPage = () => {
                 </div>
             </div>
 
-            {/* ================= BACK BUTTON ================= */}
-            <button
-                onClick={() => navigate(-1)}
-                className="absolute bottom-8 left-8 flex items-center gap-2 text-slate-400 hover:text-white transition-colors group"
-            >
-                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                <span className="text-lg font-medium">Back</span>
-            </button>
         </div>
     );
 };

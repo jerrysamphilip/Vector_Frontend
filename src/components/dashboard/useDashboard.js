@@ -55,8 +55,9 @@ export function useDashboard() {
     });
 
     const { data: campaignsData, isLoading } = useQuery({
-        queryKey: ['campaigns'],
-        queryFn: () => campaignApi.list({ page_size: 20 }),
+        // Totals and status counts need every campaign, not the first page
+        queryKey: ['campaigns', 'all'],
+        queryFn: () => campaignApi.listAll(),
     });
 
     const { data: dashboardAlerts = [] } = useQuery({

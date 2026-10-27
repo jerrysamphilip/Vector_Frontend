@@ -8,6 +8,7 @@ import { prospectsApi } from '../../../api/prospects';
 import { reportsApi } from '../../../api/reports';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import Loading from '../../common/Loading';
+import LoadError from '../../ui/LoadError';
 import DialogPanel from '../../common/DialogPanel';
 
 // Status badge colors matching theme.
@@ -59,7 +60,7 @@ export default function LeadListTab({ campaignId }) {
     const [selectedListId, setSelectedListId] = useState('');
 
     // Fetch prospects
-    const { data: prospects, isLoading } = useQuery({
+    const { data: prospects, isLoading, error: loadError, refetch } = useQuery({
         queryKey: ['campaign-prospects', campaignId],
         queryFn: () => campaignApi.getProspects(campaignId),
     });
@@ -291,6 +292,8 @@ export default function LeadListTab({ campaignId }) {
                     <div className="flex items-center justify-center py-20">
                         <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#2d6bbf', borderTopColor: 'transparent' }} />
                     </div>
+                ) : loadError && !prospects ? (
+                    <LoadError error={loadError} onRetry={refetch} title="Couldn't load prospects" compact />
                 ) : filteredProspects.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center px-6">
                         <div

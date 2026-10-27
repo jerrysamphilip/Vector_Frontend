@@ -13,7 +13,7 @@ export default function TestAutomation() {
     const fetchCampaigns = async () => {
         try {
             setStatus('Fetching campaigns...');
-            const data = await campaignApi.list();
+            const data = await campaignApi.listAll();
             console.log('[TestAutomation] Raw API response:', data);
             console.log('[TestAutomation] data.items:', data.items);
             setCampaigns(data.items || data || []);

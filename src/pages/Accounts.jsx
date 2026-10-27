@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Building2, ChevronLeft, ChevronRight, Loader2, Wand2, X } from 'lucide-react';
 import { accountsApi, errorMessage } from '../api/contacts';
 import { hasPermission } from '../lib/authStorage';
+import LoadError from '../components/ui/LoadError';
 import { withVersion } from '../lib/staleVersion';
 import {
     Avatar, Modal, Field, inputClass, ErrorNote, PrimaryButton, SecondaryButton, relativeDate, BRAND_GRADIENT,
@@ -92,7 +93,7 @@ export default function Accounts() {
     }, [search]);
 
     const filters = { q, owner, sort_by: sort.by, sort_order: sort.order, page, page_size: PAGE_SIZE };
-    const { data, isLoading, isFetching } = useQuery({
+    const { data, isLoading, isFetching, error: loadError, refetch } = useQuery({
         queryKey: ['accounts', filters], queryFn: () => accountsApi.list(filters), placeholderData: keepPreviousData,
     });
 
@@ -167,6 +168,8 @@ export default function Accounts() {
 
                 {isLoading ? (
                     <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+                ) : loadError && !data ? (
+                    <LoadError error={loadError} onRetry={refetch} title="Couldn't load companies" />
                 ) : items.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
                         <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-50 to-violet-100 flex items-center justify-center mb-5">

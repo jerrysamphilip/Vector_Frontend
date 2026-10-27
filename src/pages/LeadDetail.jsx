@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import LoadError from '../components/ui/LoadError';
+import { isNotFound } from '../lib/apiErrors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, Loader2, Rocket, Ban, History, Trash2 } from 'lucide-react';
 import { errorMessage } from '../api/contacts';
@@ -64,7 +66,7 @@ export function LeadPanel({ id, embedded = false, onRemoved }) {
     const queryClient = useQueryClient();
     const meta = useLeadsMeta();
     const owners = useTeamOwners();
-    const { data: lead, isLoading, error: loadError } = useQuery({ queryKey: ['lead', id], queryFn: () => leadsApi.get(id), retry: false });
+    const { data: lead, isLoading, error: loadError, refetch } = useQuery({ queryKey: ['lead', id], queryFn: () => leadsApi.get(id), retry: false });
     const version = useRecordVersion(lead);
     const [error, setError] = useState(null);
     const [next, setNext] = useState({ next_step: '', next_step_at: '' });
@@ -89,6 +91,7 @@ export function LeadPanel({ id, embedded = false, onRemoved }) {
     const remove = useMutation({ mutationFn: () => leadsApi.remove(id), onSuccess: () => { refresh(); if (onRemoved) onRemoved(); else navigate('/app/leads'); }, onError: err => setError(errorMessage(err)) });
 
     if (isLoading) return <div className="py-32 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-indigo-500" /></div>;
+    if (loadError && !isNotFound(loadError)) return <LoadError error={loadError} onRetry={refetch} title="Couldn't load this lead" />;
     if (loadError || !lead) return <div className="py-24 text-center"><p className="text-lg font-bold text-slate-800">Lead not found</p><Link to="/app/leads" className="inline-block mt-4 text-sm font-semibold text-indigo-600">← Back to leads</Link></div>;
 
     const open = ['NEW', 'CONTACTED', 'ENGAGED', 'SQL'].includes(lead.stage);

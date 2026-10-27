@@ -1,12 +1,32 @@
 import { apiClient as api } from './http';
 import { withVersion } from '../lib/staleVersion';
 
+export const LIST_ALL_PAGE_SIZE = 100; // the API's maximum page_size
+export const LIST_ALL_MAX_PAGES = 50;
+
 // Campaign API
 export const campaignApi = {
     // List campaigns with filters
     list: async (params = {}) => {
         const response = await api.get('/campaigns', { params });
         return response.data;
+    },
+
+    // Every campaign matching the filters: GET /campaigns caps page_size at 100, so walk the pages
+    // (hard cap LIST_ALL_MAX_PAGES pages). Returns the list response shape with all items and the API's total.
+    listAll: async (params = {}) => {
+        const items = [];
+        let total = 0;
+        for (let page = 1; page <= LIST_ALL_MAX_PAGES; page += 1) {
+            const response = await api.get('/campaigns', { params: { ...params, page, page_size: LIST_ALL_PAGE_SIZE } });
+            const data = response.data || {};
+            const pageItems = data.items || [];
+            items.push(...pageItems);
+            total = data.total ?? items.length;
+            const totalPages = data.total_pages ?? Math.ceil(total / LIST_ALL_PAGE_SIZE);
+            if (pageItems.length < LIST_ALL_PAGE_SIZE || page >= totalPages || items.length >= total) break;
+        }
+        return { items, total, page: 1, page_size: items.length, total_pages: 1 };
     },
 
     // Get single campaign

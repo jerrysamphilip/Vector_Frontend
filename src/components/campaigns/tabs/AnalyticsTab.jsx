@@ -247,9 +247,6 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
                             <span className="w-2 h-2 rounded-full bg-green-500"></span>
                             Total Sent Today / Limit
                         </h3>
-                        <button className="text-xs bg-white border border-green-200 text-green-700 px-3 py-1 rounded-full font-medium shadow-sm">
-                            View Plan
-                        </button>
                     </div>
                     <div>
                         <span className="text-4xl font-bold text-slate-800">55</span>

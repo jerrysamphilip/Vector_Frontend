@@ -7,6 +7,8 @@ import { campaignApi } from '../api/campaigns';
 import { isStaleVersion } from '../lib/staleVersion';
 import StatusBadge from '../components/campaigns/StatusBadge';
 import Loading from '../components/common/Loading';
+import LoadError from '../components/ui/LoadError';
+import { errorMessage, isNotFound } from '../lib/apiErrors';
 import PageTransition, { containerVariants, itemVariants } from '../components/layout/PageTransition';
 
 // Tab Components
@@ -27,7 +29,7 @@ export default function CampaignDetails() {
 
     // Queries
     // Fetch all in parallel for speed
-    const { data: campaign, isLoading: campaignLoading } = useQuery({
+    const { data: campaign, isLoading: campaignLoading, error: campaignError, refetch: refetchCampaign } = useQuery({
         queryKey: ['campaign', id],
         queryFn: () => campaignApi.get(id),
         staleTime: 60000,
@@ -55,6 +57,8 @@ export default function CampaignDetails() {
     // Send Now Mutation: the server sends a capped batch per request, so keep
     // calling until nothing is left, showing progress on the button.
     const [sendProgress, setSendProgress] = useState('');
+    // In-page result / error banner for Send now, pause and resume (was window.alert)
+    const [banner, setBanner] = useState(null); // { tone: 'success' | 'error', text }
     const sendNowMutation = useMutation({
         mutationFn: async (id) => {
             const totals = { sent: 0, failed: 0, skipped: 0 };
@@ -72,14 +76,17 @@ export default function CampaignDetails() {
         },
         onSettled: () => setSendProgress(''),
         onSuccess: (data) => {
-            alert(`✅ Success!\n\nSent: ${data.sent}\nFailed: ${data.failed}${data.skipped ? `\nSkipped: ${data.skipped}` : ''}\n\nCheck 'Schedule' tab for updates.`);
-            queryClient.invalidateQueries(['campaign', id]);
-            queryClient.invalidateQueries(['campaign-analytics', id]);
+            setBanner({
+                tone: data.failed ? 'error' : 'success',
+                text: `Send now finished: ${data.sent} sent, ${data.failed} failed${data.skipped ? `, ${data.skipped} skipped` : ''}. Check the Schedule tab for updates.`,
+            });
+            queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+            queryClient.invalidateQueries({ queryKey: ['campaign-analytics', id] });
             // Force refresh schedule
             refetchSchedule();
         },
         onError: (error) => {
-            alert(`❌ Error sending emails: ${error.response?.data?.detail || error.message}`);
+            setBanner({ tone: 'error', text: `Error sending emails: ${errorMessage(error)}` });
         }
     });
 
@@ -88,24 +95,26 @@ export default function CampaignDetails() {
         // T-3: the version on screen; a campaign changed meanwhile gets 409 (StaleVersionBanner)
         mutationFn: (id) => campaignApi.pause(id, null, campaign?.row_version),
         onSuccess: () => {
-            queryClient.invalidateQueries(['campaign', id]);
+            setBanner(null);
+            queryClient.invalidateQueries({ queryKey: ['campaign', id] });
             queryClient.invalidateQueries({ queryKey: ['campaigns'], exact: false });
         },
         onError: (error) => {
             if (isStaleVersion(error)) return;
-            alert(`❌ Error pausing campaign: ${error.response?.data?.detail || error.message}`);
+            setBanner({ tone: 'error', text: `Error pausing campaign: ${errorMessage(error)}` });
         }
     });
 
     const resumeMutation = useMutation({
         mutationFn: (id) => campaignApi.resume(id, campaign?.row_version),
         onSuccess: () => {
-            queryClient.invalidateQueries(['campaign', id]);
+            setBanner(null);
+            queryClient.invalidateQueries({ queryKey: ['campaign', id] });
             queryClient.invalidateQueries({ queryKey: ['campaigns'], exact: false });
         },
         onError: (error) => {
             if (isStaleVersion(error)) return;
-            alert(`❌ Error resuming campaign: ${error.response?.data?.detail || error.message}`);
+            setBanner({ tone: 'error', text: `Error resuming campaign: ${errorMessage(error)}` });
         }
     });
 
@@ -141,6 +150,9 @@ export default function CampaignDetails() {
 
     // Show fullscreen loading until basic campaign data is fetched
     if (isInitialLoading) return <Loading text="Loading campaign..." size="lg" fullScreen />;
+    if (campaignError && !campaign && !isNotFound(campaignError)) {
+        return <LoadError error={campaignError} onRetry={refetchCampaign} title="Couldn't load this campaign" />;
+    }
     if (!campaign) return <div className="p-10 text-center text-slate-500">Campaign not found</div>;
 
     // Dynamic prospect count for tab label
@@ -267,6 +279,13 @@ export default function CampaignDetails() {
                         </nav>
                     </div>
                 </motion.header>
+
+                {banner && (
+                    <div role={banner.tone === 'error' ? 'alert' : 'status'} className={`mt-4 flex items-start justify-between gap-3 rounded-lg border px-4 py-2.5 text-sm ${banner.tone === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                        <span>{banner.text}</span>
+                        <button onClick={() => setBanner(null)} aria-label="Dismiss" className="opacity-70 hover:opacity-100">x</button>
+                    </div>
+                )}
 
                 {campaign.status === 'PAUSED' && campaign.paused_reason && (
                     <div className={`mt-4 px-4 py-3 rounded-xl border text-sm ${campaign.auto_paused ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>

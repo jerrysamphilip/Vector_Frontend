@@ -9,6 +9,8 @@ import Loading from '../components/common/Loading';
 import PageTransition, { containerVariants, itemVariants } from '../components/layout/PageTransition';
 import CampaignsTable from '../components/campaigns/CampaignsTable';
 import { Button } from '../components/ui/Button';
+import Pagination from '../components/ui/Pagination';
+import LoadError from '../components/ui/LoadError';
 import { ColumnPicker } from '../components/campaigns/CampaignsTable';
 import { loadVisibleCols, LS_KEY } from '../components/campaigns/campaignColumns';
 import BulkActionBar from '../components/campaigns/BulkActionBar';
@@ -26,6 +28,8 @@ const Campaigns = () => {
     const [visibleCols, setVisibleCols] = useState(loadVisibleCols);
     const [pickerOpen, setPickerOpen] = useState(false);
     const [actionError, setActionError] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
     const showErr = (err) => { setPerformingActionId(null); setActionError(err?.response?.data?.detail || err?.message || 'Action failed'); };
 
     // Debounce: update debouncedSearch 300ms after user stops typing
@@ -33,6 +37,7 @@ const Campaigns = () => {
         clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             setDebouncedSearch(searchTerm);
+            setPage(1); // a new search starts on page 1
         }, 300);
         return () => clearTimeout(debounceRef.current);
     }, [searchTerm]);
@@ -42,10 +47,13 @@ const Campaigns = () => {
         try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch (_) { /* storage unavailable */ }
     }
 
-    const { data, isLoading, error } = useQuery({
-        queryKey: ['campaigns', debouncedSearch],
+    const listKey = ['campaigns', debouncedSearch, page, pageSize];
+    const { data, isLoading, error, refetch } = useQuery({
+        queryKey: listKey,
         queryFn: () => campaignApi.list({
             campaign_name: debouncedSearch || undefined,
+            page,
+            page_size: pageSize,
         }),
         staleTime: 0,
         refetchOnMount: 'always',
@@ -95,9 +103,9 @@ const Campaigns = () => {
         onMutate: async (id) => {
             await queryClient.cancelQueries({ queryKey: ['campaigns'] });
 
-            const previousData = queryClient.getQueryData(['campaigns', searchTerm]);
+            const previousData = queryClient.getQueryData(listKey);
 
-            queryClient.setQueryData(['campaigns', debouncedSearch], old => {
+            queryClient.setQueryData(listKey, old => {
                 if (!old) return old;
                 return {
                     ...old,
@@ -110,7 +118,7 @@ const Campaigns = () => {
 
         onError: (err, id, context) => {
             showErr(err);
-            queryClient.setQueryData(['campaigns', debouncedSearch], context.previousData);
+            if (context) queryClient.setQueryData(listKey, context.previousData);
         },
 
         onSettled: () => {
@@ -120,6 +128,13 @@ const Campaigns = () => {
     });
 
     const campaigns = data?.items || [];
+    const total = data?.total ?? 0;
+
+    // Deleting the last row of the last page: step back to the page that still exists
+    useEffect(() => {
+        const lastPage = Math.max(1, data?.total_pages || Math.ceil(total / pageSize) || 1);
+        if (data && page > lastPage) setPage(lastPage);
+    }, [data, total, page, pageSize]);
 
 
     const handleAction = (action, campaign, e) => {
@@ -184,7 +199,7 @@ const Campaigns = () => {
 
     // Only show full-screen loader on the very first load (no data yet)
     if (isLoading && !data) return <Loading text="Loading campaigns..." size="lg" fullScreen/>;
-    if (error) return <div className="p-10 text-center text-red-500">Failed to load: {error.message}</div>;
+    if (error && !data) return <LoadError error={error} onRetry={refetch} title="Couldn't load campaigns" />;
 
     return (
         <PageTransition>
@@ -270,7 +285,15 @@ const Campaigns = () => {
                             else setSelectedIds(campaigns.map(c => c.campaign_id));
                         }}
                     />
-
+                    {total > 0 && (
+                        <Pagination
+                            page={page}
+                            pageSize={pageSize}
+                            total={total}
+                            onPageChange={(p) => { setPage(p); setSelectedIds([]); }}
+                            onPageSizeChange={(size) => { setPageSize(size); setPage(1); setSelectedIds([]); }}
+                        />
+                    )}
                 </motion.div>
 
                 <BulkActionBar

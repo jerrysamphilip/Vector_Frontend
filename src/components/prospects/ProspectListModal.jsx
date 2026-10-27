@@ -90,8 +90,8 @@ export default function ProspectListModal({ list, onClose }) {
                         onCancel={() => setShowAddToList(false)} />
                 )}
                 {listNotice && (
-                    <div className="px-6 py-2 border-b border-emerald-100 bg-emerald-50 text-xs text-emerald-800 flex items-center justify-between">
-                        {listNotice}<button onClick={() => setListNotice(null)} aria-label="Dismiss"><X className="w-3.5 h-3.5" /></button>
+                    <div role={listNotice.tone === 'error' ? 'alert' : 'status'} className={`px-6 py-2 border-b text-xs flex items-center justify-between ${listNotice.tone === 'error' ? 'border-red-100 bg-red-50 text-red-700' : 'border-emerald-100 bg-emerald-50 text-emerald-800'}`}>
+                        {typeof listNotice === 'string' ? listNotice : listNotice.text}<button onClick={() => setListNotice(null)} aria-label="Dismiss"><X className="w-3.5 h-3.5" /></button>
                     </div>
                 )}
 

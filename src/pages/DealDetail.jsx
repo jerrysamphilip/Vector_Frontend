@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import LoadError from '../components/ui/LoadError';
+import { isNotFound } from '../lib/apiErrors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, FileText, Plus, Trash2, AlertTriangle, Megaphone, ListOrdered } from 'lucide-react';
 import { errorMessage } from '../api/contacts';
@@ -75,7 +77,7 @@ export default function DealDetail() {
     const canSee = meta?.can_see_amounts !== false;
     const [closing, setClosing] = useState(null);
     const { data: stages = [] } = useQuery({ queryKey: ['sales-stages'], queryFn: () => stagesApi.list() });
-    const { data: deal, isLoading, error: loadError } = useQuery({ queryKey: ['deal', id], queryFn: () => dealsApi.get(id), retry: false });
+    const { data: deal, isLoading, error: loadError, refetch } = useQuery({ queryKey: ['deal', id], queryFn: () => dealsApi.get(id), retry: false });
     const version = useRecordVersion(deal);
     const [form, setForm] = useState(null);
     const [error, setError] = useState(null);
@@ -94,6 +96,7 @@ export default function DealDetail() {
     const remove = useMutation({ mutationFn: () => dealsApi.remove(id), onSuccess: () => { refresh(); navigate('/app/deals'); }, onError: e => setError(errorMessage(e)) });
 
     if (isLoading || (deal && !form)) return <div className="py-32 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-indigo-500" /></div>;
+    if (loadError && !isNotFound(loadError)) return <LoadError error={loadError} onRetry={refetch} title="Couldn't load this opportunity" />;
     if (loadError || !deal) return <div className="py-24 text-center"><p className="text-lg font-bold text-slate-800">Opportunity not found</p><Link to="/app/deals" className="inline-block mt-4 text-sm font-semibold text-indigo-600">← Back to opportunities</Link></div>;
 
     const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));

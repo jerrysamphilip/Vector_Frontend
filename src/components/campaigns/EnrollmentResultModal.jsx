@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { CheckCircle2, AlertTriangle, Download, X } from 'lucide-react';
 import { useDialog } from '../common/useDialog';
+import { downloadCsv } from '../../lib/csv';
 
 /**
  * Result of enrolling contacts into a campaign: how many were enrolled and, for every
@@ -16,14 +17,8 @@ export default function EnrollmentResultModal({ title = 'Enrollment result', enr
         return Object.entries(groups).sort((a, b) => b[1] - a[1]);
     }, [rejected]);
 
-    const downloadCsv = () => {
-        const escape = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-        const rows = [['Name', 'Email', 'Reason'], ...rejected.map(r => [r.name, r.email, r.reason])];
-        const blob = new Blob([rows.map(r => r.map(escape).join(',')).join('\n')], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = Object.assign(document.createElement('a'), { href: url, download: 'not-enrolled.csv' });
-        a.click();
-        URL.revokeObjectURL(url);
+    const downloadRejected = () => {
+        downloadCsv('not-enrolled.csv', [['Name', 'Email', 'Reason'], ...rejected.map(r => [r.name, r.email, r.reason])]);
     };
 
     return (
@@ -80,7 +75,7 @@ export default function EnrollmentResultModal({ title = 'Enrollment result', enr
                 </div>
                 <div className="px-6 pb-6 pt-2 flex gap-2.5">
                     {rejected.length > 0 && (
-                        <button onClick={downloadCsv} className="h-10 px-4 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-2">
+                        <button onClick={downloadRejected} className="h-10 px-4 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-2">
                             <Download className="w-4 h-4" /> Download list
                         </button>
                     )}

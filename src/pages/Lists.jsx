@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Search, ListChecks, Zap, Pencil, Trash2, Loader2, Users } from 'lucide-react';
 import { listsApi, errorMessage } from '../api/contacts';
 import { hasPermission } from '../lib/authStorage';
+import LoadError from '../components/ui/LoadError';
 import FilterBuilder, { filterCount } from '../components/contacts/FilterBuilder';
 import {
     BRAND_GRADIENT, ErrorNote, Field, inputClass, Modal, PrimaryButton, SecondaryButton, relativeDate,
@@ -93,7 +94,7 @@ export default function Lists() {
     const [editing, setEditing] = useState(null); // null | 'new' | list
     const [error, setError] = useState(null);
 
-    const { data, isLoading } = useQuery({ queryKey: ['lists', type], queryFn: () => listsApi.list(type ? { list_type: type } : {}) });
+    const { data, isLoading, error: loadError, refetch } = useQuery({ queryKey: ['lists', type], queryFn: () => listsApi.list(type ? { list_type: type } : {}) });
     const refresh = () => {
         queryClient.invalidateQueries({ queryKey: ['lists'] });
         queryClient.invalidateQueries({ queryKey: ['contact-facets'] });
@@ -137,6 +138,8 @@ export default function Lists() {
 
                 {isLoading ? (
                     <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+                ) : loadError && !data ? (
+                    <LoadError error={loadError} onRetry={refetch} title="Couldn't load lists" />
                 ) : items.length === 0 ? (
                     <div className="py-20 text-center px-6">
                         <ListChecks className="w-10 h-10 text-slate-300 mx-auto mb-3" />

@@ -1,3 +1,4 @@
+import { localISODate } from '../lib/dates';
 import { apiClient as api } from './http';
 
 export const reportsApi = {
@@ -61,7 +62,7 @@ export const reportsApi = {
             params,
             responseType: 'blob',
         });
-        const today = new Date().toISOString().split('T')[0];
+        const today = localISODate();
         downloadBlob(response.data, `analytics_report_${today}.docx`);
     },
 };

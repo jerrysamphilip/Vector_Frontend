@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { prospectsApi } from '../../../api/prospects';
 import { withVersion } from '../../../lib/staleVersion';
+import { errorMessage } from '../../../lib/apiErrors';
 
 // State and actions of the prospect list dialog (ProspectListModal): paged / searchable prospects of
 // one list, inline edit and per-list note, revalidation, selection with bulk edit / delete / add to list.
@@ -73,25 +74,43 @@ export function useProspectListModal(list) {
         },
     });
 
+    // Bulk results are per-prospect requests: say how many went through and keep the failed ones selected
+    const bulkOutcome = (verb, done, res) => {
+        const total = done + (res.failed || 0);
+        if (!res.failed) return `${done} prospect${done === 1 ? '' : 's'} ${verb}.`;
+        const why = res.first_error ? ` First error: ${errorMessage(res.first_error)}` : '';
+        return { tone: 'error', text: `${done} of ${total} ${verb}; ${res.failed} failed (still selected).${why}` };
+    };
+
     // Bulk delete mutation
     const bulkDeleteMutation = useMutation({
         mutationFn: (ids) => prospectsApi.bulkDeleteProspects(ids),
-        onSuccess: () => {
-            queryClient.invalidateQueries(['list-prospects', list.list_id]);
-            queryClient.invalidateQueries(['prospect-lists']);
-            queryClient.invalidateQueries(['prospect-stats']);
-            setSelectedIds([]);
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ['list-prospects', list.list_id] });
+            queryClient.invalidateQueries({ queryKey: ['prospect-lists'] });
+            queryClient.invalidateQueries({ queryKey: ['prospect-stats'] });
+            setSelectedIds(res?.failed_ids || []);
             setShowBulkDeleteConfirm(false);
+            setListNotice(bulkOutcome('deleted', res?.deleted ?? 0, res || {}));
+        },
+        onError: (err) => {
+            setShowBulkDeleteConfirm(false);
+            setListNotice({ tone: 'error', text: `Delete failed: ${errorMessage(err)}` });
         },
     });
 
     // Bulk update mutation
     const bulkUpdateMutation = useMutation({
         mutationFn: ({ ids, updates }) => prospectsApi.bulkUpdateProspects(ids, updates),
-        onSuccess: () => {
-            queryClient.invalidateQueries(['list-prospects', list.list_id]);
-            setSelectedIds([]);
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ['list-prospects', list.list_id] });
+            setSelectedIds(res?.failed_ids || []);
             setShowBulkEdit(false);
+            setListNotice(bulkOutcome('updated', res?.updated ?? 0, res || {}));
+        },
+        onError: (err) => {
+            setShowBulkEdit(false);
+            setListNotice({ tone: 'error', text: `Update failed: ${errorMessage(err)}` });
         },
     });
 

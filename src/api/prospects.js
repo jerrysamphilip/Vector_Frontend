@@ -68,8 +68,9 @@ export const prospectsApi = {
         const results = await Promise.allSettled(
             prospectIds.map(id => api.delete(`/prospects/${id}`))
         );
-        const failed = results.filter(r => r.status === 'rejected').length;
-        return { deleted: prospectIds.length - failed, failed };
+        const failedIds = prospectIds.filter((_, i) => results[i].status === 'rejected');
+        const firstError = results.find(r => r.status === 'rejected')?.reason;
+        return { deleted: prospectIds.length - failedIds.length, failed: failedIds.length, failed_ids: failedIds, first_error: firstError };
     },
 
     // Bulk update prospects (calls individual patch for each)
@@ -77,7 +78,8 @@ export const prospectsApi = {
         const results = await Promise.allSettled(
             prospectIds.map(id => api.patch(`/prospects/${id}`, updates))
         );
-        const failed = results.filter(r => r.status === 'rejected').length;
-        return { updated: prospectIds.length - failed, failed };
+        const failedIds = prospectIds.filter((_, i) => results[i].status === 'rejected');
+        const firstError = results.find(r => r.status === 'rejected')?.reason;
+        return { updated: prospectIds.length - failedIds.length, failed: failedIds.length, failed_ids: failedIds, first_error: firstError };
     },
 };

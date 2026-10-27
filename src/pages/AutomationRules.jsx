@@ -62,7 +62,7 @@ export default function AutomationRules() {
 
     const fetchCampaigns = async () => {
         try {
-            const data = await campaignApi.list();
+            const data = await campaignApi.listAll();
             setCampaigns(data.items || []);
         } catch (error) {
             console.error('Error fetching campaigns:', error);
