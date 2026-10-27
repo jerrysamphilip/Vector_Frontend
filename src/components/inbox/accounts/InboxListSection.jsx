@@ -9,10 +9,14 @@ export default function InboxListSection({ accounts }) {
     const {
         connectMs365, error, filterKey, filteredInboxes, isLoading, openConnectionWizard, searchTerm,
         selectedInboxId, setDetailTab, setFilterKey, setInboxToDelete, setSearchTerm, setSelectedInboxId,
-        updateMutation
+        updateMutation, resumeMutation, formError,
     } = accounts;
     return (
         <div className="space-y-4">
+
+            {formError && resumeMutation?.isError && (
+                <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">{formError}</p>
+            )}
 
             {/* Search + filter bar */}
             <div className="flex flex-wrap items-center gap-3">
@@ -88,6 +92,8 @@ export default function InboxListSection({ accounts }) {
                                     })}
                                     isUpdating={updateMutation.isPending}
                                     onConnectMs365={connectMs365}
+                                    onResume={resumeMutation ? (i => resumeMutation.mutate(i.inbox_id)) : undefined}
+                                    isResuming={Boolean(resumeMutation?.isPending && resumeMutation?.variables === inbox.inbox_id)}
                                 />
                             ))}
                         </AnimatePresence>

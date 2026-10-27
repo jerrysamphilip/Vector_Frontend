@@ -1,7 +1,9 @@
-import { Check, CheckCheck, Clock, Target, User } from 'lucide-react';
+import { Target, User } from 'lucide-react';
 import { Avatar } from './inboxShared';
+import { ActivityTimeline, DeliveryTick, ReplyLabelBadge } from './inboxBadges';
 
-// One message of the thread: bubble, time, delivery state (outbound) or "Create lead" (replies).
+// One message of the thread: bubble, time, campaign, delivery tick and activity timeline (outbound),
+// reply label and "Create lead" (replies).
 export default function MessageBubble({ m, inbox }) {
     const {
         activeConversation, createLead, leadBusy
@@ -42,14 +44,14 @@ export default function MessageBubble({ m, inbox }) {
                             {new Date(m.display_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                     )}
-                    {isOut && (
-                        m.status === 'QUEUED' ? (
-                            <Clock className="w-3 h-3" style={{ color: '#9ca3af' }} title="Queued to send" />
-                        ) : m.delivered_at ? (
-                            <CheckCheck className="w-3 h-3" style={{ color: '#059669' }} title={`Delivered ${new Date(m.delivered_at).toLocaleString()}`} />
-                        ) : (
-                            <Check className="w-3 h-3" style={{ color: '#2d6bbf' }} title="Sent — delivery not yet confirmed" />
-                        )
+                    {isOut && <DeliveryTick message={m} />}
+                    {isOut && m.campaign_name && (
+                        <span className="text-[10px] text-gray-400 truncate max-w-[160px]" title={`Campaign: ${m.campaign_name}`}>
+                            · {m.campaign_name}
+                        </span>
+                    )}
+                    {!isOut && !isBounce && (m.reply_label || m.reply_needs_review) && (
+                        <ReplyLabelBadge label={m.reply_label} needsReview={m.reply_needs_review} className="ml-1" />
                     )}
                     {!isOut && !isBounce && m.message_id && (
                         <button type="button" onClick={() => createLead(m.message_id)} disabled={leadBusy === m.message_id}
@@ -59,6 +61,7 @@ export default function MessageBubble({ m, inbox }) {
                         </button>
                     )}
                 </div>
+                {isOut && <ActivityTimeline activity={m.activity} />}
             </div>
             {isOut && (
                 <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"

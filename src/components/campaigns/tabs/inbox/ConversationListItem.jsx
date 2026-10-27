@@ -1,6 +1,8 @@
 import { Avatar, fmtDate, getConvType, CONV_TYPE_META } from './inboxShared';
+import { DeliveryTick, ReplyLabelBadge } from './inboxBadges';
 
-// One conversation in the list: contact, type (reply / sent / bounce), subject, snippet, unread dot.
+// One conversation in the list: contact, type (reply / sent / bounce), reply label, delivery tick of the
+// last sent email, campaign, subject, snippet, unread dot.
 export default function ConversationListItem({ c, inbox }) {
     const {
         selectedId, setSelectedId
@@ -41,11 +43,20 @@ export default function ConversationListItem({ c, inbox }) {
                         </span>
                     </div>
                     <p className="text-[11px] text-gray-500 truncate">{c.subject}</p>
+                    {c.campaign_name && (
+                        <p className="text-[10px] text-gray-400 truncate" title={`Campaign: ${c.campaign_name}`}>{c.campaign_name}</p>
+                    )}
                     <div className="flex items-center gap-1 mt-0.5">
                         <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
                             style={{ background: meta.bg, color: meta.color }}>
                             {meta.label}
                         </span>
+                        {(c.last_reply_label || c.needs_review) && (
+                            <ReplyLabelBadge label={c.last_reply_label} needsReview={c.needs_review} />
+                        )}
+                        {convType === 'sent' && (
+                            <DeliveryTick message={{ status: c.last_message_status, final_status: c.last_message_final_status }} />
+                        )}
                         {c.last_message_snippet && (
                             <p className="text-[11px] text-gray-400 truncate italic flex-1">
                                 {c.last_message_snippet}

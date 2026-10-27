@@ -3,12 +3,37 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2, Mail, Settings2, X } from 'lucide-react';
 import DialogPanel from '../common/DialogPanel';
 
-const LABELS = {
+export const LABELS = {
     DOMAIN_REPUTATION: 'Domain Reputation Alerts',
     INBOX_PAUSED: 'Inbox Paused Alerts',
     INBOX_SYNC_STALE: 'Inbox Sync Stale Alerts',
     CAMPAIGN_PAUSED: 'Campaign Paused Alerts',
+    // Sending pipeline (S-11)
+    NO_ACTIVE_MAILBOX: 'Campaign Has No Active Mailbox',
+    INBOX_LIMIT_REACHED: 'Mailbox Daily Limit Reached',
+    SEND_FAILURE_RATE: 'High Send Failure Rate',
+    DELIVERY_EVENTS_MISSING: 'Delivery Reports Missing',
+    SES_UNAVAILABLE: 'Email Provider (SES) Unavailable',
+    STUCK_SENDING: 'Emails Stuck While Sending',
 };
+
+export const DESCRIPTIONS = {
+    NO_ACTIVE_MAILBOX: 'An active campaign has emails waiting but none of its mailboxes can send.',
+    INBOX_LIMIT_REACHED: 'A mailbox used today\'s capacity while emails are still queued on it.',
+    SEND_FAILURE_RATE: 'Warning at 5 % failed sends in 24 hours, critical at 25 %.',
+    DELIVERY_EVENTS_MISSING: 'Many recent emails have no delivery report from Amazon SES yet.',
+    SES_UNAVAILABLE: 'Amazon SES is refusing or not answering; sending pauses and retries.',
+    STUCK_SENDING: 'Emails have been in "sending" for more than 30 minutes.',
+};
+
+function AlertName({ type }) {
+    return (
+        <>
+            {LABELS[type] || type}
+            {DESCRIPTIONS[type] && <span className="block text-[10px] font-normal text-gray-400">{DESCRIPTIONS[type]}</span>}
+        </>
+    );
+}
 
 function toKey(pref) {
     return `${pref.scope_type}:${pref.scope_id || ''}:${pref.alert_type}`;
@@ -153,7 +178,7 @@ export default function AlertPreferencesModal({
                                                     return (
                                                         <tr key={toKey(pref)}>
                                                             <td className="px-3 py-2 text-xs font-medium text-gray-800">
-                                                                {LABELS[pref.alert_type] || pref.alert_type}
+                                                                <AlertName type={pref.alert_type} />
                                                             </td>
                                                             <td className="px-3 py-2">
                                                                 <input
@@ -211,7 +236,7 @@ export default function AlertPreferencesModal({
                                                             return (
                                                                 <tr key={toKey(pref)}>
                                                                     <td className="px-3 py-2 text-xs font-medium text-gray-800">
-                                                                        {LABELS[pref.alert_type] || pref.alert_type}
+                                                                        <AlertName type={pref.alert_type} />
                                                                     </td>
                                                                     <td className="px-3 py-2">
                                                                         <input

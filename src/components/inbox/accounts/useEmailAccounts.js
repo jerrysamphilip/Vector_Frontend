@@ -14,7 +14,10 @@ export const INBOX_FILTERS = [
     { key: 'issues',   label: 'Issues' },
     { key: 'enabled',  label: 'Warmup On' },
     { key: 'disabled', label: 'Warmup Off' },
+    { key: 'paused',   label: 'Paused' },
 ];
+
+export const isPaused = (inbox) => (inbox?.status || '').toUpperCase() === 'PAUSED';
 
 export function useEmailAccounts() {
     const queryClient = useQueryClient();
@@ -126,6 +129,18 @@ export function useEmailAccounts() {
         },
     });
 
+    // "Resume sending" on a paused mailbox (F-20)
+    const resumeMutation = useMutation({
+        mutationFn: (id) => inboxesApi.resume(id),
+        onSuccess: (_, id) => {
+            queryClient.invalidateQueries({ queryKey: ['inboxes'] });
+            queryClient.invalidateQueries({ queryKey: ['inbox-warmup', id] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-alerts-v2'] });
+            setFormError('');
+        },
+        onError: (err) => setFormError(errorText(err, 'Could not resume the mailbox')),
+    });
+
     const runWarmupMutation = useMutation({
         mutationFn: inboxesApi.runWarmupCycle,
         onSuccess: () => {
@@ -154,6 +169,7 @@ export function useEmailAccounts() {
             if (filterKey === 'healthy')  return !inbox.warmup_issue_code;
             if (filterKey === 'enabled')  return Boolean(inbox.warmup_enabled);
             if (filterKey === 'disabled') return !inbox.warmup_enabled;
+            if (filterKey === 'paused')   return isPaused(inbox);
             return true;
         });
     }, [inboxes, searchTerm, filterKey]);
@@ -210,7 +226,7 @@ export function useEmailAccounts() {
         searchTerm, setSearchTerm, filterKey, setFilterKey, detailTab, setDetailTab,
         saveSuccess, ms365Notice, setMs365Notice, drawerForm, setDrawerForm,
         inboxes, isLoading, error, overview, alertPreferences, alertPrefsLoading, detailLoading,
-        createMutation, updateMutation, deleteMutation, runWarmupMutation, saveAlertPrefsMutation,
+        createMutation, updateMutation, deleteMutation, runWarmupMutation, saveAlertPrefsMutation, resumeMutation,
         filteredInboxes, selectedInboxSummary, todayMetric, events, history,
         handleSaveSettings, connectMs365, openConnectionWizard, poolStyle, repColor,
     };

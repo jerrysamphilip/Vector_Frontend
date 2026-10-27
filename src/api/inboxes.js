@@ -13,6 +13,8 @@ export const inboxesApi = {
     sync: async (id, days = 30) => (await api.post(`/inboxes/${id}/sync`, { days })).data,
     // Microsoft 365 blocks password sign-in; connect with OAuth instead (BR-DF-05)
     startMicrosoftOAuth: async (id) => (await api.post(`/inboxes/${id}/oauth/microsoft/start`)).data,
+    // A paused mailbox (manually or after repeated SES identity rejections) sends again (F-20)
+    resume: async (id) => (await api.post(`/inboxes/${id}/resume`)).data,
 
     getWarmupOverview: async () => (await api.get('/inboxes/warmup/overview')).data,
     getWarmupDetail: async (id) => (await api.get(`/inboxes/${id}/warmup`)).data,
@@ -20,6 +22,7 @@ export const inboxesApi = {
 };
 
 export const conversationsApi = {
+    // Server-side paging and search: { page, page_size, search, campaign_id, label } (S-10)
     list: async (params = {}) => (await api.get('/conversations', { params })).data,
     get: async (id) => (await api.get(`/conversations/${id}`)).data,
     reply: async (id, bodyText) => (await api.post(`/conversations/${id}/reply`, { body_text: bodyText })).data,

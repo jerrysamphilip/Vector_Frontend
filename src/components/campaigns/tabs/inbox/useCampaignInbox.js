@@ -1,22 +1,69 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getStoredUser } from '../../../../lib/authStorage';
 import { conversationsApi, inboxesApi } from '../../../../api/inboxes';
 import { leadsApi } from '../../../../api/sales';
 import { cleanInboxBody } from './inboxShared';
 
 export const POLL_INTERVAL = 30000;
+export const PAGE_SIZE = 30;
+export const SEARCH_DEBOUNCE_MS = 300;
 
-// State and actions of a campaign's inbox: conversations (polled every 30 s), the selected thread, reply
+export const conversationKeys = {
+    list: (campaignId, search, label) => ['conversations', campaignId || 'all', search || '', label || ''],
+    thread: (id) => ['conversation', id],
+};
+
+// Next page number for the infinite list, from the server's paging (S-10)
+export function nextPageParam(lastPage) {
+    if (!lastPage) return undefined;
+    if (lastPage.has_more !== undefined) return lastPage.has_more ? lastPage.page + 1 : undefined;
+    return lastPage.page * lastPage.page_size < lastPage.total ? lastPage.page + 1 : undefined;
+}
+
+// All loaded pages as one list (a conversation that moved between pages while polling is shown once)
+export function flattenPages(data) {
+    const seen = new Set();
+    const items = [];
+    for (const page of data?.pages || []) {
+        for (const c of page.items || []) {
+            if (seen.has(c.id)) continue;
+            seen.add(c.id);
+            items.push(c);
+        }
+    }
+    return items;
+}
+
+function useDebounced(value, ms) {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+        const t = setTimeout(() => setDebounced(value), ms);
+        return () => clearTimeout(t);
+    }, [value, ms]);
+    return debounced;
+}
+
+// State and actions of a campaign's inbox (or the unified inbox without campaignId): conversations
+// searched and paged by the server (infinite scroll, polled every 30 s), the selected thread, reply
 // (optimistic), IMAP sync of the campaign's inboxes, IMAP readiness and "create lead" from a reply.
 export function useCampaignInbox({ campaignId, inboxIds = [] }) {
-    const [conversations, setConversations] = useState([]);
+    const queryClient = useQueryClient();
     const [selectedId, setSelectedId]       = useState(null);
-    const [messages, setMessages]           = useState([]);
     const [replyText, setReplyText]         = useState('');
     const [leadBusy, setLeadBusy]           = useState(null);
     const [leadError, setLeadError]         = useState(null);
+    const [syncing, setSyncing]             = useState(false);
+    const [syncError, setSyncError]         = useState(null);
+    const [searchQuery, setSearchQuery]     = useState('');
+    const [labelFilter, setLabelFilter]     = useState('');
+    // null = checking, true = at least one IMAP inbox exists, false = none configured
+    const [imapReady, setImapReady]         = useState(null);
     const navigate = useNavigate();
+    const messagesEndRef = useRef(null);
+    const search = useDebounced(searchQuery.trim(), SEARCH_DEBOUNCE_MS);
+
     const createLead = async (messageId) => {
         setLeadBusy(messageId); setLeadError(null);
         try {
@@ -29,20 +76,6 @@ export function useCampaignInbox({ campaignId, inboxIds = [] }) {
             else setLeadError(typeof detail === 'string' ? detail : 'Could not create the lead');
         } finally { setLeadBusy(null); }
     };
-    const [loading, setLoading]             = useState(true);
-    const [refreshing, setRefreshing]       = useState(false);
-    const [sending, setSending]             = useState(false);
-    const [syncing, setSyncing]             = useState(false);
-    const [syncError, setSyncError]         = useState(null);
-    const [searchQuery, setSearchQuery]     = useState('');
-    // null = checking, true = at least one IMAP inbox exists, false = none configured
-    const [imapReady, setImapReady]         = useState(null);
-
-    const messagesEndRef = useRef(null);
-    const selectedIdRef  = useRef(selectedId);
-    const pollTimerRef   = useRef(null);
-
-    useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
 
     // Check if any inbox has IMAP configured
     useEffect(() => {
@@ -56,77 +89,90 @@ export function useCampaignInbox({ campaignId, inboxIds = [] }) {
             .catch(() => setImapReady(true)); // don't block UI on check failure
     }, []);
 
+    const listKey = conversationKeys.list(campaignId, search, labelFilter);
+    const list = useInfiniteQuery({
+        queryKey: listKey,
+        queryFn: ({ pageParam }) => conversationsApi.list({
+            campaign_id: campaignId || undefined, search: search || undefined, label: labelFilter || undefined,
+            page: pageParam, page_size: PAGE_SIZE,
+        }),
+        initialPageParam: 1,
+        getNextPageParam: nextPageParam,
+        refetchInterval: POLL_INTERVAL,
+    });
+    const conversations = useMemo(() => flattenPages(list.data), [list.data]);
+    const total = list.data?.pages?.[0]?.total ?? conversations.length;
+
+    // Select the first conversation once the list has loaded
+    useEffect(() => {
+        if (!selectedId && conversations.length > 0) setSelectedId(conversations[0].id);
+    }, [conversations, selectedId]);
+
+    const thread = useQuery({
+        queryKey: conversationKeys.thread(selectedId),
+        queryFn: () => conversationsApi.get(selectedId),
+        enabled: Boolean(selectedId),
+        refetchInterval: POLL_INTERVAL,
+    });
+    const messages = useMemo(() => {
+        const data = thread.data;
+        return data?.messages || data?.items || (Array.isArray(data) ? data : []);
+    }, [thread.data]);
+
+    // Opening a thread marks it read on the server; mirror that in the loaded list
+    useEffect(() => {
+        if (!thread.data || !selectedId) return;
+        queryClient.setQueryData(listKey, (old) => old && ({
+            ...old,
+            pages: old.pages.map(p => ({ ...p, items: (p.items || []).map(c => c.id === selectedId ? { ...c, is_unread: false } : c) })),
+        }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [thread.data, selectedId]);
+
     const normalizedMessages = useMemo(() => (messages || []).map(m => {
         const rawBody = m.body_text || m.html_body || m.body || '';
         return { ...m, cleaned_body: cleanInboxBody(rawBody), display_time: m.sent_at || m.scheduled_at || null };
     }), [messages]);
 
-    const fetchConversations = useCallback(async (silent = false) => {
-        if (!silent) setLoading(true);
-        try {
-            const data = await conversationsApi.list({ campaign_id: campaignId, page_size: 100 });
-            const items = data.items || data || [];
-            setConversations(items);
-            if (items.length > 0 && !selectedIdRef.current) setSelectedId(items[0].id);
-        } catch (err) {
-            console.error('[Inbox] fetch error:', err?.response?.data || err.message);
-        } finally {
-            if (!silent) setLoading(false);
-        }
-    }, [campaignId]);
+    useEffect(() => { messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' }); }, [messages]);
 
-    const fetchMessages = useCallback(async (id, silent = false) => {
-        if (!silent) setRefreshing(true);
-        try {
-            const data = await conversationsApi.get(id);
-            const msgs = data.messages || data.items || (Array.isArray(data) ? data : []);
-            setMessages(msgs);
-        } catch (err) {
-            console.error('[Inbox] messages error:', err?.response?.data || err.message);
-            if (!silent) setMessages([]);
-        } finally {
-            if (!silent) setRefreshing(false);
-        }
-    }, []);
-
-    // Load on campaign / selection change (fetchConversations only changes with campaignId; fetchMessages never)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => { fetchConversations(); }, [campaignId]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => { if (selectedId) fetchMessages(selectedId); else setMessages([]); }, [selectedId]);
-    useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
-    useEffect(() => {
-        pollTimerRef.current = setInterval(() => {
-            fetchConversations(true);
-            if (selectedIdRef.current) fetchMessages(selectedIdRef.current, true);
-        }, POLL_INTERVAL);
-        return () => clearInterval(pollTimerRef.current);
-    }, [fetchConversations, fetchMessages]);
+    const reply = useMutation({
+        mutationFn: ({ id, text }) => conversationsApi.reply(id, text),
+        onMutate: async ({ id, text }) => {
+            const key = conversationKeys.thread(id);
+            await queryClient.cancelQueries({ queryKey: key });
+            const previous = queryClient.getQueryData(key);
+            const optimistic = {
+                message_id: `local-${Date.now()}`, direction: 'OUTBOUND',
+                body_text: text, status: 'QUEUED', sent_at: new Date().toISOString(),
+            };
+            queryClient.setQueryData(key, (old) => old ? { ...old, messages: [...(old.messages || []), optimistic] } : old);
+            return { previous, key };
+        },
+        onError: (_err, { text }, ctx) => {
+            if (ctx?.previous) queryClient.setQueryData(ctx.key, ctx.previous);
+            setReplyText(text);
+        },
+        onSettled: (_data, _err, { id }) => {
+            queryClient.invalidateQueries({ queryKey: conversationKeys.thread(id) });
+            queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        },
+    });
 
     const handleSend = async (e) => {
         e.preventDefault();
         const trimmed = replyText.trim();
-        if (!trimmed || sending || !selectedId) return;
-        const optimisticId = `local-${Date.now()}`;
-        setSending(true);
+        if (!trimmed || reply.isPending || !selectedId) return;
         setReplyText('');
-        setMessages(prev => [...prev, {
-            message_id: optimisticId, direction: 'OUTBOUND',
-            body_text: trimmed, status: 'QUEUED', sent_at: new Date().toISOString(),
-        }]);
         try {
-            const data = await conversationsApi.reply(selectedId, trimmed);
-            const persisted = data?.message;
-            if (persisted) setMessages(prev => prev.map(m => m.message_id === optimisticId ? persisted : m));
-            setTimeout(() => fetchMessages(selectedId), 300);
+            await reply.mutateAsync({ id: selectedId, text: trimmed });
         } catch (err) {
             console.error('Error sending reply:', err);
-            setMessages(prev => prev.filter(m => m.message_id !== optimisticId));
-            setReplyText(trimmed);
-        } finally {
-            setSending(false);
         }
     };
+
+    const fetchConversations = () => list.refetch();
+    const fetchMessages = () => thread.refetch();
 
     const handleSyncNow = async () => {
         setSyncing(true);
@@ -158,7 +204,7 @@ export function useCampaignInbox({ campaignId, inboxIds = [] }) {
                     setSyncError(`Sync error: ${msg}`);
                 }
             }
-            await fetchConversations();
+            await list.refetch();
             setImapReady(true);
         } catch (err) {
             const msg = err?.response?.data?.detail || err.message;
@@ -172,19 +218,17 @@ export function useCampaignInbox({ campaignId, inboxIds = [] }) {
         }
     };
 
-    const filteredConversations = conversations.filter(c =>
-        (c.prospect_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.subject || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.prospect_email || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
     const activeConversation = conversations.find(c => c.id === selectedId);
     const unreadCount = conversations.filter(c => c.is_unread).length;
 
     return {
         conversations, selectedId, setSelectedId, replyText, setReplyText, leadBusy, leadError, createLead,
-        loading, refreshing, sending, syncing, syncError, searchQuery, setSearchQuery, imapReady, setImapReady,
+        loading: list.isLoading, refreshing: thread.isFetching && !thread.isLoading, sending: reply.isPending,
+        syncing, syncError, searchQuery, setSearchQuery, labelFilter, setLabelFilter, imapReady, setImapReady,
         messagesEndRef, normalizedMessages, fetchConversations, fetchMessages, handleSend, handleSyncNow,
-        filteredConversations, activeConversation, unreadCount,
+        // The server already applied the search: what is loaded is what matches
+        filteredConversations: conversations, activeConversation, unreadCount, total,
+        loadError: list.isError, hasNextPage: Boolean(list.hasNextPage), isFetchingNextPage: list.isFetchingNextPage,
+        fetchNextPage: () => list.fetchNextPage(),
     };
 }
