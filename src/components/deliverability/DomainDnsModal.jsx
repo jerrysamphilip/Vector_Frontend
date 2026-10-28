@@ -123,7 +123,8 @@ export default function DomainDnsModal({ domainName: initialName = null, canMana
 
                     {domainName && info && (
                         <DnsRecordsPanel domainName={domainName} records={info.dns_records || []} statuses={info}
-                            dkimTokensAvailable={info.dkim_tokens_available} onRefresh={refresh} refreshing={refreshing} canRefresh={canManage} />
+                            dkimTokensAvailable={info.dkim_tokens_available} onRefresh={refresh} refreshing={refreshing} canRefresh={canManage}
+                            liveSummary={info.live_summary} liveCheckedAt={info.live_checked_at} />
                     )}
 
                     {domainName && info && (

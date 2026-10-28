@@ -12,6 +12,17 @@ export function sendingCapacity(inbox) {
     return { sent, capacity, pct, remaining: inbox.remaining_today ?? Math.max(capacity - sent, 0) };
 }
 
+// Reply reading (S-26): derived from the SMTP settings, or not set up; nothing when IMAP is saved (or the API is older)
+export function ImapBadge({ inbox }) {
+    if (inbox.imap_derived_from_smtp) {
+        return <span className="text-[10px] font-semibold text-sky-800 bg-sky-50 px-1.5 rounded" title="The IMAP server and sign-in are taken from the SMTP settings">IMAP: derived from SMTP</span>;
+    }
+    if (inbox.imap_configured === false) {
+        return <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 px-1.5 rounded" title="Replies can't be read until IMAP is set up">IMAP: not set up</span>;
+    }
+    return null;
+}
+
 // ─── Inbox Row (table-style, matching dashboard card patterns) ────────────────
 export default function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete, onToggleWarmup, isUpdating, onConnectMs365,
     onResume, isResuming = false }) {
@@ -45,6 +56,7 @@ export default function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete
                         <span className="text-[10px] text-gray-400">Day {inbox.warmup_day || 0}</span>
                         {inbox.auth_type === 'OAUTH_MS365' && <span className="text-[10px] font-semibold text-sky-700 bg-sky-50 px-1.5 rounded">Microsoft 365</span>}
                         {paused && <PausedBadge inbox={inbox} />}
+                        <ImapBadge inbox={inbox} />
                     </div>
                     {paused && inbox.paused_reason && (
                         <p className="text-[10px] text-amber-700 truncate max-w-[260px]" title={inbox.paused_reason}>{inbox.paused_reason}</p>

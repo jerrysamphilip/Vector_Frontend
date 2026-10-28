@@ -61,21 +61,21 @@ describe('saved company views menu', () => {
 });
 
 describe('company properties', () => {
-    it('confirms before deleting a property', async () => {
+    it('confirms before deactivating a property (DELETE deactivates; values are kept)', async () => {
         const user = userEvent.setup();
         const { http: h } = renderPage(<Accounts />, { route: '/app/accounts', http: http() });
         await screen.findByText('Acme Corp');
         await user.click(screen.getByRole('button', { name: /properties/i }));
         const modal = await screen.findByRole('dialog', { name: /company properties/i });
-        await user.click(await within(modal).findByRole('button', { name: 'Delete Tier' }));
-        const ask = await screen.findByRole('dialog', { name: 'Delete "Tier"?' });
-        expect(ask).toHaveTextContent('Values already saved on companies will be hidden.');
+        await user.click(await within(modal).findByRole('button', { name: 'Deactivate Tier' }));
+        const ask = await screen.findByRole('dialog', { name: 'Deactivate "Tier"?' });
+        expect(ask).toHaveTextContent('Values already saved on companies are kept');
         await user.keyboard('{Escape}');
-        expect(screen.queryByRole('dialog', { name: 'Delete "Tier"?' })).toBeNull();
+        expect(screen.queryByRole('dialog', { name: 'Deactivate "Tier"?' })).toBeNull();
         expect(screen.getByRole('dialog', { name: /company properties/i })).toBeInTheDocument(); // Escape closed only the confirm
         expect(deletes(h, '/accounts/fields/f-1')).toHaveLength(0);
-        await user.click(within(modal).getByRole('button', { name: 'Delete Tier' }));
-        await user.click(within(await screen.findByRole('dialog', { name: 'Delete "Tier"?' })).getByRole('button', { name: 'Delete' }));
+        await user.click(within(modal).getByRole('button', { name: 'Deactivate Tier' }));
+        await user.click(within(await screen.findByRole('dialog', { name: 'Deactivate "Tier"?' })).getByRole('button', { name: 'Deactivate' }));
         await waitFor(() => expect(deletes(h, '/accounts/fields/f-1')).toHaveLength(1));
     });
 });

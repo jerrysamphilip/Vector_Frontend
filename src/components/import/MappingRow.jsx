@@ -1,6 +1,6 @@
 import { inputClass } from '../contacts/shared';
 
-export const NEW_TYPES = { TEXT: 'Text', NUMBER: 'Number', DATE: 'Date', SELECT: 'Dropdown', MULTI_CHECKBOX: 'Multiple checkboxes', PHONE: 'Phone', URL: 'Link' };
+export const NEW_TYPES = { TEXT: 'Text', LONG_TEXT: 'Long text', NUMBER: 'Number', DATE: 'Date', BOOLEAN: 'Yes / No', SELECT: 'Dropdown', MULTI_CHECKBOX: 'Multiple checkboxes', PHONE: 'Phone', URL: 'Link' };
 
 /** Column → property picker; "Create new property" asks for a type and label (BR-CM-26). */
 export default function MappingRow({ header, sample, value, targets, onChange }) {

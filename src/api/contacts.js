@@ -66,7 +66,9 @@ export const contactsApi = {
     merge: (primaryId, duplicateIds, choices = {}) =>
         post('/contacts/merge', { primary_id: primaryId, duplicate_ids: duplicateIds, choices }),
 
-    fields: () => get('/contacts/fields'),
+    // params.include_inactive: also the deactivated properties (settings, C-17); forms use the active ones
+    // (it is also used directly as a react-query queryFn, so only include_inactive is read from the argument)
+    fields: (params) => get('/contacts/fields', params?.include_inactive ? { include_inactive: true } : undefined),
     createField: (payload) => post('/contacts/fields', payload),
     updateField: (id, payload) => patch(`/contacts/fields/${id}`, payload),
     deleteField: (id) => del(`/contacts/fields/${id}`),

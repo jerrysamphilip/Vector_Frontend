@@ -1,7 +1,8 @@
 import { SlidersHorizontal } from 'lucide-react';
 import { formatCustomValue } from '../contacts/shared';
 
-/** The company's custom property values on its record page (C-16), grouped like the definitions. */
+/** The company's custom property values on its record page (C-16), grouped like the definitions. Deactivated
+ *  properties (C-17) keep their values and are marked inactive. */
 export default function CompanyPropertiesCard({ properties = [], values = {} }) {
     if (!properties.length) return null;
     const groups = properties.reduce((acc, p) => {
@@ -21,7 +22,7 @@ export default function CompanyPropertiesCard({ properties = [], values = {} }) 
                         <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
                             {items.map(p => (
                                 <div key={p.field_key} className="min-w-0">
-                                    <dt className="text-xs text-slate-500">{p.label}</dt>
+                                    <dt className="text-xs text-slate-500">{p.label}{p.is_active === false && <span className="ml-1 text-slate-400">(inactive)</span>}</dt>
                                     <dd className="text-sm font-medium text-slate-800 truncate">{formatCustomValue(p, values?.[p.field_key]) ?? <span className="text-slate-300">—</span>}</dd>
                                 </div>
                             ))}

@@ -35,7 +35,9 @@ export const companiesApi = {
         `companies.${params?.format || 'csv'}`),
 
     // Company custom properties (C-16)
-    fields: () => get('/accounts/fields'),
+    // params.include_inactive: also the deactivated properties (settings, C-17); forms use the active ones
+    // (it is also used directly as a react-query queryFn, so only include_inactive is read from the argument)
+    fields: (params) => get('/accounts/fields', params?.include_inactive ? { include_inactive: true } : undefined),
     createField: (payload) => post('/accounts/fields', payload),
     updateField: (id, payload) => patch(`/accounts/fields/${id}`, payload),
     deleteField: (id) => del(`/accounts/fields/${id}`),

@@ -4,6 +4,7 @@ import { X, Loader2, AlertTriangle } from 'lucide-react';
 import { contactsApi } from '../../api/contacts';
 import DialogPanel from '../ui/DialogPanel';
 import { COUNTRIES } from '../../lib/countries';
+import { BOOLEAN_CHOICES, booleanValue, choiceLabel, choicesOf, isChoiceType, maxLengthOf } from '../../lib/customProperties';
 
 export const BRAND_GRADIENT = 'linear-gradient(135deg, #2d6bbf, #73C8D2)';
 
@@ -158,22 +159,38 @@ export function OwnerSelect({ owners = [], value, onChange, allowUnassigned = tr
     );
 }
 
-/** Input for one tenant-defined custom property. */
-export function CustomFieldInput({ field, value, onChange }) {
+/**
+ * Input for one tenant-defined custom property. Choice inputs show the option labels and store the values
+ * (C-17); BOOLEAN is a Yes / No picker (stores true / false); LONG_TEXT is a textarea; text inputs stop at the
+ * property's max_length. `invalid` marks the control for an error shown by the surrounding Field.
+ */
+export function CustomFieldInput({ field, value, onChange, invalid = false }) {
+    const aria = invalid ? { 'aria-invalid': 'true' } : {};
+    const choices = choicesOf(field);
     if (field.field_type === 'SELECT') {
         return (
-            <select value={value ?? ''} onChange={e => onChange(e.target.value)} className={inputClass}>
+            <select value={value ?? ''} onChange={e => onChange(e.target.value)} className={inputClass} {...aria}>
                 <option value="">—</option>
-                {field.options.map(o => <option key={o} value={o}>{o}</option>)}
+                {choices.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+        );
+    }
+    if (field.field_type === 'BOOLEAN') {
+        const current = booleanValue(value);
+        return (
+            <select value={current === null ? '' : String(current)} onChange={e => onChange(e.target.value === '' ? '' : e.target.value === 'true')}
+                className={inputClass} {...aria}>
+                <option value="">—</option>
+                {BOOLEAN_CHOICES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
         );
     }
     if (field.field_type === 'RADIO') {
         return (
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 py-1">
-                {field.options.map(o => (
-                    <label key={o} className="flex items-center gap-1.5 text-sm text-slate-700">
-                        <input type="radio" className="accent-indigo-600" checked={value === o} onChange={() => onChange(o)} /> {o}
+                {choices.map(o => (
+                    <label key={o.value} className="flex items-center gap-1.5 text-sm text-slate-700">
+                        <input type="radio" className="accent-indigo-600" checked={value === o.value} onChange={() => onChange(o.value)} /> {o.label}
                     </label>
                 ))}
                 {value && <button type="button" onClick={() => onChange('')} className="text-xs text-slate-400 hover:text-slate-600">clear</button>}
@@ -184,21 +201,37 @@ export function CustomFieldInput({ field, value, onChange }) {
         const selected = Array.isArray(value) ? value : [];
         return (
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 py-1">
-                {field.options.map(o => (
-                    <label key={o} className="flex items-center gap-1.5 text-sm text-slate-700">
-                        <input type="checkbox" className="accent-indigo-600" checked={selected.includes(o)}
-                            onChange={() => onChange(selected.includes(o) ? selected.filter(x => x !== o) : [...selected, o])} /> {o}
+                {choices.map(o => (
+                    <label key={o.value} className="flex items-center gap-1.5 text-sm text-slate-700">
+                        <input type="checkbox" className="accent-indigo-600" checked={selected.includes(o.value)}
+                            onChange={() => onChange(selected.includes(o.value) ? selected.filter(x => x !== o.value) : [...selected, o.value])} /> {o.label}
                     </label>
                 ))}
             </div>
         );
     }
+    const limit = maxLengthOf(field);
+    if (field.field_type === 'LONG_TEXT') {
+        return (
+            <textarea rows={4} value={value ?? ''} maxLength={limit} onChange={e => onChange(e.target.value)} {...aria}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+        );
+    }
     const type = { NUMBER: 'number', DATE: 'date', URL: 'url', PHONE: 'tel' }[field.field_type] || 'text';
-    return <input type={type} value={value ?? ''} onChange={e => onChange(type === 'number' && e.target.value !== '' && !Number.isNaN(Number(e.target.value)) ? Number(e.target.value) : e.target.value)} className={inputClass} />;
+    return <input type={type} value={value ?? ''} maxLength={limit ?? undefined} {...aria}
+        onChange={e => onChange(type === 'number' && e.target.value !== '' && !Number.isNaN(Number(e.target.value)) ? Number(e.target.value) : e.target.value)} className={inputClass} />;
 }
 
+/** A stored custom value as text: choice labels instead of values, Yes / No for BOOLEAN; null when empty. */
 export function formatCustomValue(field, value) {
     if (value === undefined || value === null || value === '' || (Array.isArray(value) && !value.length)) return null;
+    if (field?.field_type === 'BOOLEAN' || typeof value === 'boolean') {
+        const b = booleanValue(value);
+        return b === null ? String(value) : (b ? 'Yes' : 'No');
+    }
+    if (field && isChoiceType(field.field_type)) {
+        return (Array.isArray(value) ? value : [value]).map(v => choiceLabel(field, v)).join(', ');
+    }
     if (Array.isArray(value)) return value.join(', ');
     if (field?.field_type === 'NUMBER' && typeof value === 'number') return value.toLocaleString();
     return String(value);

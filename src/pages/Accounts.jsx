@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthProvider';
 import LoadError from '../components/ui/LoadError';
 import { withVersion } from '../lib/staleVersion';
 import { COMPANY_FIELDS } from '../lib/fieldValidation';
+import { activeFields, customFieldErrors } from '../lib/customProperties';
 import { useFieldErrors } from '../lib/useFieldErrors';
 import {
     Modal, Field, inputClass, ErrorNote, CountryOptions, PrimaryButton, SecondaryButton, BRAND_GRADIENT, CustomFieldInput, useCrmMeta,
@@ -27,7 +28,9 @@ export { formatRevenue };
 const PAGE_SIZE = 25;
 const EMPTY_FILTER = { op: 'AND', conditions: [] };
 
-export function AccountFormModal({ account, properties = [], onClose, onSaved }) {
+export function AccountFormModal({ account, properties: allProperties = [], onClose, onSaved }) {
+    // Deactivated properties keep their values but are not edited (C-17)
+    const properties = activeFields(allProperties);
     const [form, setForm] = useState({
         name: account?.name || '', domain: account?.domain || '', website: account?.website || '',
         phone: account?.phone || '', industry: account?.industry || '', emp_band: account?.emp_band || '',
@@ -53,7 +56,13 @@ export function AccountFormModal({ account, properties = [], onClose, onSaved })
         onSuccess: onSaved,
         onError: err => { checks.fromServer(err); setError(errorMessage(err)); },
     });
-    const submit = () => { if (checks.validate()) save.mutate(); };
+    // C-17: custom property limits (max_length) are checked here too; the server's 400 message shows below
+    const [customErrors, setCustomErrors] = useState({});
+    const submit = () => {
+        const customErrs = customFieldErrors(properties, custom);
+        setCustomErrors(customErrs);
+        if (checks.validate() && !Object.keys(customErrs).length) save.mutate();
+    };
 
     return (
         <Modal title={account ? 'Edit company' : 'New company'} subtitle={account ? 'Renaming updates the company name on its contacts' : 'A company your contacts work at'}
@@ -88,8 +97,9 @@ export function AccountFormModal({ account, properties = [], onClose, onSaved })
                     <textarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400" {...checks.bind('description')} />
                 </Field>
                 {properties.map(p => (
-                    <Field key={p.field_key} label={`${p.label}${p.required ? ' *' : ''}`}>
-                        <CustomFieldInput field={p} value={custom[p.field_key]} onChange={v => setCustom(c => ({ ...c, [p.field_key]: v }))} />
+                    <Field key={p.field_key} label={`${p.label}${p.required ? ' *' : ''}`} error={customErrors[p.field_key]}>
+                        <CustomFieldInput field={p} value={custom[p.field_key]} invalid={!!customErrors[p.field_key]}
+                            onChange={v => { setCustom(c => ({ ...c, [p.field_key]: v })); setCustomErrors(e => (e[p.field_key] ? { ...e, [p.field_key]: '' } : e)); }} />
                     </Field>
                 ))}
             </div>

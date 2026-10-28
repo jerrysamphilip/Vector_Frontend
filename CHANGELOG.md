@@ -10,6 +10,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions follow [SemVer
 Release candidate for BRD v2.0 Phase 1 (R1.0) and Phase 2 (R2.1), released together with backend 1.1.0.
 
 ### Added
+- Custom property safety (C-17): contact and company property settings list deactivated properties
+  (`?include_inactive=true`) marked "Inactive" with Reactivate; Delete is now "Deactivate" (saved values are kept and
+  still exported) and is not offered for system properties; properties can be edited (label, group, required,
+  choices, maximum length) with the data type locked; renamed choices keep their stored values (options sent as
+  `{value, label}`); new types Yes / No (BOOLEAN) and Long text (LONG_TEXT); `max_length` for text properties (up to
+  1000 / 10000) enforced on record forms, with the server's 400 message shown. Pickers, filters and record pages show
+  choice labels and store values (`src/lib/customProperties.js`).
+- Mailboxes show when reply reading (IMAP) is derived from the SMTP settings or not set up (`imap_configured`,
+  `imap_derived_from_smtp`), on the list, the detail and the IMAP test result (S-26).
+- Sending-domain DNS records compared with live DNS (S-25): per record OK / Add / Update / Unknown (icon and word),
+  what DNS has now, the value to publish with a copy button (SPF merged into the existing record), the summary and
+  when DNS was checked.
 - Field validation and normalisation on contact, company and campaign sender forms (`src/lib/fieldValidation.js`):
   names, e-mail, international phone, LinkedIn/website/CTA links (https, no script schemes), country/state/postal
   code, revenue, column lengths, no HTML; server 422 errors shown on their fields.

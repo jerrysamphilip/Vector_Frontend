@@ -4,6 +4,7 @@ import { UserPlus } from 'lucide-react';
 import { contactsApi, errorMessage } from '../../api/contacts';
 import { getStoredUser } from '../../lib/authStorage';
 import { CONTACT_FIELDS } from '../../lib/fieldValidation';
+import { customFieldErrors } from '../../lib/customProperties';
 import { useFieldErrors } from '../../lib/useFieldErrors';
 import {
     CountryOptions, CustomFieldInput, ErrorNote, Field, inputClass, Modal, OwnerSelect,
@@ -34,9 +35,18 @@ export default function ContactFormModal({
     // F-07 / F-08: inline rules per field; the server checks again and its 422 field errors land on the fields too
     const checks = useFieldErrors(CONTACT_FIELDS, form, setForm);
 
+    // C-17: custom property limits (max_length) are checked here too; the server's 400 message shows below
+    const [customErrors, setCustomErrors] = useState({});
+    const setCustom = (key, v) => {
+        setForm(s => ({ ...s, custom_fields: { ...s.custom_fields, [key]: v } }));
+        setCustomErrors(errs => (errs[key] ? { ...errs, [key]: '' } : errs));
+    };
+
     const submit = async (e) => {
         e?.preventDefault();
-        if (!checks.validate()) { setError(null); return; }
+        const customErrs = customFieldErrors(fields, form.custom_fields);
+        setCustomErrors(customErrs);
+        if (!checks.validate() || Object.keys(customErrs).length) { setError(null); return; }
         setSaving(true); setError(null); setExistingId(null); setExistingDeleted(false);
         const payload = Object.fromEntries(
             Object.entries(checks.normalized()).filter(([k, v]) => !(typeof v === 'string' && !v.trim()) || k === 'owner_id')
@@ -126,9 +136,9 @@ export default function ContactFormModal({
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">{group}</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {groupFields.map(f => (
-                                <Field key={f.field_id} label={`${f.label}${f.required ? ' *' : ''}`}>
-                                    <CustomFieldInput field={f} value={form.custom_fields[f.field_key]}
-                                        onChange={v => setForm(s => ({ ...s, custom_fields: { ...s.custom_fields, [f.field_key]: v } }))} />
+                                <Field key={f.field_id} label={`${f.label}${f.required ? ' *' : ''}`} error={customErrors[f.field_key]}>
+                                    <CustomFieldInput field={f} value={form.custom_fields[f.field_key]} invalid={!!customErrors[f.field_key]}
+                                        onChange={v => setCustom(f.field_key, v)} />
                                 </Field>
                             ))}
                         </div>

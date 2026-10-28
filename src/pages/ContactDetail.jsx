@@ -9,6 +9,7 @@ import {
 import { contactsApi, tasksApi, errorMessage } from '../api/contacts';
 import { withVersion } from '../lib/staleVersion';
 import { CONTACT_FIELDS } from '../lib/fieldValidation';
+import { customFieldErrors } from '../lib/customProperties';
 import { useFieldErrors } from '../lib/useFieldErrors';
 import { useRecordVersion, versionedSave } from '../lib/useRecordVersion';
 import { dealsApi, leadsApi, moneyShort } from '../api/sales';
@@ -319,6 +320,7 @@ function DetailsCard({ contact, fields, onSaved }) {
         });
         setError(null);
         checks.setErrors({});
+        setCustomErrors({});
         setEditing(true);
     };
     const save = useMutation({
@@ -331,7 +333,17 @@ function DetailsCard({ contact, fields, onSaved }) {
         onSuccess: (data) => { setEditing(false); onSaved(data); },
         onError: err => { checks.fromServer(err); setError(errorMessage(err)); },
     });
-    const submit = () => { if (checks.validate()) save.mutate(); };
+    // C-17: custom property limits (max_length) are checked here too; the server's 400 message shows below
+    const [customErrors, setCustomErrors] = useState({});
+    const setCustom = (key, v) => {
+        setForm(s => ({ ...s, custom_fields: { ...s.custom_fields, [key]: v } }));
+        setCustomErrors(errs => (errs[key] ? { ...errs, [key]: '' } : errs));
+    };
+    const submit = () => {
+        const customErrs = customFieldErrors(fields, form.custom_fields);
+        setCustomErrors(customErrs);
+        if (checks.validate() && !Object.keys(customErrs).length) save.mutate();
+    };
     const groups = fields.reduce((acc, f) => { (acc[f.group_name || 'Other properties'] ||= []).push(f); return acc; }, {});
 
     const rows = [
@@ -379,9 +391,9 @@ function DetailsCard({ contact, fields, onSaved }) {
                         <div key={group} className="space-y-3 pt-1">
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{group}</p>
                             {gf.map(f => (
-                                <Field key={f.field_id} label={`${f.label}${f.required ? ' *' : ''}`}>
-                                    <CustomFieldInput field={f} value={form.custom_fields[f.field_key]}
-                                        onChange={v => setForm(s => ({ ...s, custom_fields: { ...s.custom_fields, [f.field_key]: v } }))} />
+                                <Field key={f.field_id} label={`${f.label}${f.required ? ' *' : ''}`} error={customErrors[f.field_key]}>
+                                    <CustomFieldInput field={f} value={form.custom_fields[f.field_key]} invalid={!!customErrors[f.field_key]}
+                                        onChange={v => setCustom(f.field_key, v)} />
                                 </Field>
                             ))}
                         </div>

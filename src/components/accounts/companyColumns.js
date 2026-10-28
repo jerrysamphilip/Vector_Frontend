@@ -1,6 +1,8 @@
 // Columns and filter fields of the companies table (F-14). Keys match the backend's ACCOUNT_COLUMNS
 // (app/domain/accounts.py) and the export's `columns` parameter; custom properties are `custom.<field_key>`.
 
+import { activeFields, filterSpecOf } from '../../lib/customProperties';
+
 export const BASE_COLUMNS = [
     { key: 'name', label: 'Company', sort: 'name' },
     { key: 'domain', label: 'Domain' },
@@ -62,12 +64,8 @@ export function filterFields(properties = [], stages = []) {
         { key: 'owner_id', label: 'Owner', type: 'enum', options: [['me', 'Me']] },
         { key: 'annual_revenue', label: 'Annual revenue', type: 'number' },
     ];
-    const custom = properties.map(p => ({
-        key: `custom.${p.field_key}`,
-        label: p.label,
-        type: { NUMBER: 'number', DATE: 'date', SELECT: 'enum', RADIO: 'enum', MULTI_CHECKBOX: 'enum' }[p.field_type] || 'text',
-        options: p.options?.length ? p.options.map(o => [o, o]) : undefined,
-    }));
+    // Choice properties filter by stored value, shown by label (C-17); BOOLEAN as Yes / No; inactive ones are left out
+    const custom = activeFields(properties).map(p => ({ key: `custom.${p.field_key}`, label: p.label, ...filterSpecOf(p) }));
     return [...base, ...custom];
 }
 

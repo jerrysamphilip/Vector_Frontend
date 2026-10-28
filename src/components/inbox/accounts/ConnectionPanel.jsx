@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Pencil, Zap } from 'lucide-react';
+import { Info, Loader2, Pencil, Zap } from 'lucide-react';
 import { inboxesApi } from '../../../api/inboxes';
 import { errorText } from './shared';
 
@@ -23,10 +23,12 @@ export default function ConnectionPanel({ inbox, onEdit }) {
         }
     };
 
-    const Section = ({ kind, title, sub, host, port, user, hasPassword, extra }) => {
+    const Section = ({ kind, title, sub, host, port, user, hasPassword, extra, configuredFlag, derived = false }) => {
         const r = results[kind];
         const ok = r?.status === 'connected';
-        const configured = Boolean(host) && (hasPassword || oauth);
+        // S-26: the API says whether replies can be read (saved IMAP settings, or ones derived from SMTP)
+        const configured = typeof configuredFlag === 'boolean' ? configuredFlag : Boolean(host) && (hasPassword || oauth);
+        const resultDerived = Boolean(r?.imap_derived_from_smtp);
         return (
             <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
@@ -38,16 +40,21 @@ export default function ConnectionPanel({ inbox, onEdit }) {
                         {configured ? 'Configured' : 'Incomplete'}
                     </span>
                 </div>
+                {derived && (
+                    <p className="flex items-center gap-1.5 rounded-lg bg-sky-50 px-2.5 py-1.5 text-[11px] font-medium text-sky-800" data-testid="imap-derived">
+                        <Info size={12} aria-hidden="true"/> IMAP: derived from SMTP settings
+                    </p>
+                )}
                 <dl className="grid grid-cols-[90px_1fr] gap-x-3 gap-y-1.5 text-xs">
                     <dt className="text-gray-400">Server</dt>
-                    <dd className="font-medium text-gray-800 break-all">{host ? `${host}:${port}` : <span className="text-amber-700">Not set</span>}</dd>
+                    <dd className="font-medium text-gray-800 break-all">{host ? `${host}:${port}` : derived ? <span className="text-gray-500">From SMTP server</span> : <span className="text-amber-700">Not set</span>}</dd>
                     <dt className="text-gray-400">Username</dt>
                     <dd className="font-medium text-gray-800 break-all">{user || inbox.email_address}</dd>
                     <dt className="text-gray-400">Sign-in</dt>
                     <dd className="font-medium text-gray-800">{oauth ? 'Microsoft 365 (OAuth)' : hasPassword ? 'Password saved' : <span className="text-amber-700">No password</span>}</dd>
                     {extra}
                 </dl>
-                <button type="button" onClick={() => runTest(kind)} disabled={testing !== null || !host}
+                <button type="button" onClick={() => runTest(kind)} disabled={testing !== null || !(host || configured)}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:border-[#0046FF] hover:text-[#0046FF] disabled:opacity-50">
                     {testing === kind ? <Loader2 size={13} className="animate-spin"/> : <Zap size={13}/>}
                     Test {kind === 'smtp' ? 'sending' : 'receiving'} sign-in
@@ -57,6 +64,11 @@ export default function ConnectionPanel({ inbox, onEdit }) {
                         {ok
                             ? (kind === 'smtp' ? 'Signed in to the SMTP server. Sending credentials work.' : `Signed in to the mailbox. ${r.inbox_message_count_last_7d ?? 0} emails in the inbox from the last 7 days.`)
                             : (r.error || 'Could not connect.')}
+                        {resultDerived && (
+                            <span className="block mt-1 font-normal">
+                                IMAP: derived from SMTP settings{r.imap_host ? ` (${r.imap_host}:${r.imap_port || 993})` : ''}.
+                            </span>
+                        )}
                     </p>
                 )}
             </div>
@@ -75,6 +87,7 @@ export default function ConnectionPanel({ inbox, onEdit }) {
                 extra={<><dt className="text-gray-400">Security</dt><dd className="font-medium text-gray-800">{inbox.smtp_use_ssl ? 'SSL' : 'STARTTLS'}</dd></>}/>
             <Section kind="imap" title="Receiving (IMAP)" sub="Used to find replies and for warmup engagement."
                 host={inbox.imap_host} port={inbox.imap_port || 993} user={inbox.imap_username} hasPassword={inbox.has_imap_password}
+                configuredFlag={inbox.imap_configured} derived={Boolean(inbox.imap_derived_from_smtp)}
                 extra={<>
                     <dt className="text-gray-400">Last sync</dt>
                     <dd className="font-medium text-gray-800">{inbox.last_sync_at ? new Date(inbox.last_sync_at).toLocaleString() : 'Never'}</dd>
