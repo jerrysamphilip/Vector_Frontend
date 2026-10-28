@@ -12,6 +12,8 @@ import { useTemplateEditor } from './useTemplateEditor';
 import { trackVersion, useWizardMutations } from './useWizardMutations';
 import { withVersion } from '../../../lib/staleVersion';
 import { useApiQuery } from '../../../lib/useApiQuery';
+import { errorMessage } from '../../../lib/apiErrors';
+import { normalizeForm, SENDER_FIELDS, serverFieldErrors, validateForm } from '../../../lib/fieldValidation';
 
 // All state and actions of the create/edit campaign wizard (pages/CreateCampaign.jsx), returned as one
 // object the step components read from. Concerns live in their own hooks:
@@ -193,25 +195,34 @@ export function useCreateCampaignWizard() {
             setErrors({ inboxes: 'Select at least one inbox for rotation' });
             return;
         }
+        // F-07 / F-08: sender name / title and the CTA link (a full https:// URL); the server checks again
+        const senderErrors = validateForm(SENDER_FIELDS, formData);
+        if (Object.keys(senderErrors).length) {
+            setErrors(senderErrors);
+            setTimeout(() => document.querySelector('[data-sender-details] [aria-invalid="true"]')?.focus(), 0);
+            return;
+        }
+        const data = normalizeForm(SENDER_FIELDS, formData);
+        setFormData(data);
 
         // If editing an existing campaign, update it and go to step 2
         if (campaignId) {
             campaignApi.update(campaignId, withVersion(
-                { ...formData, send_window_end: formData.send_window_end || null }, campaignVersionRef.current))
+                { ...data, send_window_end: data.send_window_end || null }, campaignVersionRef.current))
                 .then((updated) => {
                     trackVersion(campaignVersionRef, updated);
                     setCurrentStep(2);
                     queryClient.invalidateQueries({ queryKey: ['campaigns'] });
                 })
                 .catch((err) => {
-                    setErrors({ submit: err.response?.data?.detail || 'Failed to update campaign' });
+                    setErrors({ ...serverFieldErrors(err), submit: errorMessage(err, 'Failed to update campaign') });
                 });
             return;
         }
 
         mutations.createMutation.mutate({
-            ...formData,
-            send_window_end: formData.send_window_end || null,
+            ...data,
+            send_window_end: data.send_window_end || null,
         });
     };
 

@@ -8,13 +8,15 @@ import {
 } from 'lucide-react';
 import { contactsApi, tasksApi, errorMessage } from '../api/contacts';
 import { withVersion } from '../lib/staleVersion';
+import { CONTACT_FIELDS } from '../lib/fieldValidation';
+import { useFieldErrors } from '../lib/useFieldErrors';
 import { useRecordVersion, versionedSave } from '../lib/useRecordVersion';
 import { dealsApi, leadsApi, moneyShort } from '../api/sales';
 import { NewLeadModal } from './Leads';
 import { DealFormModal } from './Deals';
 import { DealStatusBadge, LeadStageBadge } from '../components/sales/shared';
 import {
-    Avatar, TagInput, OwnerSelect, CustomFieldInput, Field, inputClass, ErrorNote, PrimaryButton, SecondaryButton, formatDateTime, relativeDate, parseDate, useCrmMeta, StageBadge, StatusBadge, formatCustomValue,
+    Avatar, TagInput, OwnerSelect, CountryOptions, CustomFieldInput, Field, inputClass, ErrorNote, PrimaryButton, SecondaryButton, formatDateTime, relativeDate, parseDate, useCrmMeta, StageBadge, StatusBadge, formatCustomValue,
 } from '../components/contacts/shared';
 import MentionTextarea, { MentionText, activeMentions } from '../components/contacts/MentionTextarea';
 import ContactCompaniesCard from '../components/contacts/ContactCompaniesCard';
@@ -303,6 +305,8 @@ function DetailsCard({ contact, fields, onSaved }) {
     const [form, setForm] = useState({});
     const [version, setVersion] = useState(null); // row_version when editing started (T-3)
     const [error, setError] = useState(null);
+    // F-07 / F-08: inline field rules; the server's 422 field errors are shown on the fields as well
+    const checks = useFieldErrors(CONTACT_FIELDS, form, setForm);
     const start = () => {
         setVersion(contact.row_version);
         setForm({
@@ -314,19 +318,20 @@ function DetailsCard({ contact, fields, onSaved }) {
             custom_fields: Object.fromEntries(fields.map(f => [f.field_key, contact.custom_fields?.[f.field_key] ?? (f.field_type === 'MULTI_CHECKBOX' ? [] : '')])),
         });
         setError(null);
+        checks.setErrors({});
         setEditing(true);
     };
     const save = useMutation({
         mutationFn: () => {
-            const payload = { ...form };
+            const payload = checks.normalized();
             if (payload.company_name === (contact.company_name || '')) delete payload.company_name;
             if (!payload.email) delete payload.email;
             return contactsApi.update(contact.prospect_id, withVersion(payload, version));
         },
         onSuccess: (data) => { setEditing(false); onSaved(data); },
-        onError: err => setError(errorMessage(err)),
+        onError: err => { checks.fromServer(err); setError(errorMessage(err)); },
     });
-    const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }));
+    const submit = () => { if (checks.validate()) save.mutate(); };
     const groups = fields.reduce((acc, f) => { (acc[f.group_name || 'Other properties'] ||= []).push(f); return acc; }, {});
 
     const rows = [
@@ -350,26 +355,26 @@ function DetailsCard({ contact, fields, onSaved }) {
                 {!editing && <button onClick={start} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"><Pencil className="w-3 h-3" /> Edit</button>}
             </div>
             {editing ? (
-                <div className="space-y-3">
+                <div ref={checks.formRef} className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
-                        <Field label="First name"><input className={inputClass} value={form.first_name} onChange={set('first_name')} /></Field>
-                        <Field label="Last name"><input className={inputClass} value={form.last_name} onChange={set('last_name')} /></Field>
+                        <Field label="First name" error={checks.errors.first_name}><input className={inputClass} {...checks.bind('first_name')} /></Field>
+                        <Field label="Last name" error={checks.errors.last_name}><input className={inputClass} {...checks.bind('last_name')} /></Field>
                     </div>
-                    <Field label="Email"><input type="email" className={inputClass} value={form.email} onChange={set('email')} /></Field>
+                    <Field label="Email" error={checks.errors.email}><input type="email" className={inputClass} {...checks.bind('email')} /></Field>
                     <div className="grid grid-cols-2 gap-2">
-                        <Field label="Phone"><input type="tel" className={inputClass} value={form.phone} onChange={set('phone')} /></Field>
-                        <Field label="Mobile"><input type="tel" className={inputClass} value={form.mobile_phone} onChange={set('mobile_phone')} /></Field>
+                        <Field label="Phone" error={checks.errors.phone}><input type="tel" className={inputClass} {...checks.bind('phone')} /></Field>
+                        <Field label="Mobile" error={checks.errors.mobile_phone}><input type="tel" className={inputClass} {...checks.bind('mobile_phone')} /></Field>
                     </div>
-                    <Field label="Job title"><input className={inputClass} value={form.designation} onChange={set('designation')} /></Field>
-                    <Field label="Company" hint="Changing it links the contact to that company"><input className={inputClass} value={form.company_name} onChange={set('company_name')} /></Field>
-                    <Field label="Industry"><input className={inputClass} value={form.industry} onChange={set('industry')} /></Field>
-                    <Field label="Lead source"><input className={inputClass} value={form.lead_source} onChange={set('lead_source')} /></Field>
+                    <Field label="Job title" error={checks.errors.designation}><input className={inputClass} {...checks.bind('designation')} /></Field>
+                    <Field label="Company" hint="Changing it links the contact to that company" error={checks.errors.company_name}><input className={inputClass} {...checks.bind('company_name')} /></Field>
+                    <Field label="Industry" error={checks.errors.industry}><input className={inputClass} {...checks.bind('industry')} /></Field>
+                    <Field label="Lead source" error={checks.errors.lead_source}><input className={inputClass} {...checks.bind('lead_source')} /></Field>
                     <div className="grid grid-cols-3 gap-2">
-                        <Field label="City"><input className={inputClass} value={form.poc_city} onChange={set('poc_city')} /></Field>
-                        <Field label="State"><input className={inputClass} value={form.poc_state} onChange={set('poc_state')} /></Field>
-                        <Field label="Country"><input className={inputClass} value={form.poc_country} onChange={set('poc_country')} /></Field>
+                        <Field label="City" error={checks.errors.poc_city}><input className={inputClass} {...checks.bind('poc_city')} /></Field>
+                        <Field label="State" error={checks.errors.poc_state}><input className={inputClass} {...checks.bind('poc_state')} /></Field>
+                        <Field label="Country" error={checks.errors.poc_country}><input className={inputClass} {...checks.bind('poc_country')} list="country-names" /></Field><CountryOptions />
                     </div>
-                    <Field label="LinkedIn"><input type="url" className={inputClass} value={form.linkedin_url} onChange={set('linkedin_url')} /></Field>
+                    <Field label="LinkedIn" error={checks.errors.linkedin_url}><input type="url" className={inputClass} {...checks.bind('linkedin_url')} /></Field>
                     {Object.entries(groups).map(([group, gf]) => (
                         <div key={group} className="space-y-3 pt-1">
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{group}</p>
@@ -383,7 +388,7 @@ function DetailsCard({ contact, fields, onSaved }) {
                     ))}
                     <ErrorNote message={error} />
                     <div className="flex gap-2">
-                        <PrimaryButton onClick={() => save.mutate()} loading={save.isPending} className="flex-1">Save</PrimaryButton>
+                        <PrimaryButton onClick={submit} loading={save.isPending} className="flex-1">Save</PrimaryButton>
                         <SecondaryButton onClick={() => setEditing(false)} className="flex-1">Cancel</SecondaryButton>
                     </div>
                 </div>

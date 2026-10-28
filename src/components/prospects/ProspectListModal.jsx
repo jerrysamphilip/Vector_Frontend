@@ -2,9 +2,10 @@
 // Modal component for viewing and editing prospects within a list.
 // State and actions: listModal/useProspectListModal; table, toolbar and confirmations: listModal/.
 
+import { useId } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, ShieldCheck, X } from 'lucide-react';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
 import { useProspectListModal } from './listModal/useProspectListModal';
 import AddToListPanel from './listModal/AddToListPanel';
 import BulkEditPanel from './listModal/BulkEditPanel';
@@ -22,7 +23,7 @@ export default function ProspectListModal({ list, onClose }) {
         setShowAddToList, setListNotice, listNotice, showBulkEdit, setShowBulkEdit, bulkUpdateMutation, pageSize,
         deleteConfirmId, showBulkDeleteConfirm,
     } = modal;
-    const { titleId, dialogProps } = useDialog({ onClose });
+    const titleId = useId();
 
     return (
         <motion.div
@@ -32,8 +33,7 @@ export default function ProspectListModal({ list, onClose }) {
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
             onClick={onClose}
         >
-            <motion.div
-                {...dialogProps}
+            <DialogPanel as={motion.div} onClose={onClose} labelledBy={titleId}
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
@@ -112,7 +112,7 @@ export default function ProspectListModal({ list, onClose }) {
                 {total > pageSize && (
                     <ListPagination modal={modal} />
                 )}
-            </motion.div>
+            </DialogPanel>
 
             {/* Delete Single Prospect Confirmation */}
             {deleteConfirmId && (

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
@@ -11,7 +11,8 @@ import { authApi } from '../../api/auth';
 import { tasksApi, viewsApi } from '../../api/contacts';
 import { BUILT_IN_VIEWS, contactViewHref } from '../../lib/contactViews';
 import { useAuth } from '../../auth/AuthProvider';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
+import { NavDrawerBackdrop, NavDrawerScope } from './NavDrawerLayer';
 import { errorText } from '../../lib/apiErrors';
 
 // Grouped navigation. permission: null = everyone; admin: admins only.
@@ -91,7 +92,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
   const [forgotMsg, setForgotMsg] = useState('');
 
   // role=dialog, focus trap, Escape closes, focus returns to the Account button
-  const { titleId, dialogProps } = useDialog({ onClose, returnFocusRef });
+  const titleId = useId();
 
   const forgotPwMutation = useMutation({
     mutationFn: () => authApi.forgotPassword(currentUser?.email),
@@ -125,8 +126,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <motion.div
-        {...dialogProps}
+      <DialogPanel as={motion.div} onClose={onClose} returnFocusRef={returnFocusRef} labelledBy={titleId}
         className="relative w-full max-w-md max-h-[90vh] max-h-[90dvh] overflow-x-hidden overflow-y-auto bg-white rounded-2xl shadow-2xl outline-none"
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -242,7 +242,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
             {loading ? 'Updating...' : 'Update Password'}
           </button>
         </form>
-      </motion.div>
+      </DialogPanel>
     </div>
   );
 }
@@ -320,9 +320,8 @@ export default function Sidebar({ drawer = null }) {
   return (
     <>
     {/* Below lg: off-canvas drawer (useNavDrawer in Layout). Backdrop closes it. */}
-    {isDrawer && drawerOpen && (
-      <div className="fixed top-0 right-0 bottom-0 left-0 z-40 bg-slate-900/50 lg:hidden" onClick={drawer.closeDrawer} aria-hidden="true" />
-    )}
+    {isDrawer && drawerOpen && <NavDrawerBackdrop onClose={drawer.closeDrawer} />}
+    <NavDrawerScope open={drawerOpen}>
     <aside id="app-sidebar" ref={drawer?.drawerRef} aria-label={drawerOpen ? 'Navigation' : 'Main navigation'} inert={isDrawer && !drawerOpen ? true : undefined}
       role={drawerOpen ? 'dialog' : undefined} aria-modal={drawerOpen ? 'true' : undefined}
       className={`fixed top-0 left-0 w-60 h-screen h-[100dvh] lg:h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-blue-600 text-white transition-transform duration-200 lg:translate-x-0 lg:z-40 ${drawerOpen ? 'translate-x-0 z-50 shadow-2xl' : '-translate-x-full z-40'}`}>
@@ -373,6 +372,7 @@ export default function Sidebar({ drawer = null }) {
         </NavLink>
       </div>
     </aside>
+    </NavDrawerScope>
     </>
   );
 }

@@ -7,8 +7,10 @@ import { companiesApi } from '../api/accounts';
 import { useAuth } from '../auth/AuthProvider';
 import LoadError from '../components/ui/LoadError';
 import { withVersion } from '../lib/staleVersion';
+import { COMPANY_FIELDS } from '../lib/fieldValidation';
+import { useFieldErrors } from '../lib/useFieldErrors';
 import {
-    Modal, Field, inputClass, ErrorNote, PrimaryButton, SecondaryButton, BRAND_GRADIENT, CustomFieldInput, useCrmMeta,
+    Modal, Field, inputClass, ErrorNote, CountryOptions, PrimaryButton, SecondaryButton, BRAND_GRADIENT, CustomFieldInput, useCrmMeta,
 } from '../components/contacts/shared';
 import CompanyCell, { formatRevenue } from '../components/accounts/CompanyCell';
 import ColumnChooser from '../components/accounts/ColumnChooser';
@@ -39,46 +41,51 @@ export function AccountFormModal({ account, properties = [], onClose, onSaved })
     const { meta } = useCrmMeta();
     const [error, setError] = useState(null);
     const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }));
+    // F-07 / F-08: inline field rules; the server's 422 field errors are shown on the fields as well
+    const checks = useFieldErrors(COMPANY_FIELDS, form, setForm);
     const save = useMutation({
         mutationFn: () => {
-            const payload = { ...form, annual_revenue: form.annual_revenue === '' || form.annual_revenue == null ? null : String(form.annual_revenue), lifecycle_stage: form.lifecycle_stage || null };
+            const clean = checks.normalized();
+            const payload = { ...clean, annual_revenue: clean.annual_revenue === '' || clean.annual_revenue == null ? null : String(clean.annual_revenue), lifecycle_stage: clean.lifecycle_stage || null };
             if (properties.length) payload.custom_fields = Object.fromEntries(properties.map(p => [p.field_key, custom[p.field_key] ?? null]));
             return account ? companiesApi.update(account.account_id, withVersion(payload, version)) : companiesApi.create(payload);
         },
         onSuccess: onSaved,
-        onError: err => setError(errorMessage(err)),
+        onError: err => { checks.fromServer(err); setError(errorMessage(err)); },
     });
+    const submit = () => { if (checks.validate()) save.mutate(); };
 
     return (
         <Modal title={account ? 'Edit company' : 'New company'} subtitle={account ? 'Renaming updates the company name on its contacts' : 'A company your contacts work at'}
             onClose={onClose} width="max-w-xl"
             footer={<>
                 <SecondaryButton onClick={onClose} className="flex-1">Cancel</SecondaryButton>
-                <PrimaryButton onClick={() => save.mutate()} loading={save.isPending} disabled={!form.name.trim()} className="flex-1">
+                <PrimaryButton onClick={submit} loading={save.isPending} disabled={!form.name.trim()} className="flex-1">
                     {account ? 'Save' : 'Create company'}
                 </PrimaryButton>
             </>}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Name *" className="sm:col-span-2"><input className={inputClass} value={form.name} onChange={set('name')} autoFocus /></Field>
-                <Field label="Domain"><input className={inputClass} value={form.domain} onChange={set('domain')} placeholder="acme.com" /></Field>
-                <Field label="Website"><input type="url" className={inputClass} value={form.website} onChange={set('website')} placeholder="https://" /></Field>
-                <Field label="Phone"><input type="tel" className={inputClass} value={form.phone} onChange={set('phone')} /></Field>
-                <Field label="Industry"><input className={inputClass} value={form.industry} onChange={set('industry')} /></Field>
-                <Field label="Employees"><input className={inputClass} value={form.emp_band} onChange={set('emp_band')} placeholder="51-200" /></Field>
-                <Field label="Annual revenue (USD)"><input inputMode="decimal" className={inputClass} value={form.annual_revenue} onChange={set('annual_revenue')} placeholder="2500000" /></Field>
+            <div ref={checks.formRef} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Name *" className="sm:col-span-2" error={checks.errors.name}><input className={inputClass} {...checks.bind('name')} autoFocus /></Field>
+                <Field label="Domain" error={checks.errors.domain}><input className={inputClass} {...checks.bind('domain')} placeholder="acme.com" /></Field>
+                <Field label="Website" error={checks.errors.website}><input type="url" className={inputClass} {...checks.bind('website')} placeholder="https://" /></Field>
+                <Field label="Phone" error={checks.errors.phone}><input type="tel" className={inputClass} {...checks.bind('phone')} /></Field>
+                <Field label="Industry" error={checks.errors.industry}><input className={inputClass} {...checks.bind('industry')} /></Field>
+                <Field label="Employees" error={checks.errors.emp_band}><input className={inputClass} {...checks.bind('emp_band')} placeholder="51-200" /></Field>
+                <Field label="Annual revenue (USD)" error={checks.errors.annual_revenue}><input inputMode="decimal" className={inputClass} {...checks.bind('annual_revenue')} placeholder="2500000" /></Field>
                 <Field label="Lifecycle stage">
                     <select className={inputClass} value={form.lifecycle_stage} onChange={set('lifecycle_stage')}>
                         <option value="">Not set</option>
                         {(meta?.lifecycle_stages || []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                 </Field>
-                <Field label="Street" className="sm:col-span-2"><input className={inputClass} value={form.street} onChange={set('street')} /></Field>
-                <Field label="City"><input className={inputClass} value={form.city} onChange={set('city')} /></Field>
-                <Field label="State"><input className={inputClass} value={form.state} onChange={set('state')} /></Field>
-                <Field label="Postal code"><input className={inputClass} value={form.postal_code} onChange={set('postal_code')} /></Field>
-                <Field label="Country"><input className={inputClass} value={form.country} onChange={set('country')} /></Field>
-                <Field label="About" className="sm:col-span-2">
-                    <textarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400" value={form.description} onChange={set('description')} />
+                <Field label="Street" className="sm:col-span-2" error={checks.errors.street}><input className={inputClass} {...checks.bind('street')} /></Field>
+                <Field label="City" error={checks.errors.city}><input className={inputClass} {...checks.bind('city')} /></Field>
+                <Field label="State" error={checks.errors.state}><input className={inputClass} {...checks.bind('state')} /></Field>
+                <Field label="Postal code" error={checks.errors.postal_code}><input className={inputClass} {...checks.bind('postal_code')} /></Field>
+                <Field label="Country" error={checks.errors.country}><input className={inputClass} {...checks.bind('country')} list="country-names" /></Field>
+                <CountryOptions />
+                <Field label="About" className="sm:col-span-2" error={checks.errors.description}>
+                    <textarea rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400" {...checks.bind('description')} />
                 </Field>
                 {properties.map(p => (
                     <Field key={p.field_key} label={`${p.label}${p.required ? ' *' : ''}`}>

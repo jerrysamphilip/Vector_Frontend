@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useId } from 'react';
 import { CheckCircle2, AlertTriangle, Download, X } from 'lucide-react';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
 import { downloadCsv } from '../../lib/csv';
 
 /**
@@ -9,7 +9,7 @@ import { downloadCsv } from '../../lib/csv';
  * [{prospect_id, email, name, reason_code, reason}].
  */
 export default function EnrollmentResultModal({ title = 'Enrollment result', enrolled = 0, rejected = [], rejectedCount, note, limitNotice, onClose, closeLabel = 'Done' }) {
-    const { titleId, dialogProps } = useDialog({ onClose });
+    const titleId = useId();
     const total = rejectedCount ?? rejected.length;
     const byReason = useMemo(() => {
         const groups = {};
@@ -24,7 +24,7 @@ export default function EnrollmentResultModal({ title = 'Enrollment result', enr
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-            <div {...dialogProps} className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden outline-none">
+            <DialogPanel onClose={onClose} labelledBy={titleId} className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden outline-none">
                 <div className="h-1.5 w-full flex-shrink-0" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }} />
                 <div className="px-6 pt-5 pb-3 flex items-start justify-between">
                     <h2 id={titleId} className="text-lg font-bold text-gray-900">{title}</h2>
@@ -81,7 +81,7 @@ export default function EnrollmentResultModal({ title = 'Enrollment result', enr
                     )}
                     <button onClick={onClose} className="ml-auto h-10 px-5 text-sm font-semibold text-white rounded-xl" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>{closeLabel}</button>
                 </div>
-            </div>
+            </DialogPanel>
         </div>
     );
 }

@@ -10,6 +10,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions follow [SemVer
 Release candidate for BRD v2.0 Phase 1 (R1.0) and Phase 2 (R2.1), released together with backend 1.1.0.
 
 ### Added
+- Field validation and normalisation on contact, company and campaign sender forms (`src/lib/fieldValidation.js`):
+  names, e-mail, international phone, LinkedIn/website/CTA links (https, no script schemes), country/state/postal
+  code, revenue, column lengths, no HTML; server 422 errors shown on their fields.
+- Every dialog runs on the Radix-based DialogPanel; the hand-rolled focus trap (useDialog / activateModal) is gone and
+  the mobile nav drawer uses Radix FocusScope / DismissableLayer.
 - Campaign editor after launch (`/app/campaigns/:id/edit`): steps, persona versions, preview as a real contact,
   sender/window/inboxes, "N unsent emails will be updated" before saving; Settings tab editable for active campaigns.
 - Companies: saved views, column chooser, archived filter, custom properties, backfill preview/run/undo, export.

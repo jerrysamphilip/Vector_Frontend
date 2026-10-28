@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useId } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { NavLink, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,7 +9,8 @@ import {
 import logo from '../../assets/logo.png';
 import { authApi } from '../../api/auth';
 import { useAuth } from '../../auth/AuthProvider';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
+import { NavDrawerBackdrop, NavDrawerScope } from './NavDrawerLayer';
 import { useNavDrawer } from './useNavDrawer';
 import { errorText } from '../../lib/apiErrors';
 
@@ -52,7 +53,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
     const [forgotMsg, setForgotMsg] = useState('');
 
     // role=dialog, focus trap, Escape closes, focus returns to the profile button
-    const { titleId, dialogProps } = useDialog({ onClose, returnFocusRef });
+    const titleId = useId();
 
     const forgotPwMutation = useMutation({
         mutationFn: () => authApi.forgotPassword(currentUser?.email),
@@ -86,8 +87,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-            <motion.div
-                {...dialogProps}
+            <DialogPanel as={motion.div} onClose={onClose} returnFocusRef={returnFocusRef} labelledBy={titleId}
                 className="relative w-full max-w-md max-h-[90vh] max-h-[90dvh] overflow-x-hidden overflow-y-auto bg-white rounded-2xl shadow-2xl outline-none"
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -164,7 +164,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
                         {loading ? 'Updating...' : 'Update Password'}
                     </button>
                 </form>
-            </motion.div>
+            </DialogPanel>
         </div>
     );
 }
@@ -190,9 +190,8 @@ export default function AdminLayout() {
 
     return (
         <>
-            {drawerOpen && (
-                <div className="fixed top-0 right-0 bottom-0 left-0 z-40 bg-slate-900/50 lg:hidden" onClick={drawer.closeDrawer} aria-hidden="true" />
-            )}
+            {drawerOpen && <NavDrawerBackdrop onClose={drawer.closeDrawer} />}
+            <NavDrawerScope open={drawerOpen}>
             <motion.aside
                 id="admin-sidebar"
                 ref={drawer.drawerRef}
@@ -288,6 +287,7 @@ export default function AdminLayout() {
                     </button>
                 </div>
             </motion.aside>
+            </NavDrawerScope>
 
             {/* Profile popup */}
             <AnimatePresence>

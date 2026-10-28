@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useId } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -15,7 +15,7 @@ import BouncedRevalidationModal from '../components/prospects/BouncedRevalidatio
 import KpiTile from '../components/ui/KpiTile';
 import LoadError from '../components/ui/LoadError';
 import { useApiQuery } from '../lib/useApiQuery';
-import { useDialog } from '../components/common/useDialog';
+import DialogPanel from '../components/ui/DialogPanel';
 import { errorText } from '../lib/apiErrors';
 
 // ── GradientCard ─────────────────────────────────────────────────
@@ -90,7 +90,7 @@ function UploadModal({ onClose }) {
     const [file, setFile]     = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError]   = useState(null);
-    const { titleId, dialogProps } = useDialog({ onClose });
+    const titleId = useId();
 
     const handleSubmit = async () => {
         if (!name.trim()) { setError('Give this list a name'); return; }
@@ -115,7 +115,7 @@ function UploadModal({ onClose }) {
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-            <div {...dialogProps} className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden outline-none"
+            <DialogPanel onClose={onClose} labelledBy={titleId} className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden outline-none"
                 onClick={e => e.stopPropagation()}>
 
                 {/* Gradient top bar */}
@@ -174,18 +174,18 @@ function UploadModal({ onClose }) {
                             : <><Upload className="w-4 h-4" />Validate & Continue</>}
                     </button>
                 </div>
-            </div>
+            </DialogPanel>
         </div>
     );
 }
 
 // ── Delete Confirm Modal ──────────────────────────────────────────
 function DeleteModal({ title, message, onConfirm, onCancel, loading }) {
-    const { titleId, dialogProps } = useDialog({ onClose: onCancel });
+    const titleId = useId();
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
-            <div {...dialogProps} className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 outline-none"
+            <DialogPanel onClose={onCancel} labelledBy={titleId} className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 outline-none"
                 onClick={e => e.stopPropagation()}>
                 <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
                     <Trash2 className="w-5 h-5 text-red-500" />
@@ -203,7 +203,7 @@ function DeleteModal({ title, message, onConfirm, onCancel, loading }) {
                         Delete
                     </button>
                 </div>
-            </div>
+            </DialogPanel>
         </div>
     );
 }

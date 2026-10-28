@@ -29,7 +29,8 @@ export default function DialogPanel({
     as: Tag = 'div', onClose, closeOnEscape = true, returnFocusRef, labelledBy, className = '', children, ...rest
 }) {
     const generatedId = useId();
-    const titleId = labelledBy || `dialog-title-${generatedId.replace(/:/g, '')}`;
+    // An aria-label (and no labelledBy) names the dialog instead of a title element
+    const titleId = labelledBy || (rest['aria-label'] ? undefined : `dialog-title-${generatedId.replace(/:/g, '')}`);
     const panelRef = useRef(null);
     // The opener: read while rendering, before this dialog (or an autoFocus field in it) takes focus
     const [opener] = useState(() => (typeof document !== 'undefined' ? document.activeElement : null));

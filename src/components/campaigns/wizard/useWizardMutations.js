@@ -4,6 +4,8 @@ import { campaignWizardApi } from '../../../api/campaignWizard';
 import { campaignDraftsApi } from '../../../api/campaignDrafts';
 import { versionOf } from '../../../lib/staleVersion';
 import { OUR_COMPANY } from './emailPreview';
+import { errorMessage } from '../../../lib/apiErrors';
+import { serverFieldErrors } from '../../../lib/fieldValidation';
 
 /** Keep the draft campaign's latest row_version (T-3) from a create / get / update / launch response. */
 export function trackVersion(versionRef, record) {
@@ -39,7 +41,8 @@ export function useWizardMutations(ctx) {
             setCurrentStep(2);
             queryClient.invalidateQueries({ queryKey: ['campaigns'], });
         },
-        onError: (error) => setErrors({ submit: error.response?.data?.detail || 'Failed to create campaign' })
+        // a 422 puts its field errors next to the fields (sender details) as well as the summary line
+        onError: (error) => setErrors({ ...serverFieldErrors(error), submit: errorMessage(error, 'Failed to create campaign') })
     });
 
     // Step 2: Sequence

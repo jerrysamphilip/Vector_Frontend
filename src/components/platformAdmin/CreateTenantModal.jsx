@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, Building2, CheckCircle2, Copy, X } from 'lucide-react';
 import { platformAdminApi } from '../../api/platformAdmin';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
 import { errorText } from '../../lib/apiErrors';
 
 // Platform admin: create a tenant with its first admin. The admin gets a set-password link by email
@@ -34,7 +34,7 @@ export default function CreateTenantModal({ onClose, onCreated }) {
         mutation.mutate(form);
     };
     // Escape / backdrop do not dismiss the one-time activation link
-    const { titleId, dialogProps } = useDialog({ onClose, closeOnEscape: !magicLink });
+    const titleId = useId();
 
     const handleCopy = () => {
         navigator.clipboard.writeText(magicLink).then(() => {
@@ -52,8 +52,7 @@ export default function CreateTenantModal({ onClose, onCreated }) {
                 exit={{ opacity: 0 }}
             >
                 <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onClick={!magicLink ? onClose : undefined} />
-                <motion.div
-                    {...dialogProps}
+                <DialogPanel as={motion.div} onClose={onClose} closeOnEscape={!magicLink} labelledBy={titleId}
                     className="relative w-full max-w-lg max-h-[90vh] max-h-[90dvh] overflow-x-hidden overflow-y-auto rounded-[28px] bg-white shadow-2xl outline-none"
                     initial={{ opacity: 0, scale: 0.96, y: 12 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -206,7 +205,7 @@ export default function CreateTenantModal({ onClose, onCreated }) {
                             </form>
                         )}
                     </div>
-                </motion.div>
+                </DialogPanel>
             </motion.div>
         </AnimatePresence>
     );

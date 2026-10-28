@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import DialogPanel from './DialogPanel';
 import { ConfirmProvider, useConfirm } from './ConfirmDialog';
-import { useDialog } from '../common/useDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './DropdownMenu';
 
 const tick = () => act(() => new Promise(r => setTimeout(r, 0)));
@@ -147,18 +146,55 @@ describe('DialogPanel (Radix FocusScope + DismissableLayer)', () => {
     });
 });
 
-describe('ConfirmDialog over a hand-rolled useDialog modal', () => {
+describe('DialogPanel (former useDialog behaviour)', () => {
+    it('only the top-most of nested dialogs reacts to Escape', async () => {
+        const user = userEvent.setup();
+        const outerClose = vi.fn();
+        const innerClose = vi.fn();
+        function Nested() {
+            const [inner, setInner] = useState(false);
+            return (
+                <DialogPanel onClose={outerClose} labelledBy="outer">
+                    <h2 id="outer">Outer</h2>
+                    <button onClick={() => setInner(true)}>More options</button>
+                    {inner && (
+                        <DialogPanel onClose={() => { innerClose(); setInner(false); }} labelledBy="inner">
+                            <h2 id="inner">Inner</h2>
+                            <input aria-label="Inner field" />
+                        </DialogPanel>
+                    )}
+                </DialogPanel>
+            );
+        }
+        render(<Nested />);
+        await user.click(screen.getByRole('button', { name: 'More options' }));
+        expect(screen.getByLabelText('Inner field')).toHaveFocus();
+        await user.keyboard('{Escape}');
+        expect(innerClose).toHaveBeenCalledTimes(1);
+        expect(outerClose).not.toHaveBeenCalled();
+        await user.keyboard('{Escape}');
+        expect(outerClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('is named by an aria-label when no labelledBy is given', () => {
+        render(<DialogPanel aria-label="DNS records for example.com"><button>Done</button></DialogPanel>);
+        const dialog = screen.getByRole('dialog', { name: 'DNS records for example.com' });
+        expect(dialog).not.toHaveAttribute('aria-labelledby');
+    });
+});
+
+describe('ConfirmDialog over a DialogPanel modal', () => {
     function LegacyModal({ onClose }) {
-        const { titleId, dialogProps } = useDialog({ onClose });
+        const titleId = 'legacy-title';
         const confirm = useConfirm();
         const [answer, setAnswer] = useState('');
         return (
-            <div {...dialogProps}>
+            <DialogPanel onClose={onClose} labelledBy={titleId}>
                 <h2 id={titleId}>Legacy</h2>
                 <input aria-label="Legacy field" />
                 <button onClick={async () => setAnswer(String(await confirm({ title: 'Really?', confirmLabel: 'Yes' })))}>Ask</button>
                 <p>answer:{answer}</p>
-            </div>
+            </DialogPanel>
         );
     }
 

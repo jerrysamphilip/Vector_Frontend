@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, Server, Loader2, Plus } from 'lucide-react';
 import deliverabilityApi from '../../api/deliverability';
 import DnsRecordsPanel from './DnsRecordsPanel';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { errorText } from '../../lib/apiErrors';
 
@@ -27,7 +27,7 @@ const detail = (err, fallback) => errorText(err, fallback);
  */
 export default function DomainDnsModal({ domainName: initialName = null, canManage, onClose, onChanged }) {
     const [domainName, setDomainName] = useState(initialName);
-    const { dialogProps } = useDialog({ onClose });
+    
     const [input, setInput] = useState('');
     const [fresh, setInfo] = useState(null);      // { dns_records, dkim_tokens_available, *_status } after add / check
     const [adding, setAdding] = useState(false);
@@ -78,11 +78,11 @@ export default function DomainDnsModal({ domainName: initialName = null, canMana
         }
     };
 
-    // The accessible name stays the aria-label ("DNS records for <domain>" / "Add sending domain"); useDialog adds
+    // The accessible name stays the aria-label ("DNS records for <domain>" / "Add sending domain"); DialogPanel adds
     // aria-modal, the focus trap, Escape and focus return.
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div {...dialogProps} aria-labelledby={undefined} aria-label={domainName ? `DNS records for ${domainName}` : 'Add sending domain'}
+            <DialogPanel onClose={onClose} aria-label={domainName ? `DNS records for ${domainName}` : 'Add sending domain'}
                 className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto outline-none">
                 <div className="px-6 py-5 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                     <div className="flex items-center gap-3">
@@ -132,7 +132,7 @@ export default function DomainDnsModal({ domainName: initialName = null, canMana
                         </div>
                     )}
                 </div>
-            </div>
+            </DialogPanel>
         </div>
     );
 }

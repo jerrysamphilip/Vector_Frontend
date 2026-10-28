@@ -1,11 +1,11 @@
 // Import wizard (C-03..C-06, F-16): upload -> map (saved mappings) -> options -> preview (dry run) -> start
 // -> live progress (cancel) -> result with the error CSV. The drawer can be closed at any time: a started
 // import keeps running on the server and shows its progress in the imports history.
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Loader2, Save, Upload, X } from 'lucide-react';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
 import { contactsApi, errorMessage, listsApi } from '../../api/contacts';
 import { DATE_ORDERS, IMPORT_MODES, backgroundImportsApi as api, isActive, savedMappingsApi } from '../../api/imports';
 import { getStoredUser } from '../../lib/authStorage';
@@ -260,7 +260,7 @@ const BACK = { map: 'upload', options: 'map', preview: 'options' };
 
 export default function ImportDrawer({ onClose, initialJob = null }) {
     const queryClient = useQueryClient();
-    const { titleId, dialogProps } = useDialog({ onClose });
+    const titleId = useId();
     const me = getStoredUser();
     const [step, setStep] = useState(initialJob ? 'run' : 'upload');
     const [file, setFile] = useState(null);
@@ -305,7 +305,7 @@ export default function ImportDrawer({ onClose, initialJob = null }) {
     return (
         <div className="fixed inset-0 z-50 flex justify-end">
             <div className="absolute inset-0 bg-slate-900/30" onClick={close} />
-            <div {...dialogProps} className="relative bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col outline-none" onClick={e => e.stopPropagation()}>
+            <DialogPanel onClose={onClose} labelledBy={titleId} className="relative bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col outline-none" onClick={e => e.stopPropagation()}>
                 <div className="h-1.5 w-full flex-shrink-0" style={{ background: BRAND_GRADIENT }} />
                 <div className="px-5 sm:px-6 pt-5 pb-2 flex items-start justify-between gap-3">
                     <div>
@@ -341,7 +341,7 @@ export default function ImportDrawer({ onClose, initialJob = null }) {
                         <SecondaryButton onClick={close} className="ml-auto">Cancel</SecondaryButton>
                     </div>
                 )}
-            </div>
+            </DialogPanel>
         </div>
     );
 }

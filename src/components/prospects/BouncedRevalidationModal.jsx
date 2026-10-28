@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { campaignApi } from '../../api/campaigns';
 import RevalidateModal from '../campaigns/RevalidateModal';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
 import { errorText } from '../../lib/apiErrors';
 
 function formatDate(value) {
@@ -28,7 +28,7 @@ function formatDate(value) {
 export default function BouncedRevalidationModal({ onClose }) {
     const [selectedProspect, setSelectedProspect] = useState(null);
     const [successMessage, setSuccessMessage] = useState('');
-    const { titleId, dialogProps } = useDialog({ onClose });
+    const titleId = useId();
 
     const {
         data: candidates = [],
@@ -47,8 +47,7 @@ export default function BouncedRevalidationModal({ onClose }) {
     return (
         <>
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                <motion.div
-                    {...dialogProps}
+                <DialogPanel as={motion.div} onClose={onClose} labelledBy={titleId}
                     initial={{ opacity: 0, scale: 0.96, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96, y: 10 }}
@@ -173,7 +172,7 @@ export default function BouncedRevalidationModal({ onClose }) {
                             </div>
                         )}
                     </div>
-                </motion.div>
+                </DialogPanel>
             </div>
 
             <AnimatePresence>

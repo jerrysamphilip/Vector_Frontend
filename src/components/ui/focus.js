@@ -34,6 +34,3 @@ export function focusElement(el) {
     if (el.matches?.('[role="dialog"],[role="alertdialog"]') && !el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
     el.focus({ preventScroll: true });
 }
-
-/** Selector of the popup layers (dialogs, menus, listboxes) a dialog lets focus move into. */
-export const LAYER_SELECTOR = '[role="dialog"],[role="alertdialog"],[role="listbox"],[role="menu"]';

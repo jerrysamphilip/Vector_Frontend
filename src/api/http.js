@@ -128,6 +128,7 @@ export function normalizeError(error) {
     const data = error?.response?.data;
     if (!data) return;
     if (Array.isArray(data.detail)) {
+        data.detail_list = data.detail; // keep FastAPI's per-field list for forms (serverFieldErrors)
         data.detail = data.detail.map(d => (d?.loc ? `${d.loc.filter(l => l !== 'body').join('.')}: ${d.msg}` : d?.msg || String(d))).join('; ');
     } else if (data.detail && typeof data.detail === 'object') {
         data.detail_data = data.detail; // keep the structured detail (e.g. {prospect_id}, {lead_id}) for callers
