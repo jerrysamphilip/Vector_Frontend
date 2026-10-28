@@ -1,3 +1,4 @@
+import { formatDate as formatApiDate } from '../../lib/dates';
 import { AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import KpiTile from '../ui/KpiTile';
 import { errorText } from '../../lib/apiErrors';
@@ -81,12 +82,7 @@ export function StatPill({ label, value }) {
 }
 
 export function formatDate(dateValue) {
-    if (!dateValue) return '—';
-    return new Date(dateValue).toLocaleDateString('en-IN', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    });
+    return formatApiDate(dateValue, { locale: 'en-IN' });
 }
 export function ErrorBanner({ message }) {
     if (!message) return null;

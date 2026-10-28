@@ -1,3 +1,4 @@
+import { parseApiDate } from '../../lib/dates';
 import { useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -14,7 +15,7 @@ export const SERIES = [
 
 export function ChartTooltip({ active, payload, label }) {
     if (!active || !payload?.length) return null;
-    const dt = new Date(label);
+    const dt = parseApiDate(label) ?? new Date(NaN); // 'YYYY-MM-DD' = that local calendar day
     const dateStr = dt.toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' });
     return (
         <div className="bg-white border border-gray-100 rounded-xl shadow-xl px-4 py-3 text-xs min-w-[140px]">
@@ -107,7 +108,7 @@ export default function EngagementChart({ timeseries, loading, kpis }) {
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                             <XAxis dataKey="d" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false}
-                                tickFormatter={d => { const dt = new Date(d); return `${dt.getDate()} ${dt.toLocaleString('en', { month: 'short' })}`; }}
+                                tickFormatter={d => { const dt = parseApiDate(d) ?? new Date(NaN); return `${dt.getDate()} ${dt.toLocaleString('en', { month: 'short' })}`; }}
                                 interval={Math.max(0, Math.floor(data.length / 7))}
                             />
                             <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} width={32} axisLine={false} tickLine={false}

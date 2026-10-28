@@ -2,18 +2,14 @@
 // per contact: last_sent_at, delivered_at, bounce_reason, ooo, steps_sent, steps_total, next_email_at,
 // stopped_reason (the API computes next_email_at with each step's stop_on_reply / stop_on_bounce flags).
 
-// The API sends UTC timestamps; a value without an offset is UTC, not local time
-export function parseUtc(value) {
-    if (!value) return null;
-    const text = String(value);
-    const date = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(text) ? text : `${text}Z`);
-    return Number.isNaN(date.getTime()) ? null : date;
-}
+import { formatDateTime, parseApiDate } from '../../../lib/dates';
 
+// The API sends UTC timestamps; a value without an offset is UTC, not local time (src/lib/dates.js)
+export const parseUtc = parseApiDate;
+
+/** "Oct 26, 1:54 PM EDT" in the viewer's zone. */
 export function formatWhen(value, locale) {
-    const date = parseUtc(value);
-    if (!date) return '—';
-    return date.toLocaleString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return formatDateTime(value, { year: false, locale });
 }
 
 /** "2 / 3" steps sent, or "—" when the campaign has no steps yet. */

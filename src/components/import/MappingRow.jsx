@@ -37,7 +37,10 @@ export default function MappingRow({ header, sample, value, targets, onChange })
     );
 }
 
-/** What blocks an import with this mapping (shown as warnings; empty when it can run). */
+/**
+ * What blocks an import with this mapping (`problems`; empty when it can run) and what doesn't block it but
+ * the user should know (`notices`).
+ */
 export function mappingProblems(mapping) {
     const mapped = Object.values(mapping);
     const hasEmail = mapped.includes('contact.email');
@@ -47,5 +50,8 @@ export function mappingProblems(mapping) {
     // Contact properties (and custom properties) are matched on email: without an Email column they can't be imported
     const orphans = hasEmail ? [] : Object.keys(mapping).filter(h => /^(contact\.|custom\.|new:)/.test(mapping[h] || ''));
     if (orphans.length) problems.push(`Contact properties need an Email column to match contacts. Map an Email column, or set ${orphans.map(h => `“${h}”`).join(', ')} to a Company field or Skip.`);
-    return { problems, hasEmail, hasCompany };
+    const targets = mapped.filter(t => t && t !== 'skip');
+    const notices = targets.length !== new Set(targets).size
+        ? ['More than one column maps to the same property; the last one wins.'] : [];
+    return { problems, notices, hasEmail, hasCompany };
 }

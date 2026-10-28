@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../lib/dates';
 import { useEffect, useState } from 'react';
 import { Info, Loader2, Pencil, Zap } from 'lucide-react';
 import { inboxesApi } from '../../../api/inboxes';
@@ -90,7 +91,7 @@ export default function ConnectionPanel({ inbox, onEdit }) {
                 configuredFlag={inbox.imap_configured} derived={Boolean(inbox.imap_derived_from_smtp)}
                 extra={<>
                     <dt className="text-gray-400">Last sync</dt>
-                    <dd className="font-medium text-gray-800">{inbox.last_sync_at ? new Date(inbox.last_sync_at).toLocaleString() : 'Never'}</dd>
+                    <dd className="font-medium text-gray-800">{formatDateTime(inbox.last_sync_at, { fallback: 'Never' })}</dd>
                     {inbox.imap_last_error && <><dt className="text-gray-400">Last error</dt><dd className="font-medium text-red-600 break-words">{inbox.imap_last_error}</dd></>}
                 </>}/>
             <p className="text-[11px] text-gray-400">Tests sign in with the saved settings and send nothing. Save your changes first, then test.</p>

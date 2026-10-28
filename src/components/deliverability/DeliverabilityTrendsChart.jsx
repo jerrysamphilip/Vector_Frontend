@@ -1,4 +1,5 @@
 
+import { formatDateTime, parseApiDate } from '../../lib/dates';
 import { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import deliverabilityApi from '../../api/deliverability';
@@ -46,8 +47,9 @@ export function formatDataPoints(stats) {
         complaints: p.Complaints || 0,
         rejects: p.Rejects || 0,
         bounces: p.Bounces || 0,
-        date: new Date(p.Timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        fullDate: new Date(p.Timestamp).toLocaleString()
+        // SES datapoints are UTC instants (daily buckets at 00:00 UTC): show the UTC day they count
+        date: parseApiDate(p.Timestamp)?.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' }) ?? '',
+        fullDate: formatDateTime(p.Timestamp)
     }));
 }
 

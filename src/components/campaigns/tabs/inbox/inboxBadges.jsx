@@ -1,4 +1,5 @@
 import { AlertTriangle, Check, CheckCheck, Clock, XCircle } from 'lucide-react';
+import { formatDateTime, toApiIso } from '../../../../lib/dates';
 
 // Reply labels (S-09), delivery ticks from final_status and the per-email activity timeline (S-10).
 
@@ -61,10 +62,9 @@ const STEP_LABELS = {
     COMPLAINED: 'Marked as spam', UNSUBSCRIBED: 'Unsubscribed', REPLIED: 'Replied',
 };
 
+// "Oct 26, 1:54 PM EDT" in the viewer's zone
 function fmtStepTime(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return formatDateTime(iso, { year: false, fallback: '' });
 }
 
 export function ActivityTimeline({ activity = [] }) {
@@ -77,7 +77,7 @@ export function ActivityTimeline({ activity = [] }) {
                     <span className={step.type === 'BOUNCED' || step.type === 'COMPLAINED' ? 'text-red-500' : ''}>
                         {STEP_LABELS[step.type] || step.type}
                     </span>
-                    {step.at && <time dateTime={step.at}>{fmtStepTime(step.at)}</time>}
+                    {step.at && <time dateTime={toApiIso(step.at) || step.at}>{fmtStepTime(step.at)}</time>}
                     {step.reply_label && <ReplyLabelBadge label={step.reply_label} />}
                 </li>
             ))}

@@ -14,6 +14,7 @@ import { getStoredUser } from '../../../lib/authStorage';
 import { useApiQuery } from '../../../lib/useApiQuery';
 import { useToast } from '../../ui/Toast';
 import { campaignInboxIds, formatSentToday, sentTodayVsCapacity } from './sentToday';
+import { parseApiDate } from '../../../lib/dates';
 
 // Dashboard Theme Colors
 const COLORS = {
@@ -27,10 +28,26 @@ const COLORS = {
     completed: '#e2e8f0',  // slate-200 for gauge empty
 };
 
-// ─── Inline SVG sparklines for gradient cards ───────────────────────────
 // ─── Gradient Card with hover-replay sparkline ───────────────────────────────
-function GradientCard(props) {
-    return <KpiTile {...props} />;
+// `hint`: what the number counts, shown as the tile's tooltip
+function GradientCard({ hint, ...props }) {
+    return <div title={hint}><KpiTile {...props} /></div>;
+}
+
+// ─── Dates from the API (src/lib/dates.js) ──────────────────────────────────────
+// A 'YYYY-MM-DD' chart bucket is a calendar day (local midnight of that day, not UTC midnight, which is the
+// day before in the Americas); API datetimes without an offset are UTC.
+function parseCalendarDay(day) {
+    return parseApiDate(day) ?? new Date(NaN);
+}
+
+const RATE_HINT = 'Rate over delivered emails (sent minus bounced).';
+const IN_SEQUENCE_HINT = 'Contacts still in the sequence (not finished), including contacts not emailed yet. Excludes bounced, unsubscribed, replied and completed contacts.';
+
+// A step's positive replies over its delivered emails (sent minus bounced), like the other reply rates
+function stepPositiveRate(seq) {
+    const delivered = Math.max((seq.sent || 0) - (seq.bouncedCount || 0), 0);
+    return delivered > 0 ? (((seq.positiveCount || 0) / delivered) * 100).toFixed(1) : 0;
 }
 
 
@@ -72,8 +89,10 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
     const bounced = metrics?.bounced_count || 0;
     const senderBounced = metrics?.sender_bounced_count || 0;
     const unsub = metrics?.unsubscribed_count || 0;
-    const leadsContacted = campaign?.prospect_count || leadStats?.total || 0;
+    const enrolled = campaign?.prospect_count || leadStats?.total || 0;
 
+    // One denominator for open / reply rates on every screen: delivered = sent - bounced (the backend's
+    // open_rate / reply_rate use the same). Bounce, sender-bounce and unsubscribe rates stay over sent.
     const base = Math.max(sent - bounced, 0) || 1;
     const openRate = ((opened / base) * 100).toFixed(1);
     const replyRate = ((replied / base) * 100).toFixed(1);
@@ -90,11 +109,11 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
     const completedCount = leadStats?.data?.find(d => d.name === 'Completed')?.value || 0;
     // Fallback: If prospects have null status, the backend tags them as "Other". Let's show them as Active.
     const activeCount = (leadStats?.data?.find(d => d.name === 'Active')?.value || 0) + (leadStats?.data?.find(d => d.name === 'Other')?.value || 0);
-    const completionPercent = leadsContacted > 0 ? Math.round((completedCount / leadsContacted) * 100) : 0;
+    const completionPercent = enrolled > 0 ? Math.round((completedCount / enrolled) * 100) : 0;
 
     const gaugeData = [
         { name: 'Completed', value: completedCount > 0 ? completedCount : (completionPercent > 0 ? completionPercent : 1) },
-        { name: 'Remaining', value: leadsContacted > 0 ? leadsContacted - completedCount : (completionPercent > 0 ? 100 - completionPercent : 100) }
+        { name: 'Remaining', value: enrolled > 0 ? enrolled - completedCount : (completionPercent > 0 ? 100 - completionPercent : 100) }
     ];
 
     // Aggregate barData based on chartFilter
@@ -114,9 +133,7 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
             const weeks = {};
             
             targetData.forEach((day) => {
-                // Safely parse date using local timezone to prevent UTC shift bugs
-                const [year, month, d] = day.date.split('-');
-                const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(d));
+                const dateObj = parseCalendarDay(day.date);
                 
                 // Find the Monday of this week
                 const dayOfWeek = dateObj.getDay(); 
@@ -151,8 +168,8 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
             // Show all 180 days for monthly
             const months = {};
             targetData.forEach((day) => {
-                const dateObj = new Date(day.date);
-                const mm = dateObj.toLocaleString('default', { month: 'short' });
+                const dateObj = parseCalendarDay(day.date);
+                const mm = dateObj.toLocaleString('en-US', { month: 'short' });
                 const yyyy = dateObj.getFullYear();
                 const key = `${mm} ${yyyy}`;
                 
@@ -224,9 +241,9 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
                             </div>
 
                             <div className="space-y-3">
-                                <div className="flex items-center justify-between gap-15 text-sm">
+                                <div className="flex items-center justify-between gap-15 text-sm" title={IN_SEQUENCE_HINT}>
                                     <span className="flex items-center gap-2 text-slate-600">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-400"></div> Active
+                                        <div className="w-2 h-2 rounded-full bg-emerald-400"></div> In sequence
                                     </span>
                                     <span className="font-semibold text-slate-800">{activeCount}</span>
                                 </div>
@@ -253,19 +270,20 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
                     </div>
                 </div>
 
-                {/* Total Sent Today */}
-                <div className="bg-[#f0fdf4] rounded-xl border border-green-100 p-6">
+                {/* Mailbox sends today: per inbox, every campaign using it, since 00:00 UTC (backend sent_today) */}
+                <div className="bg-[#f0fdf4] rounded-xl border border-green-100 p-6"
+                    title="Emails that went out today (since 00:00 UTC) from this campaign's sending inboxes, for every campaign that uses them, against the inboxes' daily capacity. Failed and queued emails are not counted.">
                     <div className="flex justify-between items-start mb-4">
                         <h3 className="font-semibold text-green-900 flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                            Total Sent Today / Limit
+                            Mailbox Sends Today / Capacity
                         </h3>
                     </div>
                     <div>
                         <span className="text-4xl font-bold text-slate-800" data-testid="sent-today-value">{formatSentToday(todayStats)}</span>
                         <span className="text-sm text-slate-500 ml-2">
                             {todayStats.inboxCount
-                                ? `Sent today by this campaign's ${todayStats.inboxCount === 1 ? 'inbox' : `${todayStats.inboxCount} inboxes`} (all campaigns) / daily capacity`
+                                ? `Mailbox sends today by this campaign's ${todayStats.inboxCount === 1 ? 'inbox' : `${todayStats.inboxCount} inboxes`} across all campaigns (since 00:00 UTC) / daily capacity`
                                 : 'Not available'}
                         </span>
                     </div>
@@ -275,20 +293,21 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
             {/* 2. KPI Grid (Matching Dashboard Style) */}
             <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                    { label: 'Total Leads Contacted', count: leadsContacted, percent: '', link: '', targetTab: 'Prospects', from: '#0046FF', to: '#0035CC', chart: 'bar', trend: true },
-                    { label: 'Total Opened', count: opened, percent: `${openRate}%`, link: '', targetTab: 'Prospects', from: '#73C8D2', to: '#5BB4BE', chart: 'wave', trend: true },
-                    { label: 'Clean Replies (No OOO)', count: repliedNoOOO, percent: `${cleanReplyRate}%`, link: '', targetTab: 'Inbox', from: '#8b5cf6', to: '#6d28d9', chart: 'wave', trend: true },
-                    { label: 'Positive Replies', count: positive, percent: `${positiveRate}%`, link: '', targetTab: 'Inbox', from: '#10b981', to: '#059669', chart: 'wave', trend: true },
-                    { label: 'Total Sent', count: sent, percent: '', link: '', targetTab: 'Schedule', from: '#E5E7EB', to: '#D1D5DB', dark: true, chart: 'bar', trend: true },
-                    { label: 'Bounced', count: bounced, percent: `${bounceRate}%`, link: '', targetTab: 'Prospects', from: '#FF9013', to: '#E67B05', chart: 'bar', trend: false },
-                    { label: 'Sender Bounced', count: senderBounced, percent: `${senderBounceRate}%`, link: '', targetTab: 'Prospects', from: '#f59e0b', to: '#d97706', chart: 'bar', trend: false },
-                    { label: 'Unsubscribed', count: unsub, percent: `${unsubRate}%`, link: '', targetTab: 'Prospects', from: '#ef4444', to: '#b91c1c', chart: 'bar', trend: false }
+                    { label: 'Enrolled', count: enrolled, sub: 'Contacts in this campaign', hint: 'Contacts enrolled in this campaign, whether or not they have been emailed yet.', link: '', targetTab: 'Prospects', from: '#0046FF', to: '#0035CC', chart: 'bar', trend: true },
+                    { label: 'Opened (unique)', count: opened, sub: `${openRate}% of delivered`, hint: `Unique contacts who opened at least one email; repeat opens are not counted. ${RATE_HINT}`, link: '', targetTab: 'Prospects', from: '#73C8D2', to: '#5BB4BE', chart: 'wave', trend: true },
+                    { label: 'Clean Replies (No OOO)', count: repliedNoOOO, sub: `${cleanReplyRate}% of delivered`, hint: `Replies without out-of-office auto-replies. ${RATE_HINT}`, link: '', targetTab: 'Inbox', from: '#8b5cf6', to: '#6d28d9', chart: 'wave', trend: true },
+                    { label: 'Positive Replies', count: positive, sub: `${positiveRate}% of delivered`, hint: `Replies classified as positive. ${RATE_HINT}`, link: '', targetTab: 'Inbox', from: '#10b981', to: '#059669', chart: 'wave', trend: true },
+                    { label: 'Total Sent', count: sent, sub: 'Emails sent (incl. bounced)', hint: 'Emails that went out, all steps, including the ones that bounced afterwards.', link: '', targetTab: 'Schedule', from: '#E5E7EB', to: '#D1D5DB', dark: true, chart: 'bar', trend: true },
+                    { label: 'Bounced', count: bounced, sub: `${bounceRate}% of sent`, hint: 'Emails that bounced, as a share of the emails sent.', link: '', targetTab: 'Prospects', from: '#FF9013', to: '#E67B05', chart: 'bar', trend: false },
+                    { label: 'Sender Bounced', count: senderBounced, sub: `${senderBounceRate}% of sent`, hint: 'Emails refused because of the sending mailbox or server, as a share of the emails sent.', link: '', targetTab: 'Prospects', from: '#f59e0b', to: '#d97706', chart: 'bar', trend: false },
+                    { label: 'Unsubscribed', count: unsub, sub: `${unsubRate}% of sent`, hint: 'Contacts who unsubscribed, as a share of the emails sent.', link: '', targetTab: 'Prospects', from: '#ef4444', to: '#b91c1c', chart: 'bar', trend: false }
                 ].map((stat, i) => (
                     <GradientCard 
                         key={i}
                         label={stat.label} 
                         value={stat.count} 
-                        sub={stat.percent ? `${stat.percent} of metrics` : 'Contacts enrolled'} 
+                        sub={stat.sub}
+                        hint={stat.hint}
                         from={stat.from} 
                         to={stat.to} 
                         dark={stat.dark}
@@ -307,7 +326,7 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
                 <div className="p-5 border-b border-slate-100 flex items-center justify-between">
                     <div>
                         <h3 className="font-semibold text-slate-800 text-sm">Campaign Analytics over the period</h3>
-                        <p className="text-xs text-slate-500 mt-1">Shows metrics of campaign activity across your team</p>
+                        <p className="text-xs text-slate-500 mt-1">Per UTC day: emails sent, unique contacts who opened that day, replies and bounces</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="flex bg-slate-100 p-1 rounded-md text-xs font-medium">
@@ -330,14 +349,14 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
                             <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} tickFormatter={(val) => {
-                                    if (chartFilter === 'Daily') return new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                    if (chartFilter === 'Daily') return parseCalendarDay(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                                     return val; 
                                 }} />
                                 <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                                 <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" iconSize={8} />
                                 <Bar name="Sent" dataKey="sent" fill={COLORS.sent} radius={[2, 2, 0, 0]} maxBarSize={40} />
-                                <Bar name="Open" dataKey="opened" fill={COLORS.opened} radius={[2, 2, 0, 0]} maxBarSize={40} />
+                                <Bar name="Opened (unique)" dataKey="opened" fill={COLORS.opened} radius={[2, 2, 0, 0]} maxBarSize={40} />
                                 <Bar name="Reply" dataKey="replied" fill={COLORS.replied} radius={[2, 2, 0, 0]} maxBarSize={40} />
                                 <Bar name="Bounced" dataKey="bounced" fill={COLORS.bounced} radius={[2, 2, 0, 0]} maxBarSize={40} />
                             </BarChart>
@@ -366,7 +385,7 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
                         <div className="border-b border-slate-100 p-4 flex items-center justify-between bg-slate-50/50">
                             <div className="flex items-center gap-3">
                                 <h4 className="font-semibold text-slate-800">Email {seq.step} - {seq.type || 'Follow up'}</h4>
-                                <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">Open Rate {seq.openRate}%</span>
+                                <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md" title="Unique openers of this step over its delivered emails (sent minus bounced)">Open Rate {seq.openRate}% of delivered</span>
                             </div>
                             <button className="text-slate-400 hover:text-slate-600 transition-colors">
                                 <Info className="w-4 h-4" />
@@ -388,7 +407,7 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
                                 <div className="text-xs font-bold text-slate-500 uppercase mt-2 flex items-center justify-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-sky-500"></span> Replied</div>
                             </div>
                             <div className="p-6 text-center">
-                                <div className="text-2xl font-bold text-slate-800">{seq.positiveCount || 0} <span className="text-base text-slate-400 ml-1">({seq.sent > 0 ? ((seq.positiveCount / seq.sent) * 100).toFixed(1) : 0}%)</span></div>
+                                <div className="text-2xl font-bold text-slate-800">{seq.positiveCount || 0} <span className="text-base text-slate-400 ml-1">({stepPositiveRate(seq)}%)</span></div>
                                 <div className="text-xs font-bold text-slate-500 uppercase mt-2 flex items-center justify-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Positive</div>
                             </div>
                             <div className="p-6 text-center">
@@ -615,7 +634,7 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
                                                                     <span className="text-slate-600">{reply.from_email}</span>
                                                                 </div>
                                                                 <span className="text-xs text-slate-400">
-                                                                    {reply.received_at ? new Date(reply.received_at).toLocaleString() : ''}
+                                                                    {parseApiDate(reply.received_at)?.toLocaleString() ?? ''}
                                                                 </span>
                                                             </div>
                                                             <div className="font-medium text-slate-800 mb-2">

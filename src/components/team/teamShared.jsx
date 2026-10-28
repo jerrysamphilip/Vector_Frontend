@@ -1,3 +1,4 @@
+import { parseApiDate } from '../../lib/dates';
 import { Mail, Crown } from 'lucide-react';
 import KpiTile from '../ui/KpiTile';
 
@@ -49,7 +50,8 @@ export function getInitials(firstName, lastName, email) {
 export function formatDate(value) {
     if (!value) return 'Never';
     try {
-        const d = new Date(value);
+        const d = parseApiDate(value);
+        if (!d) return '-';
         const diff = Date.now() - d;
         if (diff < 60000)          return 'Just now';
         if (diff < 3600000)        return `${Math.floor(diff / 60000)}m ago`;

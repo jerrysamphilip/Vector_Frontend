@@ -4,6 +4,7 @@ import { X, Loader2, AlertTriangle } from 'lucide-react';
 import { contactsApi } from '../../api/contacts';
 import DialogPanel from '../ui/DialogPanel';
 import { COUNTRIES } from '../../lib/countries';
+import { formatDateTime as formatApiDateTime, parseApiDate } from '../../lib/dates';
 import { BOOLEAN_CHOICES, booleanValue, choiceLabel, choicesOf, isChoiceType, maxLengthOf } from '../../lib/customProperties';
 
 export const BRAND_GRADIENT = 'linear-gradient(135deg, #2d6bbf, #73C8D2)';
@@ -40,15 +41,12 @@ export function Avatar({ first, last, seed, size = 'md', square = false }) {
 }
 
 /** API timestamps are UTC without a zone suffix; parse them as UTC. */
-export function parseDate(value) {
-    if (!value) return null;
-    if (value instanceof Date) return value;
-    return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(value) ? value : `${value}Z`);
-}
+// API timestamps are UTC (src/lib/dates.js parseApiDate)
+export const parseDate = parseApiDate;
 
 export function relativeDate(value) {
-    if (!value) return '—';
     const d = parseDate(value);
+    if (!d) return '—';
     const diff = Math.floor((Date.now() - d) / 86400000);
     if (diff <= 0) return 'Today';
     if (diff === 1) return 'Yesterday';
@@ -58,9 +56,9 @@ export function relativeDate(value) {
     return d.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// "Oct 26, 2026, 1:54 PM EDT" in the viewer's zone
 export function formatDateTime(value) {
-    if (!value) return '—';
-    return parseDate(value).toLocaleString('en', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return formatApiDateTime(value, { locale: 'en' });
 }
 
 export function TagChips({ tags = [], onRemove, max }) {

@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../lib/dates';
 import { useState } from 'react';
 import { Copy, Check, RefreshCcw, CheckCircle2, XCircle, AlertTriangle, Info, PlusCircle, PencilLine, HelpCircle } from 'lucide-react';
 
@@ -36,9 +37,7 @@ export function RecordStatusBadge({ status }) {
 
 /** API timestamps are UTC, often without a zone suffix. */
 function formatCheckedAt(value) {
-    if (!value) return null;
-    const d = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(value) ? value : `${value}Z`);
-    return Number.isNaN(d.getTime()) ? null : d.toLocaleString('en', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return formatDateTime(value, { locale: 'en', fallback: null });
 }
 
 /** "2 OK · 1 to add · 1 to update" from live_summary (zero counts left out). */

@@ -95,7 +95,7 @@ function MapStep({ preview, mapping, setMapping, setOptions }) {
         mutationFn: () => savedMappingsApi.save(name.trim(), mapping, null),
         onSuccess: () => { setName(''); queryClient.invalidateQueries({ queryKey: ['import-mappings'] }); },
     });
-    const { problems } = mappingProblems(mapping);
+    const { problems, notices } = mappingProblems(mapping);
     const use = (id) => {
         const found = (saved.data || []).find(m => m.mapping_id === id);
         if (!found) return;
@@ -121,7 +121,7 @@ function MapStep({ preview, mapping, setMapping, setOptions }) {
                     ))}
                 </tbody>
             </table>
-            {problems.map(p => <p key={p} className="text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-2.5">{p}</p>)}
+            {[...problems, ...notices].map(p => <p key={p} className="text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-2.5">{p}</p>)}
             <div className="flex gap-2 items-end">
                 <Field label="Save this mapping as" className="flex-1">
                     <input className={inputClass} value={name} maxLength={100} placeholder="e.g. Trade show leads" onChange={e => setName(e.target.value)} />

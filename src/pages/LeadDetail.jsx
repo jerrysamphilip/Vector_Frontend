@@ -1,3 +1,4 @@
+import { formatDate, parseApiDate } from '../lib/dates';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import LoadError from '../components/ui/LoadError';
@@ -13,7 +14,8 @@ import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const toLocal = (v) => {
     if (!v) return '';
-    const d = new Date(String(v).endsWith('Z') ? v : `${v}Z`);
+    const d = parseApiDate(v);
+    if (!d) return '';
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 };
 
@@ -153,7 +155,7 @@ export function LeadPanel({ id, embedded = false, onRemoved }) {
                 )}
                 {lead.stage === 'DISQUALIFIED' && (
                     <p className="mt-4 text-sm text-slate-600"><span className="font-semibold">Disqualified:</span> {lead.disqualified_reason}
-                        {lead.recycle_at && <span className="text-slate-500"> · comes back as a new lead on {new Date(`${lead.recycle_at}Z`).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
+                        {lead.recycle_at && <span className="text-slate-500"> · comes back as a new lead on {formatDate(lead.recycle_at, { locale: 'en' })}</span>}
                     </p>
                 )}
                 <div className="mt-3"><ErrorNote message={error} /></div>

@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 
 export const ALL_COLUMNS = [
-    { key: 'inProgress', label: 'In Progress', icon: Loader2, always: false },
+    { key: 'inProgress', label: 'In sequence', icon: Loader2, always: false },
     { key: 'sent', label: 'Sent', icon: Send, always: false },
     { key: 'opened', label: 'Opened', icon: MailOpen, always: false },
     { key: 'replied', label: 'Replied', icon: MessageSquare, always: false },

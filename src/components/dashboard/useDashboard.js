@@ -87,8 +87,11 @@ export function useDashboard() {
         unsubscribed: acc.unsubscribed + (c.unsubscribed_count || 0),
     }), { sent: 0, opened: 0, replied: 0, bounced: 0, unsubscribed: 0 });
 
-    const openRate         = totals.sent > 0 ? ((totals.opened       / totals.sent) * 100).toFixed(1) : '0.0';
-    const replyRate        = totals.sent > 0 ? ((totals.replied      / totals.sent) * 100).toFixed(1) : '0.0';
+    // Open / reply rates over delivered (sent - bounced), as on the campaign pages and in the backend; bounce and
+    // unsubscribe rates over sent.
+    const delivered        = Math.max(totals.sent - totals.bounced, 0);
+    const openRate         = delivered > 0 ? ((totals.opened       / delivered) * 100).toFixed(1) : '0.0';
+    const replyRate        = delivered > 0 ? ((totals.replied      / delivered) * 100).toFixed(1) : '0.0';
     const bounceRate       = totals.sent > 0 ? ((totals.bounced      / totals.sent) * 100).toFixed(1) : '0.0';
     const unsubscribeRate  = totals.sent > 0 ? ((totals.unsubscribed / totals.sent) * 100).toFixed(1) : '0.0';
 

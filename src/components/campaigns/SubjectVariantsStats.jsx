@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../lib/dates';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FlaskConical, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
@@ -148,7 +149,7 @@ export default function SubjectVariantsStats({ campaignId, step }) {
                                     <td className="py-1 pr-3 max-w-xs truncate" title={m.subject}>{m.subject}</td>
                                     <td className="py-1 pr-3">{m.status}</td>
                                     <td className="py-1 text-slate-500">
-                                        {(m.sent_at || m.scheduled_at) ? new Date(m.sent_at || m.scheduled_at).toLocaleString() : '-'}
+                                        {formatDateTime(m.sent_at || m.scheduled_at, { fallback: '-' })}
                                     </td>
                                 </tr>
                             ))}

@@ -1,5 +1,6 @@
 import { Target, User } from 'lucide-react';
-import { Avatar } from './inboxShared';
+import { formatDateTime, toApiIso } from '../../../../lib/dates';
+import { Avatar, isSystemNotice } from './inboxShared';
 import { ActivityTimeline, DeliveryTick, ReplyLabelBadge } from './inboxBadges';
 
 // One message of the thread: bubble, time, campaign, delivery tick and activity timeline (outbound),
@@ -9,7 +10,7 @@ export default function MessageBubble({ m, inbox }) {
         activeConversation, createLead, leadBusy
     } = inbox;
     const isOut = m.direction === 'OUTBOUND';
-    const isBounce = !isOut && (m.subject || '').toLowerCase().includes('delivery failed');
+    const isBounce = isSystemNotice(m);
 
     return (
         <div
@@ -40,9 +41,9 @@ export default function MessageBubble({ m, inbox }) {
                 </div>
                 <div className="flex items-center gap-1 px-1">
                     {m.display_time && (
-                        <span className="text-[10px] text-gray-400">
-                            {new Date(m.display_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        <time className="text-[10px] text-gray-400" dateTime={toApiIso(m.display_time) || undefined}>
+                            {formatDateTime(m.display_time, { year: false, fallback: '' })}
+                        </time>
                     )}
                     {isOut && <DeliveryTick message={m} />}
                     {isOut && m.campaign_name && (

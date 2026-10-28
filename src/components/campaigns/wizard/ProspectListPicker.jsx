@@ -1,3 +1,4 @@
+import { formatDate } from '../../../lib/dates';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle, ChevronDown, Search } from 'lucide-react';
 
@@ -91,7 +92,7 @@ export default function ProspectListPicker({ wizard }) {
                                             <p className="text-sm font-medium text-slate-900">{list.list_name}</p>
                                             <p className="text-xs text-slate-500">
                                                 {list.prospect_count?.toLocaleString() || 0} prospects
-                                                {list.uploaded_at && ` · ${new Date(list.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                                                {list.uploaded_at && ` · ${formatDate(list.uploaded_at, { locale: 'en-US' })}`}
                                             </p>
                                         </div>
                                     </div>

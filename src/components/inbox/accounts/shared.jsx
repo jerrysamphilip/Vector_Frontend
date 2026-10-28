@@ -1,3 +1,4 @@
+import { formatDate, formatTime, parseApiDate } from '../../../lib/dates';
 import KpiTile from '../../ui/KpiTile';
 import { errorReference, errorText as apiErrorText } from '../../../lib/apiErrors';
 
@@ -115,9 +116,9 @@ export function EventRow({ event }) {
     };
     const s = typeColors[event.event_type] || typeColors.SENT;
     const failed = event.status === 'FAILED';
-    const ts = new Date(event.event_time);
-    const timeStr = ts.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    const dateStr = ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const ts = parseApiDate(event.event_time);
+    const timeStr = formatTime(ts, { locale: 'en-US' });
+    const dateStr = formatDate(ts, { year: false, locale: 'en-US', fallback: '' });
 
     return (
         <div className={`flex gap-3 rounded-xl border p-3 ${failed ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-white'}`}>
