@@ -10,7 +10,7 @@ import StatusBadge from './StatusBadge';
 
 // ── column registry ─────────────────────────────────────────────────────────
 const ALL_COLUMNS = [
-    { key: 'inProgress', label: 'In Progress', icon: Loader2, always: false },
+    { key: 'inProgress', label: 'In sequence', icon: Loader2, always: false },
     { key: 'sent', label: 'Sent', icon: Send, always: false },
     { key: 'opened', label: 'Opened', icon: MailOpen, always: false },
     { key: 'replied', label: 'Replied', icon: MessageSquare, always: false },
@@ -20,12 +20,25 @@ const ALL_COLUMNS = [
     { key: 'repliedNoOOO', label: 'Replied w/o OOO', icon: VolumeX, always: false },
 ];
 
+// Header tooltips: what each column counts and the denominator of its rate. Open / reply rates are over delivered
+// (sent - bounced) as on the campaign analytics tab and the backend; bounce rates over sent.
+const COLUMN_HINTS = {
+    inProgress: 'In sequence: contacts who have not finished the sequence, including contacts not emailed yet. Excludes bounced, unsubscribed, replied and completed contacts.',
+    sent: 'Emails sent (incl. bounced)',
+    opened: 'Unique contacts who opened; repeat opens are not counted. % of delivered (sent minus bounced).',
+    replied: 'Replies, % of delivered (sent minus bounced).',
+    bounced: 'Bounced emails, % of sent.',
+    senderBounced: 'Emails refused because of the sending mailbox or server, % of sent.',
+    positive: 'Positive replies, % of delivered (sent minus bounced).',
+    repliedNoOOO: 'Replies without out-of-office auto-replies, % of delivered (sent minus bounced).',
+};
+
 const DEFAULT_VISIBLE = ['inProgress', 'sent', 'opened', 'replied', 'bounced', 'senderBounced', 'positive', 'repliedNoOOO'];
 
 // ── Gradient <th> ─────────────────────────────────────────────────────────────
-function GradientTh({ children, className = '' }) {
+function GradientTh({ children, className = '', title }) {
     return (
-        <th className={`py-3.5 px-4 ${className}`}>
+        <th className={`py-3.5 px-4 ${className}`} title={title}>
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 {children}
             </span>
@@ -161,14 +174,14 @@ export default function CampaignsTable({
                             <th className="py-3.5 px-4 w-[140px] min-w-[140px] sticky left-[330px] z-20 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)]" style={{ background: '#f8fafc' }}>
                                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Status</span>
                             </th>
-                            {show('inProgress') && <GradientTh className="min-w-[100px]">In Progress</GradientTh>}
-                            {show('sent') && <GradientTh className="min-w-[100px]">Sent</GradientTh>}
-                            {show('opened') && <GradientTh>Opened</GradientTh>}
-                            {show('replied') && <GradientTh>Replied</GradientTh>}
-                            {show('bounced') && <GradientTh>Bounced</GradientTh>}
-                            {show('senderBounced') && <GradientTh>Sender Bounced</GradientTh>}
-                            {show('positive') && <GradientTh>Positive</GradientTh>}
-                            {show('repliedNoOOO') && <GradientTh>Replied w/o OOO</GradientTh>}
+                            {show('inProgress') && <GradientTh className="min-w-[100px]" title={COLUMN_HINTS.inProgress}>In sequence</GradientTh>}
+                            {show('sent') && <GradientTh className="min-w-[100px]" title={COLUMN_HINTS.sent}>Sent</GradientTh>}
+                            {show('opened') && <GradientTh title={COLUMN_HINTS.opened}>Opened</GradientTh>}
+                            {show('replied') && <GradientTh title={COLUMN_HINTS.replied}>Replied</GradientTh>}
+                            {show('bounced') && <GradientTh title={COLUMN_HINTS.bounced}>Bounced</GradientTh>}
+                            {show('senderBounced') && <GradientTh title={COLUMN_HINTS.senderBounced}>Sender Bounced</GradientTh>}
+                            {show('positive') && <GradientTh title={COLUMN_HINTS.positive}>Positive</GradientTh>}
+                            {show('repliedNoOOO') && <GradientTh title={COLUMN_HINTS.repliedNoOOO}>Replied w/o OOO</GradientTh>}
                             <th className="py-3.5 px-4 w-[100px] min-w-[100px] text-right sticky right-0 z-20 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.15)]" style={{ background: '#f8fafc' }}>
                                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Actions</span>
                             </th>
@@ -263,7 +276,7 @@ export default function CampaignsTable({
                                             <StatusBadge status={campaign.status} />
                                         </td>
 
-                                        {/* ── In Progress — still being actively sequenced (ACTIVE/OPENED) ── */}
+                                        {/* ── In sequence — not finished: ACTIVE / OPENED enrolments (backend in_progress_count) ── */}
                                         {show('inProgress') && (
                                             <td className="py-4 px-4">
                                                 <div className="flex flex-col gap-1.5">

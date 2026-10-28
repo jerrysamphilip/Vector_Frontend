@@ -59,6 +59,17 @@ Release candidate for BRD v2.0 Phase 1 (R1.0) and Phase 2 (R2.1), released toget
 - Removed the unused legacy UI copy (`src - ExistUI`).
 
 ### Fixed
+- UAT time zones: API times without a zone were read as the browser's local time, so a bounce at 17:54 UTC
+  showed as 05:54 PM in every zone. `src/lib/dates.js` (`parseApiDate`, `formatDateTime`, `formatTime`,
+  `formatDate`) reads them as UTC and shows the viewer's zone with its abbreviation (1:54 PM EDT); about 20
+  screens use it (inbox, schedule, trigger logs, mailboxes, charts, lead detail). Date-only chart buckets are
+  local calendar days, so Oct 26 no longer shows under "Oct 25" and Nov 1 no longer lands in October.
+- Bounce "Delivery Failed" notes show as bounces, not replies (inbox list badge, thread, no "Create lead").
+- UAT campaign analytics labels: "Enrolled" (was "Total Leads Contacted"), "Emails sent (incl. bounced)"
+  (was "Contacts enrolled"), "In sequence" (was "In Progress"), "Opened (unique)", rates name their
+  denominator ("of delivered" / "of sent"), "Mailbox Sends Today / Capacity" (all campaigns, since 00:00 UTC);
+  tooltips on every tile and campaign list column. Open and reply rates are over delivered emails on the
+  campaign page and dashboard, matching the backend.
 - Accessible dialogs on all overlays (focus trap, labels), login field labels, return to the page after sign-in,
   suspended-account handling, template library errors.
 - Broken API calls found by the frontend/backend contract check; structured error details kept so duplicate

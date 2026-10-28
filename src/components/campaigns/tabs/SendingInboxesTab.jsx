@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from '../../../lib/dates';
 import { useState } from 'react';
 import { Mail, Shield, Clock, Settings, RefreshCw, Save, X, CheckCircle2, Zap } from 'lucide-react';
 import { inboxesApi } from '../../../api/inboxes';
@@ -250,7 +251,7 @@ export default function SendingInboxesTab({ campaign }) {
                                                 <p className="text-[10px] font-medium text-gray-400 uppercase mb-1">Last Sync</p>
                                                 <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
                                                     <Clock className="w-3.5 h-3.5 text-gray-300" />
-                                                    <span>{inbox.last_sync_at ? new Date(inbox.last_sync_at).toLocaleDateString() : 'Never'}</span>
+                                                    <span title={formatDateTime(inbox.last_sync_at, { fallback: '' })}>{formatDate(inbox.last_sync_at, { fallback: 'Never' })}</span>
                                                 </div>
                                             </div>
                                         </div>

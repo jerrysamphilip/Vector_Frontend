@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../lib/dates';
 import { useQuery } from '@tanstack/react-query';
 import { Activity, CheckCircle, Clock, Zap } from 'lucide-react';
 import { campaignApi } from '../../../api/campaigns';
@@ -80,7 +81,7 @@ export default function TriggerLogsTab({ campaignId }) {
                                 <td className="px-5 py-4">
                                     <div className="flex items-center gap-2 text-gray-500 text-xs">
                                         <Clock className="w-3.5 h-3.5 text-gray-300 shrink-0" />
-                                        {new Date(log.created_at || log.timestamp).toLocaleString()}
+                                        {formatDateTime(log.created_at || log.timestamp)}
                                     </div>
                                 </td>
                                 <td className="px-5 py-4">

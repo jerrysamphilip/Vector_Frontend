@@ -1,3 +1,4 @@
+import { parseApiDate } from '../../lib/dates';
 import { Eye, Trash2, Users, ChevronUp, ChevronDown, Check, Plus, Pencil } from 'lucide-react';
 
 // ── Avatar from list name initials ─────────────────────────────
@@ -23,8 +24,8 @@ function listInitials(name = '') {
 }
 
 function relativeDate(dateStr) {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
+  const d = parseApiDate(dateStr);
+  if (!d) return '—';
   const diff = Math.floor((Date.now() - d) / 86400000);
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Yesterday';

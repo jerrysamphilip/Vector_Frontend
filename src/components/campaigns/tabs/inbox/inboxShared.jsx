@@ -1,4 +1,5 @@
 import { ArrowDownLeft, ArrowUpRight, AlertTriangle } from 'lucide-react';
+import { calendarDaysAgo, formatDate, formatTime, parseApiDate } from '../../../../lib/dates';
 
 // Campaign inbox (tabs/InboxTab.jsx): message body clean-up, avatars, dates, conversation types, IMAP providers.
 
@@ -86,20 +87,31 @@ export function Avatar({ name, email, size = 36 }) {
     );
 }
 
+// The list's date column, in the viewer's zone: the time today ("1:54 PM EDT"), then Yesterday, the weekday
+// within a week, else the date. Days are local calendar days.
 export function fmtDate(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const now = new Date();
-    const diffDays = Math.floor((now - d) / 86400000);
-    if (diffDays === 0) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return d.toLocaleDateString([], { weekday: 'short' });
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const d = parseApiDate(iso);
+    if (!d) return '';
+    const days = calendarDaysAgo(d);
+    if (days <= 0) return formatTime(d);
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return d.toLocaleDateString([], { weekday: 'short' });
+    return formatDate(d, { year: false });
+}
+
+// A thread message that is a system notice (the "Delivery Failed" bounce note), not a reply from the contact.
+// is_system comes from the API; the subject check covers notes cached from before the field existed.
+export function isSystemNotice(m) {
+    if (!m || m.direction !== 'INBOUND') return false;
+    if (m.is_system) return true;
+    const subj = (m.subject || '').toLowerCase();
+    return subj.startsWith('delivery failed') || subj.startsWith('undeliverable');
 }
 
 export function getConvType(conv) {
     const dir = conv.last_message_direction;
     const subj = (conv.subject || '').toLowerCase();
+    if (dir === 'INBOUND' && conv.last_message_is_system) return 'bounce';
     if (dir === 'INBOUND' && (subj.includes('delivery failed') || subj.includes('undeliverable'))) return 'bounce';
     if (dir === 'INBOUND') return 'reply';
     return 'sent';

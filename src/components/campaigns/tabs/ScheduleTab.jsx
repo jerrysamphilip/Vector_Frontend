@@ -1,3 +1,4 @@
+import { formatDateTime, parseApiDate } from '../../../lib/dates';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { campaignApi } from '../../../api/campaigns';
@@ -16,9 +17,8 @@ function StatCard(props) {
  * Format an ISO UTC string → local datetime-local input value (YYYY-MM-DDTHH:MM)
  */
 function toDatetimeLocalValue(isoStr) {
-    if (!isoStr) return '';
-    const d = new Date(isoStr);
-    if (isNaN(d)) return '';
+    const d = parseApiDate(isoStr);
+    if (!d) return '';
     // Pad to "YYYY-MM-DDTHH:MM"
     const pad = (n) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -392,9 +392,7 @@ export default function ScheduleTab({ campaignId }) {
                                                                     {item.prospects.slice(0, 5).map((p, pIdx) => {
                                                                         const timestamp = p.sent_at || p.scheduled_at;
                                                                         const timeLabel = timestamp
-                                                                            ? new Date(timestamp).toLocaleString([], {
-                                                                                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                                                                            })
+                                                                            ? formatDateTime(timestamp, { year: false })
                                                                             : null;
                                                                         return (
                                                                             <span key={pIdx} className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-white rounded border border-slate-200 text-slate-600">

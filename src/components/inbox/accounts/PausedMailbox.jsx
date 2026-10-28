@@ -1,10 +1,11 @@
+import { formatDateTime } from '../../../lib/dates';
 import { PauseCircle, PlayCircle } from 'lucide-react';
 
 // Paused mailbox (F-20): a "Paused" badge whose tooltip gives the reason and since when, and the
 // "Resume sending" action (POST /inboxes/{id}/resume, admins with manage_inboxes).
 
 export function PausedBadge({ inbox }) {
-    const since = inbox.paused_at ? ` (since ${new Date(inbox.paused_at).toLocaleString()})` : '';
+    const since = inbox.paused_at ? ` (since ${formatDateTime(inbox.paused_at)})` : '';
     const reason = inbox.paused_reason || 'Paused';
     return (
         <span title={`${reason}${since}`} data-testid="paused-badge"

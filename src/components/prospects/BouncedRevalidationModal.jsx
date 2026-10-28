@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../lib/dates';
 import { useState, useId } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -19,7 +20,7 @@ import { errorText } from '../../lib/apiErrors';
 function formatDate(value) {
     if (!value) return '-';
     try {
-        return new Date(value).toLocaleString();
+        return formatDateTime(value, { fallback: '-' });
     } catch {
         return '-';
     }

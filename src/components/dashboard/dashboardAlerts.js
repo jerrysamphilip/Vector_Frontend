@@ -1,4 +1,5 @@
 import { PauseCircle, ShieldAlert, ServerCrash } from 'lucide-react';
+import { parseApiDate, toApiIso } from '../../lib/dates';
 
 // Dashboard alert center: which alerts were seen (localStorage), timestamps and the icon / colours per alert.
 
@@ -26,8 +27,9 @@ export function writeSeenAlertIds(alertIds) {
 }
 
 export function formatAlertTime(dateValue) {
-    if (!dateValue) return 'Just now';
-    const diffMs = Date.now() - new Date(dateValue).getTime();
+    const date = parseApiDate(dateValue);
+    if (!date) return 'Just now';
+    const diffMs = Date.now() - date.getTime();
     const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
     if (diffMinutes < 1) return 'Just now';
     if (diffMinutes < 60) return `${diffMinutes}m ago`;
@@ -37,13 +39,10 @@ export function formatAlertTime(dateValue) {
     return `${diffDays}d ago`;
 }
 
+// An API timestamp as an ISO string with its zone (naive values are UTC; src/lib/dates.js)
 export function normalizeApiTimestamp(dateValue) {
     if (!dateValue || typeof dateValue !== 'string') return dateValue;
-    // If backend sends naive UTC (no timezone), treat it explicitly as UTC.
-    const hasZone = /[zZ]|[+-]\d{2}:\d{2}$/.test(dateValue);
-    if (hasZone) return dateValue;
-    const isoLike = dateValue.includes('T') ? dateValue : dateValue.replace(' ', 'T');
-    return `${isoLike}Z`;
+    return toApiIso(dateValue) ?? dateValue;
 }
 
 export function getAlertVisual(alert) {
