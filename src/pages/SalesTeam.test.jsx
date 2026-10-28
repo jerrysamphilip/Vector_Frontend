@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SalesTeam from './SalesTeam';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 
 const hierarchy = (canEdit) => ({
     can_edit: canEdit,
@@ -45,7 +45,7 @@ describe('SalesTeam page', () => {
         expect(http.requests.find(r => r.method !== 'GET').body).toEqual({ sales_level: 1, manager_id: null });
     });
 
-    bug('reports a failed load', 'query error ignored: renders an empty hierarchy', async () => {
+    it('reports a failed load', async () => {
         renderPage(<SalesTeam />, opts({ 'GET /team/hierarchy': fail(500) }));
         await expectLoadError();
     });

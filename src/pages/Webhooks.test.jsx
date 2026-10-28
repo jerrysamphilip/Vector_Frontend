@@ -3,7 +3,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Webhooks from './Webhooks';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 
 const endpoint = { endpoint_id: 'w-1', url: 'https://hooks.acme.test/in', description: 'CRM sync', event_types: ['contact.created'],
     active: true, consecutive_failures: 0, disabled_reason: null, last_success_at: null, secret_hint: 'whsec_…abcd' };
@@ -46,7 +46,7 @@ describe('Webhooks page', () => {
         await expectLoadError();
     });
 
-    bug('does not also claim "No webhook endpoints yet" when the load failed', 'error note shown above the empty state', async () => {
+    it('does not also claim "No webhook endpoints yet" when the load failed', async () => {
         renderPage(<Webhooks />, opts({ 'GET /integrations/webhooks': fail(500) }));
         await expectLoadError({ emptyText: /no webhook endpoints yet/i });
     });

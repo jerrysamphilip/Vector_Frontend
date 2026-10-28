@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { deliveryLabel, nextEmailLabel, parseUtc, stepsLabel } from './leadTiming';
-import { settingsError, settingsFormFrom, settingsPayload } from './settingsForm';
+import { editSettingsBody, isLaunched, settingsError, settingsFormFrom, settingsPayload } from './settingsForm';
 
 describe('lead-list timing columns', () => {
     it('reads API timestamps as UTC', () => {
@@ -47,5 +47,15 @@ describe('settings form', () => {
         expect(settingsError({ ...form, end_date: '2029-01-01' })).toMatch(/end date/);
         expect(settingsError({ ...form, sending_mode: 'batch' })).toMatch(/batch/);
         expect(settingsError({ ...form, inbox_ids: [] })).toMatch(/inbox/);
+    });
+
+    it('builds the post-launch edit body without the locked start date', () => {
+        const body = editSettingsBody({ ...settingsFormFrom(campaign), wait_business_days: true });
+        expect(body.inbox_ids).toEqual(['i1']);
+        expect(body.settings).toMatchObject({ sender_name: 'Ann', wait_business_days: true, campaign_timezone: 'Europe/London' });
+        expect(body.settings).not.toHaveProperty('start_date');
+        expect(body.settings).not.toHaveProperty('inbox_ids');
+        expect(isLaunched({ status: 'ACTIVE' })).toBe(true);
+        expect(isLaunched({ status: 'DRAFT' })).toBe(false);
     });
 });

@@ -1,10 +1,11 @@
 import { Building2, Eye, PauseCircle, PlayCircle } from 'lucide-react';
 import { Skeleton, SectionCard, StatusBadge, formatDate } from './adminShared';
+import LoadError from '../ui/LoadError';
 
 // Tenant roster table: status, users, campaigns, created date; view details, suspend / reactivate.
 export default function TenantRosterCard({ admin }) {
     const {
-        changeStatus, setSelectedTenant, statusMutation, tenants, tenantsLoading
+        changeStatus, setSelectedTenant, statusMutation, tenants, tenantsLoading, tenantsError, refetchTenants
     } = admin;
     return (
         <SectionCard
@@ -40,6 +41,12 @@ export default function TenantRosterCard({ admin }) {
                                     ))}
                                 </tr>
                             ))
+                        ) : tenantsError ? (
+                            <tr>
+                                <td colSpan={6}>
+                                    <LoadError error={tenantsError} onRetry={refetchTenants} title="Couldn't load tenants" compact />
+                                </td>
+                            </tr>
                         ) : tenants?.length ? (
                             tenants.map((tenant, index) => (
                                 <tr key={tenant.tenant_id} className={`transition-colors hover:bg-blue-50/40 ${index % 2 ? 'bg-slate-50/45' : 'bg-white'}`}>

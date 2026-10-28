@@ -9,6 +9,7 @@ import { leadsApi } from '../api/sales';
 import { useRecordVersion, versionedSave } from '../lib/useRecordVersion';
 import { Avatar, ErrorNote, Field, Modal, OwnerSelect, PrimaryButton, SecondaryButton, formatDateTime, inputClass, relativeDate } from '../components/contacts/shared';
 import { LeadStageBadge, card, cardShadow, useLeadsMeta, useTeamOwners } from '../components/sales/shared';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const toLocal = (v) => {
     if (!v) return '';
@@ -62,6 +63,7 @@ export default function LeadDetail() {
 
 /** The lead record; also shown beside the list in the Leads split view (embedded). */
 export function LeadPanel({ id, embedded = false, onRemoved }) {
+    const confirm = useConfirm();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const meta = useLeadsMeta();
@@ -134,7 +136,7 @@ export function LeadPanel({ id, embedded = false, onRemoved }) {
                             <SecondaryButton onClick={() => save.mutate({ stage: 'NEW' })} className="w-full">Recycle as new lead</SecondaryButton>
                         )}
                         {lead.stage !== 'CONVERTED' && (
-                            <button onClick={() => window.confirm('Delete this lead? The contact is kept.') && remove.mutate()}
+                            <button onClick={async () => { if (await confirm({ title: 'Delete this lead?', message: 'The contact is kept.', confirmLabel: 'Delete', danger: true })) remove.mutate(); }}
                                 className="w-full h-9 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center gap-1.5"><Trash2 className="w-4 h-4" /> Delete lead</button>
                         )}
                     </div>

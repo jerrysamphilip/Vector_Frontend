@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { focusables, initialFocusTarget as initialTarget, LAYER_SELECTOR } from '../ui/focus';
 
 // Accessible modal behaviour shared by every overlay dialog (contacts/shared Modal, change password,
 // platform admin dialogs ...):
@@ -9,31 +10,11 @@ import { useEffect, useId, useRef, useState } from 'react';
 //   - focus returns to the control that opened it (or `returnFocusRef` when that control is gone,
 //     e.g. a menu item of a menu that closed)
 // Nested dialogs: only the top-most one reacts to Escape / Tab.
-
-const FOCUSABLE = [
-    'a[href]', 'area[href]', 'button:not([disabled])', 'input:not([disabled]):not([type="hidden"])',
-    'select:not([disabled])', 'textarea:not([disabled])', 'iframe', 'audio[controls]', 'video[controls]',
-    '[contenteditable]:not([contenteditable="false"])', '[tabindex]:not([tabindex="-1"])',
-].join(',');
+// F5: new dialogs use the Radix-based DialogPanel (components/ui/DialogPanel.jsx); this hand-rolled hook stays for
+// the callers that spread `dialogProps` on their own panel. A Radix dialog / menu opened on top of it owns Tab and
+// Escape (it handles Escape first, in the capture phase, and marks it handled).
 
 const stack = [];
-
-function focusables(root) {
-    if (!root) return [];
-    return Array.from(root.querySelectorAll(FOCUSABLE)).filter(el => {
-        if (el.closest('[inert]')) return false;
-        const style = window.getComputedStyle(el);
-        if (style.visibility === 'hidden' || style.display === 'none') return false;
-        return el.getClientRects().length > 0;
-    });
-}
-
-function initialTarget(root) {
-    const all = focusables(root);
-    const auto = root.querySelector('[autofocus],[data-autofocus]');
-    if (auto && all.includes(auto)) return auto;
-    return all.find(el => el.matches('input:not([type="checkbox"]):not([type="radio"]),select,textarea')) || all[0] || root;
-}
 
 /**
  * Low-level modal behaviour on an element that is already in the page (used by useDialog and the mobile nav drawer):
@@ -60,6 +41,9 @@ export function activateModal(node, { onEscape, initialFocus } = {}) {
             return;
         }
         if (e.key !== 'Tab') return;
+        // focus is in another dialog / menu layered on top (e.g. a Radix confirm): that layer traps Tab itself
+        const current = document.activeElement;
+        if (current && !node.contains(current) && current.closest?.(LAYER_SELECTOR)) return;
         const items = focusables(node);
         if (!items.length) { e.preventDefault(); node.focus(); return; }
         const first = items[0];
@@ -73,7 +57,7 @@ export function activateModal(node, { onEscape, initialFocus } = {}) {
     const onFocusIn = (e) => {
         if (!isTop() || node.contains(e.target)) return;
         // another dialog / popup rendered elsewhere (portals) may legitimately take focus
-        if (e.target.closest && e.target.closest('[role="dialog"],[role="alertdialog"],[role="listbox"],[role="menu"]')) return;
+        if (e.target.closest && e.target.closest(LAYER_SELECTOR)) return;
         startTarget().focus({ preventScroll: true });
     };
     // bubble phase: a control inside the dialog (open menu, combobox) can handle Escape first and stop it

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, CheckCircle2, Loader2, AlertTriangle, Pencil } from 'lucide-react';
 import { getSenderIdentity, saveSenderIdentity } from '../../api/companyProfiles';
+import { errorText } from '../../lib/apiErrors';
 
 /** Company name and postal address shown in every email footer; campaigns can't launch without them. */
 export default function SenderIdentityCard() {
@@ -23,8 +24,7 @@ export default function SenderIdentityCard() {
             setEditing(false); setError('');
         },
         onError: (err) => {
-            const d = err?.response?.data?.detail;
-            setError(typeof d === 'string' ? d : 'Could not save. Check both fields and try again.');
+            setError(errorText(err, 'Could not save. Check both fields and try again.'));
         },
     });
 

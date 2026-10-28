@@ -10,8 +10,10 @@ import DeliverabilityTrendsChart from '../components/deliverability/Deliverabili
 import KpiTile from '../components/ui/KpiTile';
 import DomainDnsModal from '../components/deliverability/DomainDnsModal';
 import DialogPanel from '../components/common/DialogPanel';
-import { getStoredUser } from '../lib/authStorage';
+import { useAuth } from '../auth/AuthProvider';
 import { useApiQuery } from '../lib/useApiQuery';
+import LoadError from '../components/ui/LoadError';
+import { useToast } from '../components/ui/Toast';
 
 // ── GradientCard ─────────────────────────────────────────────────
 function GradientCard(props) {
@@ -242,13 +244,14 @@ export default function DomainHealth() {
     const [domainToDelete, setDomainToDelete] = useState(null);
     const [deleting, setDeleting]           = useState(false);
     const [dnsModal, setDnsModal]           = useState(null); // null | { domain: null (add) | name }
-    const canManageDomains = ['SUPER_ADMIN', 'ADMIN'].includes(getStoredUser()?.role);
+    const { isAdmin: canManageDomains } = useAuth();
     const queryClient = useQueryClient();
 
     const toggleExpand = (name) => setExpandedDomain(expandedDomain === name ? null : name);
 
-    // A failed load shows the page with no domains (as before); alerts are fetched with the domains
-    const { data, isLoading: loading, refetch } = useApiQuery(DOMAIN_HEALTH_KEY, async () => {
+    // Alerts are fetched with the domains; a failed load says so (LoadError) instead of showing no domains
+    const toast = useToast();
+    const { data, error: loadError, isLoading: loading, refetch } = useApiQuery(DOMAIN_HEALTH_KEY, async () => {
         const [domainsData, alertsData] = await Promise.all([
             deliverabilityApi.getDomains(),
             deliverabilityApi.getAlerts(),
@@ -264,7 +267,7 @@ export default function DomainHealth() {
             await deliverabilityApi.triggerScan(domainName);
             await fetchData();
         } catch (err) {
-            console.error('Scan failed:', err);
+            toast.error(err, { title: `Could not scan ${domainName}` });
         } finally {
             setScanning(null);
         }
@@ -278,7 +281,7 @@ export default function DomainHealth() {
             queryClient.setQueryData(DOMAIN_HEALTH_KEY, old => old && ({ ...old, domains: old.domains.filter(d => d.domain_name !== domainToDelete.domain_name) }));
             setDomainToDelete(null);
         } catch (err) {
-            console.error('Delete failed:', err);
+            toast.error(err, { title: `Could not delete ${domainToDelete.domain_name}` });
         } finally {
             setDeleting(false);
         }
@@ -385,7 +388,9 @@ export default function DomainHealth() {
                 </div>
 
                 <div className="p-5">
-                    {domains.length === 0 ? (
+                    {loadError ? (
+                        <LoadError error={loadError} onRetry={refetch} title="Couldn't load your domains" compact />
+                    ) : domains.length === 0 ? (
                         <div className="text-center py-16">
                             <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
                                 style={{ background: 'linear-gradient(135deg, #2d6bbf18, #73C8D218)' }}>

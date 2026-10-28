@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useToast } from '../../ui/Toast';
 import { campaignWizardApi } from '../../../api/campaignWizard';
 import {
     formatEmailBodyForPreview, hasHtmlTags, hasSingleBraceTags, plainTextToHtml, substituteProspectData,
@@ -35,6 +36,7 @@ function withEmailField(prev, persona, stepNumber, field, value) {
 export function useTemplateEditor({
     processingResult, setProcessingResult, selectedPersona, formData, customInstruction, creativeEmail, setErrors,
 }) {
+    const toast = useToast();
     const [showPreview, setShowPreview] = useState(false);
     const [selectedEmailStep, setSelectedEmailStep] = useState(1); // 1, 2, 3, or 4
     const [regenerating, setRegenerating] = useState(null); // 'subject' or 'body' or null
@@ -118,7 +120,7 @@ export function useTemplateEditor({
         // Single Bracket Validation for Deliverability
         // Matches {tag} but not {{tag}}
         if (hasSingleBraceTags(newContent)) {
-            window.alert("⚠️ Invalid Custom Variable Format\n\nPlease use double braces like {{first_name}} instead of {first_name} for personalization tags. Using single braces is frequently flagged by strict spam filters (like Proofpoint).");
+            toast.error('Please use double braces like {{first_name}} instead of {first_name} for personalization tags. Using single braces is frequently flagged by strict spam filters (like Proofpoint).', { title: 'Invalid custom variable format' });
             return;
         }
 

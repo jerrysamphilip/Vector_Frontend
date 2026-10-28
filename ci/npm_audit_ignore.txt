@@ -36,6 +36,11 @@ GHSA-chx6-hx7r-mcp5 | react-router | 2026-10-18 | 2026-11-15 | Runtime, SPA mode
 GHSA-rxv8-25v2-qmq8 | react-router | 2026-10-18 | 2026-11-15 | Runtime, SPA mode only: the RSC, SSR, single-fetch and __manifest advisories need a React Router server, which this static nginx-served app does not have. Open-redirect XSS is mitigated by app-internal navigate() targets. Fixed in 7.18.x (npm audit fix) - upgrade pending.
 GHSA-mw96-cpmx-2vgc | rollup | 2026-10-18 | 2026-12-31 | Build only, path traversal needs attacker-controlled build input. Fixed with the vite upgrade.
 GHSA-68fv-2mgg-jv7q | source-map-js | 2026-10-18 | 2026-12-31 | Build only. Fixed with npm audit fix.
-GHSA-fx2h-pf6j-xcff | vite | 2026-10-18 | 2026-12-31 | Build/dev-server only (not shipped): fs.deny/WebSocket issues need the dev server exposed. Fixed in 7.3.7 (npm audit fix).
 GHSA-p9ff-h696-f583 | vite | 2026-10-18 | 2026-12-31 | Build/dev-server only (not shipped): fs.deny/WebSocket issues need the dev server exposed. Fixed in 7.3.7 (npm audit fix).
 GHSA-v2wj-q39q-566r | vite | 2026-10-18 | 2026-12-31 | Build/dev-server only (not shipped): fs.deny/WebSocket issues need the dev server exposed. Fixed in 7.3.7 (npm audit fix).
+GHSA-mrv2-3pqr-j5jr | dompurify | 2026-10-28 | 2026-11-15 | Runtime, not reachable: needs IN_PLACE mode with a hook; src/lib/sanitizeHtml.js uses neither (plain sanitize with profiles). Fixed in 3.4.17 (npm audit fix) - upgrade pending with the others.
+GHSA-xjj6-f33q-929c | undici | 2026-10-28 | 2026-11-15 | Dev/test only: undici comes in through jsdom (vitest environment); not in the browser bundle. Fixed by npm audit fix - upgrade pending.
+GHSA-4w7w-5xrc-9h26 | undici | 2026-10-28 | 2026-11-15 | Dev/test only: undici comes in through jsdom (vitest environment); not in the browser bundle. Fixed by npm audit fix - upgrade pending.
+GHSA-2m5v-pch6-74hx | undici | 2026-10-28 | 2026-11-15 | Dev/test only: undici comes in through jsdom (vitest environment); not in the browser bundle. Fixed by npm audit fix - upgrade pending.
+GHSA-qrxm-fqhp-jwvm | undici | 2026-10-28 | 2026-11-15 | Dev/test only: undici comes in through jsdom (vitest environment); not in the browser bundle. Fixed by npm audit fix - upgrade pending.
+GHSA-587h-7wmj-h5pm | vite | 2026-10-28 | 2026-11-15 | Dev server only (launch-editor, Windows): not part of the production build served by nginx. Fixed in vite >7.3.6 (npm audit fix) - upgrade pending.

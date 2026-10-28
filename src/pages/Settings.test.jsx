@@ -1,4 +1,4 @@
-// Settings.jsx is not routed in App.jsx today (/app/settings renders Dashboard); rendered at a test route.
+// Settings.jsx (profile + password) is routed at /app/account/profile (Profile settings in the account menu).
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -6,7 +6,7 @@ import Settings from './Settings';
 import { fail, renderPage } from '../test/renderPage';
 import { expectLoadError } from '../test/pageAssertions';
 
-const opts = (http) => ({ route: '/app/account-settings', http });
+const opts = (http) => ({ route: '/app/account/profile', http });
 
 describe('Settings page', () => {
     it('shows the profile prefilled from the signed-in user', () => {

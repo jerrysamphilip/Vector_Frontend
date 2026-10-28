@@ -1,23 +1,26 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { money, moneyShort, pct, salesReportsApi } from '../api/sales';
 import { ClientTypeFilter, HBar, MemberFilter, PERIODS, PageHeader, PeriodFilter, Seg, StatTile, card, cardShadow, periodRange, selectSm } from '../components/sales/shared';
 import { Funnel } from './SalesDashboard';
+import LoadError from '../components/ui/LoadError';
+import { useApiQuery } from '../lib/useApiQuery';
 import CustomReports from '../components/sales/CustomReports';
 import { CrmKpisCard, ForecastAccuracyCard, SqlToWinCard } from '../components/sales/KpiCards';
 
 const WON = '#059669';
 const WEIGHTED = '#2d6bbf';
 const Spinner = () => <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>;
+const ReportError = ({ error, onRetry }) => <LoadError error={error} onRetry={onRetry} title="Couldn't load this report" />;
 const th = 'px-3 py-2.5 text-right';
 const td = 'px-3 py-2.5 text-right tabular-nums';
 
 function LeadsTab({ member, period }) {
     const range = periodRange(period);
-    const { data } = useQuery({ queryKey: ['rep-leads', member, period], queryFn: () => salesReportsApi.leads({ ...range, member }) });
-    const { data: funnel } = useQuery({ queryKey: ['rep-funnel', member, period], queryFn: () => salesReportsApi.funnel({ ...range, member }) });
+    const { data, error, refetch } = useApiQuery(['rep-leads', member, period], () => salesReportsApi.leads({ ...range, member }));
+    const { data: funnel, error: funnelError, refetch: refetchFunnel } = useApiQuery(['rep-funnel', member, period], () => salesReportsApi.funnel({ ...range, member }));
+    if (error || funnelError) return <ReportError error={error || funnelError} onRetry={() => { refetch(); refetchFunnel(); }} />;
     if (!data || !funnel) return <Spinner />;
     const maxStage = Math.max(...data.by_stage.map(s => s.count), 0);
     return (
@@ -69,7 +72,8 @@ function LeadsTab({ member, period }) {
 
 function PipelineTab({ member }) {
     const [clientType, setClientType] = useState('');
-    const { data } = useQuery({ queryKey: ['rep-pipeline', member, clientType], queryFn: () => salesReportsApi.pipeline({ member, client_type: clientType }) });
+    const { data, error, refetch } = useApiQuery(['rep-pipeline', member, clientType], () => salesReportsApi.pipeline({ member, client_type: clientType }));
+    if (error) return <ReportError error={error} onRetry={refetch} />;
     if (!data) return <Spinner />;
     const max = Math.max(...data.by_close_month.map(m => m.amount), 0);
     return (
@@ -107,7 +111,8 @@ function ForecastBar({ bucket, max }) {
 function ForecastTab({ member }) {
     const [fy, setFy] = useState('');
     const [clientType, setClientType] = useState('');
-    const { data } = useQuery({ queryKey: ['rep-forecast', member, fy, clientType], queryFn: () => salesReportsApi.forecast({ member, fy, client_type: clientType }) });
+    const { data, error, refetch } = useApiQuery(['rep-forecast', member, fy, clientType], () => salesReportsApi.forecast({ member, fy, client_type: clientType }));
+    if (error) return <ReportError error={error} onRetry={refetch} />;
     if (!data) return <Spinner />;
     const max = Math.max(...data.quarters.map(q => q.forecast), 0);
     const maxY = Math.max(...data.years.map(y => y.forecast), 0);
@@ -178,7 +183,8 @@ function ForecastTab({ member }) {
 
 function TeamTab({ member, period }) {
     const range = periodRange(period);
-    const { data } = useQuery({ queryKey: ['rep-team', member, period], queryFn: () => salesReportsApi.team({ ...range, member }) });
+    const { data, error, refetch } = useApiQuery(['rep-team', member, period], () => salesReportsApi.team({ ...range, member }));
+    if (error) return <ReportError error={error} onRetry={refetch} />;
     if (!data) return <Spinner />;
     const t = data.totals;
     const cols = [['activities', 'Activities'], ['calls', 'Calls'], ['meetings', 'Meetings'], ['emails_sent', 'Emails'], ['leads', 'Leads'], ['sqls', 'SQLs'],
@@ -221,9 +227,10 @@ function AttainmentBar({ row, max }) {
 function TargetsTab({ member, period }) {
     const [quarter, setQuarter] = useState('');
     const [fy, setFy] = useState('');
-    const { data } = useQuery({ queryKey: ['rep-targets', member, fy, quarter], queryFn: () => salesReportsApi.targets({ member, fy, quarter }) });
+    const { data, error, refetch } = useApiQuery(['rep-targets', member, fy, quarter], () => salesReportsApi.targets({ member, fy, quarter }));
     const range = periodRange(period);
-    const { data: board } = useQuery({ queryKey: ['rep-leaderboard', member, period], queryFn: () => salesReportsApi.leaderboard({ ...range, member }) });
+    const { data: board } = useApiQuery(['rep-leaderboard', member, period], () => salesReportsApi.leaderboard({ ...range, member }));
+    if (error) return <ReportError error={error} onRetry={refetch} />;
     if (!data) return <Spinner />;
     const max = Math.max(...data.rows.map(r => Math.max(r.target || 0, r.commit || 0, r.won || 0)), 0);
     const t = data.totals;
@@ -286,7 +293,8 @@ function TargetsTab({ member, period }) {
 
 function RoiTab({ member, period }) {
     const range = period === 'all' ? {} : periodRange(period);
-    const { data } = useQuery({ queryKey: ['rep-roi', member, period], queryFn: () => salesReportsApi.campaignRoi({ ...range, member }) });
+    const { data, error, refetch } = useApiQuery(['rep-roi', member, period], () => salesReportsApi.campaignRoi({ ...range, member }));
+    if (error) return <ReportError error={error} onRetry={refetch} />;
     if (!data) return <Spinner />;
     const t = data.totals || {};
     const maxRev = Math.max(...data.rows.map(r => r.revenue), 0);

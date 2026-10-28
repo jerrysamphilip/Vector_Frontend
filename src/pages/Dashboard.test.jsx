@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import Dashboard from './Dashboard';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 import { campaign, campaignPage } from '../test/fixtures/campaigns';
 
 const http = (over = {}) => ({
@@ -31,7 +31,7 @@ describe('Dashboard page', () => {
         expect(screen.queryByRole('button', { name: /create new campaign/i })).toBeNull();
     });
 
-    bug('reports a failed campaign load instead of "No campaigns yet"', 'useDashboard ignores the campaigns query error', async () => {
+    it('reports a failed campaign load instead of "No campaigns yet"', async () => {
         renderPage(<Dashboard />, { route: '/app/analytics', http: http({ 'GET /campaigns': fail(500) }) });
         await expectLoadError({ emptyText: /no campaigns yet/i });
     });

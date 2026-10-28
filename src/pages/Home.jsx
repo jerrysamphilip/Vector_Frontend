@@ -7,6 +7,8 @@ import { getStoredUser } from '../lib/authStorage';
 import { formatDateTime, relativeDate } from '../components/contacts/shared';
 import { StatTile, card, periodRange } from '../components/sales/shared';
 import { Funnel } from './SalesDashboard';
+import LoadError from '../components/ui/LoadError';
+import { useApiQuery } from '../lib/useApiQuery';
 
 function greeting() {
     const h = new Date().getHours();
@@ -104,7 +106,7 @@ function MyDay() {
 export default function Home() {
     const me = getStoredUser();
     const range = periodRange('quarter');
-    const { data } = useQuery({ queryKey: ['sales-dashboard', 'quarter', ''], queryFn: () => salesReportsApi.dashboard(range) });
+    const { data, error: loadError, refetch } = useApiQuery(['sales-dashboard', 'quarter', ''], () => salesReportsApi.dashboard(range));
     const { data: targets } = useQuery({ queryKey: ['rep-targets', '', '', ''], queryFn: () => salesReportsApi.targets({}) });
     const k = data?.kpis;
     const t = targets?.totals;
@@ -120,6 +122,7 @@ export default function Home() {
                     {t?.target ? <p className="text-sm text-slate-500 mt-0.5">{targets.fy_label}: {moneyShort(t.won)} won, {pct(t.attainment)} of the {moneyShort(t.target)} target.</p> : null}
                 </div>
 
+                {loadError && <div className={card}><LoadError error={loadError} onRetry={refetch} title="Couldn't load this quarter's numbers" compact /></div>}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <StatTile label="New leads" value={k ? k.new_leads : '—'} sub={k ? `this quarter · ${k.sqls} became SQL` : ''} />
                     <StatTile label="Open pipeline" value={k ? moneyShort(k.open_pipeline) : '—'} sub={k ? `${k.open_opportunities} deals · ${moneyShort(k.weighted_pipeline)} weighted` : ''} />
@@ -140,7 +143,7 @@ export default function Home() {
                             <h2 className="text-sm font-semibold text-slate-900">Funnel this quarter</h2>
                             <Link to="/app/sales" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">Sales overview <ArrowRight className="w-3.5 h-3.5" /></Link>
                         </div>
-                        {data ? <Funnel stages={data.funnel} /> : <p className="text-sm text-slate-400">Loading…</p>}
+                        {data ? <Funnel stages={data.funnel} /> : loadError ? <p className="text-sm text-slate-400">Not available.</p> : <p className="text-sm text-slate-400">Loading…</p>}
                     </section>
                     <section className={`${card} p-5`}>
                         <div className="flex items-center justify-between mb-2">

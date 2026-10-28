@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Pipeline from './Pipeline';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 import { owners } from '../test/fixtures/sales';
 
 const ct = { NEW: { amount: 30000, count: 1 }, EXISTING: { amount: 0, count: 0 } };
@@ -35,7 +35,7 @@ describe('Pipeline page', () => {
         expect(await screen.findByText('Website rebuild')).toBeInTheDocument();
     });
 
-    bug('reports a failed revenue load', 'crashes: Revenue reads data.totals of undefined when the query fails (TypeError)', async () => {
+    it('reports a failed revenue load', async () => {
         renderPage(<Pipeline />, { route: '/app/pipeline', http: http({ 'GET /pipeline/revenue': fail(500) }) });
         await expectLoadError();
     });

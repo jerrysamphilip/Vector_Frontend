@@ -1,27 +1,31 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import LoadError from '../components/ui/LoadError';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { isNotFound } from '../lib/apiErrors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Globe, Phone, MapPin, Users, Pencil, Trash2, Loader2, Plus, Mail, History, DollarSign } from 'lucide-react';
-import { accountsApi, contactsApi } from '../api/contacts';
-import { hasPermission } from '../lib/authStorage';
+import { contactsApi } from '../api/contacts';
+import { companiesApi } from '../api/accounts';
+import { useAuth } from '../auth/AuthProvider';
 import { withVersion } from '../lib/staleVersion';
 import { AccountFormModal, formatRevenue } from './Accounts';
 import ContactFormModal from '../components/contacts/ContactFormModal';
 import AccountDeals from '../components/sales/AccountDeals';
+import CompanyPropertiesCard from '../components/accounts/CompanyPropertiesCard';
 import { Avatar, OwnerSelect, StageBadge, TagChips, formatDateTime, relativeDate, useCrmMeta } from '../components/contacts/shared';
 
 export default function AccountDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const { hasPermission } = useAuth();
     const canManage = hasPermission('manage_prospects');
     const [editing, setEditing] = useState(false);
     const [adding, setAdding] = useState(false);
     const { stageLabel } = useCrmMeta();
 
-    const { data: account, isLoading, error, refetch } = useQuery({ queryKey: ['account', id], queryFn: () => accountsApi.get(id), retry: false });
+    const { data: account, isLoading, error, refetch } = useQuery({ queryKey: ['account', id], queryFn: () => companiesApi.get(id), retry: false });
     const { data: owners = [] } = useQuery({ queryKey: ['contact-owners'], queryFn: contactsApi.owners });
     const { data: fields = [] } = useQuery({ queryKey: ['contact-fields'], queryFn: contactsApi.fields });
 
@@ -30,9 +34,10 @@ export default function AccountDetail() {
         queryClient.invalidateQueries({ queryKey: ['accounts'] });
         queryClient.invalidateQueries({ queryKey: ['contacts'] });
     };
-    const setOwner = useMutation({ mutationFn: owner_id => accountsApi.update(id, withVersion({ owner_id }, account)), onSuccess: refresh });
+    const setOwner = useMutation({ mutationFn: owner_id => companiesApi.update(id, withVersion({ owner_id }, account)), onSuccess: refresh });
+    const confirm = useConfirm();
     const remove = useMutation({
-        mutationFn: () => accountsApi.remove(id),
+        mutationFn: () => companiesApi.remove(id),
         onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['accounts'] }); navigate('/app/accounts'); },
     });
 
@@ -84,7 +89,7 @@ export default function AccountDetail() {
                             </button>
                         )}
                         {account.can_delete && (
-                            <button onClick={() => window.confirm(`Delete ${account.name}? Its contacts are kept. You can restore it from Recently deleted for 90 days.`) && remove.mutate()}
+                            <button onClick={async () => { if (await confirm({ title: `Delete ${account.name}?`, message: 'Its contacts are kept. You can restore it from Recently deleted for 90 days.', confirmLabel: 'Delete company', danger: true })) remove.mutate(); }}
                                 className="h-9 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center gap-1.5 border border-red-100">
                                 {remove.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Delete company
                             </button>
@@ -138,6 +143,8 @@ export default function AccountDetail() {
                 )}
             </div>
 
+            <CompanyPropertiesCard properties={account.custom_properties} values={account.custom_fields} />
+
             <AccountDeals accountId={account.account_id} />
 
             {account.history?.length > 0 && (
@@ -157,7 +164,7 @@ export default function AccountDetail() {
                 </div>
             )}
 
-            {editing && <AccountFormModal account={account} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); refresh(); }} />}
+            {editing && <AccountFormModal account={account} properties={account.custom_properties || []} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); refresh(); }} />}
             {adding && (
                 <ContactFormModal onClose={() => setAdding(false)} owners={owners} fields={fields} canAssign={canManage}
                     defaults={{ company_name: account.name }}

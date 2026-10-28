@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import CreateCampaign from './CreateCampaign';
 import { fail, renderPage } from '../test/renderPage';
-import { bug, expectLoadError } from '../test/pageAssertions';
+import { expectLoadError } from '../test/pageAssertions';
 
 const http = (over = {}) => ({
     'POST /campaigns/schedules/previews': { schedule: [] },
@@ -21,7 +21,7 @@ describe('CreateCampaign page', () => {
         expect(await screen.findByRole('heading', { name: 'Campaign Setup' })).toBeInTheDocument();
     });
 
-    bug('reports a failed draft load', 'useCampaignDraft only console.errors "[DRAFT] Failed to load draft"; the user sees nothing', async () => {
+    it('reports a failed draft load', async () => {
         renderPage(<CreateCampaign />, {
             route: '/app/campaigns/new', http: http({ 'GET /campaign-drafts/current': fail(500) }), allowConsoleError: [/\[DRAFT\]/],
         });

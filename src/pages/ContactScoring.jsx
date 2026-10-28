@@ -5,6 +5,7 @@ import { scoringApi, GRADES, GRADE_TONES } from '../api/contactScoring';
 import { errorMessage } from '../api/contacts';
 import { PageHeader, card, cardShadow } from '../components/sales/shared';
 import { ErrorNote, PrimaryButton, SecondaryButton, formatDateTime } from '../components/contacts/shared';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const cell = 'h-8 px-2 bg-white border border-slate-200 rounded-md text-sm text-slate-800 focus:outline-none focus:border-indigo-400';
 
@@ -34,6 +35,7 @@ let draftSeq = 0;
 
 /** Settings → Contact scoring (BR-CM-43): fit rules, engagement weights, decay, weights and grade thresholds. */
 export default function ContactScoring() {
+    const confirm = useConfirm();
     const qc = useQueryClient();
     const { data, isLoading, error: loadError } = useQuery({ queryKey: ['scoring-model'], queryFn: scoringApi.model, retry: false });
     const [form, setForm] = useState(null);
@@ -184,7 +186,7 @@ export default function ContactScoring() {
             </div>
 
             <div className="flex justify-between">
-                <SecondaryButton onClick={() => window.confirm('Replace the model with the default rules? Nothing is saved until you click Save model.') && setForm(structuredClone(data.defaults))} data-testid="scoring-reset">
+                <SecondaryButton onClick={async () => { if (await confirm({ title: 'Restore the default rules?', message: 'This replaces the model in the form. Nothing is saved until you click Save model.', confirmLabel: 'Restore defaults' })) setForm(structuredClone(data.defaults)); }} data-testid="scoring-reset">
                     <RotateCcw className="w-4 h-4" /> Restore defaults
                 </SecondaryButton>
                 <PrimaryButton onClick={() => save.mutate()} loading={save.isPending}><Save className="w-4 h-4" /> Save model</PrimaryButton>

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Paperclip, X, FileText, Loader2 } from 'lucide-react';
 import { templateApi } from '../../api/campaigns';
+import { errorText } from '../../lib/apiErrors';
 
 const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024; // keep in sync with backend MAX_ATTACHMENT_SIZE_MB
 
@@ -36,7 +37,7 @@ export default function AttachmentManager({ templateId, disabled = false }) {
             setError('');
         },
         onError: (err) => {
-            setError(err.response?.data?.detail || 'Failed to upload attachment');
+            setError(errorText(err, 'Failed to upload attachment'));
         },
     });
 

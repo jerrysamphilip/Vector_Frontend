@@ -52,6 +52,34 @@ export const campaignApi = {
         await api.delete(`/campaigns/${id}`);
     },
 
+    // Edit after launch (F-04): settings, mailboxes and the whole step list in one call, under the campaign's
+    // row_version (409 STALE_VERSION when stale). Unsent emails follow; checkEdit is the dry run with the same counts.
+    edit: async (id, body, expectedVersion) => {
+        const response = await api.post(`/campaigns/${id}/edits`, withVersion(body, expectedVersion));
+        return response.data;
+    },
+    checkEdit: async (id, body, expectedVersion) => {
+        const response = await api.post(`/campaigns/${id}/edits/checks`, withVersion(body, expectedVersion));
+        return response.data;
+    },
+
+    // One step email as it will be sent to one enrolled contact (optional unsaved subject / body / persona version)
+    previewEmail: async (id, { prospectId, stepNumber, templateId, subject, body }) => {
+        const response = await api.post(`/campaigns/${id}/email-previews`, {
+            prospect_id: prospectId, step_number: stepNumber,
+            ...(templateId ? { template_id: templateId } : {}),
+            ...(subject !== undefined ? { subject } : {}),
+            ...(body !== undefined ? { body } : {}),
+        });
+        return response.data;
+    },
+
+    // Which persona template each contact gets per step (F-05)
+    getTemplateAssignments: async (id, { limit = 200, offset = 0 } = {}) => {
+        const response = await api.get(`/campaigns/${id}/template-assignments`, { params: { limit, offset } });
+        return response.data;
+    },
+
     // State changes send the campaign's row_version the screen shows (T-3, lib/staleVersion.js);
     // a stale one gets 409 STALE_VERSION
 

@@ -1,17 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Copy, ExternalLink, MoreVertical, Pause, PenLine, Play, Rocket, Trash2 } from 'lucide-react';
+import { Copy, ExternalLink, MoreVertical, Pause, PenLine, PenSquare, Play, Rocket, Trash2 } from 'lucide-react';
 import { menuItems } from './menuItems';
 
 const MENU_WIDTH = 240;
 const GAP = 6;
 const EDGE = 8;
 
-const ICONS = { rename: PenLine, duplicate: Copy, view: ExternalLink, launch: Rocket, pause: Pause, resume: Play, delete: Trash2 };
+const ICONS = { edit: PenSquare, rename: PenLine, duplicate: Copy, view: ExternalLink, launch: Rocket, pause: Pause, resume: Play, delete: Trash2 };
 const TONES = { launch: 'text-emerald-600', resume: 'text-emerald-600', pause: 'text-amber-600', delete: 'text-rose-600' };
 
 /**
- * The "⋮" actions menu of a campaign (campaign rows and the CampaignDetails header): Rename, Duplicate,
+ * The "⋮" actions menu of a campaign (campaign rows and the CampaignDetails header): Edit, Rename, Duplicate,
  * Launch (drafts), Pause / Resume, Delete, offered by role (menuItems.js). Calls onAction(action, campaign, event).
  * Rendered in a portal with position: fixed so the table's sticky, scrolling Actions column cannot clip it.
  * Keyboard: Enter / Space opens, arrows move, Escape closes and returns focus to the button.

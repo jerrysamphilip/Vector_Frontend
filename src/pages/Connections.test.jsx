@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Connections from './Connections';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 
 const data = {
     connections: [{ connection_id: 'cn-1', provider: 'GOOGLE', account_email: 'ada@gmail.test', sync_email: true, sync_calendar: false, last_sync_at: null, last_error: null }],
@@ -34,7 +34,7 @@ describe('Connections page', () => {
         expect(await screen.findByText(/logged 2 email\(s\) and 1 meeting\(s\)/i)).toBeInTheDocument();
     });
 
-    bug('reports a failed load', 'query error ignored: shows both providers as not set up', async () => {
+    it('reports a failed load', async () => {
         renderPage(<Connections />, { route: '/app/connections', http: http({ 'GET /connections': fail(500) }) });
         await expectLoadError({ emptyText: /not set up on this server yet/i });
     });

@@ -10,6 +10,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions follow [SemVer
 Release candidate for BRD v2.0 Phase 1 (R1.0) and Phase 2 (R2.1), released together with backend 1.1.0.
 
 ### Added
+- Campaign editor after launch (`/app/campaigns/:id/edit`): steps, persona versions, preview as a real contact,
+  sender/window/inboxes, "N unsent emails will be updated" before saving; Settings tab editable for active campaigns.
+- Companies: saved views, column chooser, archived filter, custom properties, backfill preview/run/undo, export.
+- Duplicate review page, merge preview, contact e-mail history and merge history, export log (admins).
+- Import wizard with live progress and cancel; import history.
+- Toasts and confirm dialogs replace window.alert/confirm; friendly error text with request reference; 22 pages that
+  showed an empty state or spun forever on a failed load now show the error with Retry.
+- One auth context (`src/auth`): session from /api/auth/me, single-flight refresh, idle warning before the 30-minute
+  limit, sign-out across tabs; one shared read hook (`src/lib/useApiQuery.js`) with request cancellation.
+- Dialogs, menus and tabs on Radix UI primitives (@radix-ui/react-dropdown-menu, -tabs, -focus-scope,
+  -dismissable-layer; MIT); render tests for all 49 pages.
 - Campaigns list paging (page size 10/20/50/100); dashboard totals and automation pickers read every
   campaign (`campaignApi.listAll`), no longer only the first 20.
 - Load-error panel with request reference and Retry on list and detail pages (a 500 no longer looks like

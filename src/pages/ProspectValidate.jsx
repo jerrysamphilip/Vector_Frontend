@@ -16,6 +16,7 @@ import { uploadsApi } from '../api/uploads';
 import { useQueryClient } from '@tanstack/react-query';
 import { confirmOutcome } from '../components/prospects/upload/confirmResult';
 import ConfirmResultPanel from '../components/prospects/upload/ConfirmResultPanel';
+import { errorText } from '../lib/apiErrors';
 
 export default function ProspectValidate() {
     const navigate = useNavigate();
@@ -69,7 +70,7 @@ export default function ProspectValidate() {
             const result = await uploadsApi.revalidate(data.upload_id, updated);
             setRecords(result.records || updated);
         } catch (err) {
-            setError(err.response?.data?.detail || err.message);
+            setError(errorText(err));
             setRecords(updated);
         } finally {
             setRevalidating(false);
@@ -96,7 +97,7 @@ export default function ProspectValidate() {
             const result = await uploadsApi.revalidate(data.upload_id, records);
             setRecords(result.records || []);
         } catch (err) {
-            setError(err.response?.data?.detail || err.message);
+            setError(errorText(err));
         } finally {
             setRevalidating(false);
         }
@@ -124,7 +125,7 @@ export default function ProspectValidate() {
             if (outcome.done) navigate('/app/prospects', { replace: true });
             else setConfirmResult(outcome.summary);
         } catch (err) {
-            setError(err.response?.data?.detail || err.message);
+            setError(errorText(err));
         } finally {
             setConfirming(false);
         }

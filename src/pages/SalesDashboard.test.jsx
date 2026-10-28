@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import SalesDashboard from './SalesDashboard';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 import { owners } from '../test/fixtures/sales';
 
 const dashboard = {
@@ -35,7 +35,7 @@ describe('SalesDashboard page', () => {
         expectLoading();
     });
 
-    bug('reports a failed load', 'query error ignored: the spinner stays forever (isLoading || !data)', async () => {
+    it('reports a failed load', async () => {
         renderPage(<SalesDashboard />, { route: '/app/sales', http: http({ 'GET /sales-reports/dashboard': fail(500) }) });
         await expectLoadError();
     });

@@ -157,7 +157,7 @@ export function useEmailAccounts() {
             queryClient.invalidateQueries({ queryKey: ['dashboard-alerts-v2'] });
             setIsAlertPrefsOpen(false);
         },
-        onError: (err) => setFormError(err.response?.data?.detail || 'Failed to update alert preferences'),
+        onError: (err) => setFormError(errorText(err, 'Failed to update alert preferences')),
     });
 
     // ── derived state ──────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ export function useEmailAccounts() {
             const { authorize_url } = await inboxesApi.startMicrosoftOAuth(inbox.inbox_id);
             window.location.href = authorize_url;
         } catch (err) {
-            setMs365Notice({ ok: false, text: err?.response?.data?.detail || 'Could not start Microsoft 365 sign-in.' });
+            setMs365Notice({ ok: false, text: errorText(err, 'Could not start Microsoft 365 sign-in.') });
         }
     };
 

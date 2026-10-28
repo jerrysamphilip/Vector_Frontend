@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SalesReports from './SalesReports';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 import { owners } from '../test/fixtures/sales';
 
 const leads = {
@@ -46,7 +46,7 @@ describe('SalesReports page', () => {
         expect(await screen.findByText('Pipeline Owner')).toBeInTheDocument();
     });
 
-    bug('reports a failed load', 'LeadsTab ignores the query error: the spinner stays forever (!data)', async () => {
+    it('reports a failed load', async () => {
         renderPage(<SalesReports />, opts({ 'GET /sales-reports/leads': fail(500) }));
         await expectLoadError();
     });

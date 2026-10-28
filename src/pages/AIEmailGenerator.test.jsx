@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AIEmailGenerator from './AIEmailGenerator';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 
 const blueprints = [{ blueprint_id: 'b-1', persona_type: 'TECHNICAL', openers: ['a', 'b'] }];
 const http = (over = {}) => ({ 'GET /persona-blueprints': blueprints, ...over });
@@ -37,7 +37,7 @@ describe('AIEmailGenerator page', () => {
         await expectLoadError();
     });
 
-    bug('reports a failed blueprint load', 'blueprints query error ignored: shows "(0)" and an empty grid', async () => {
+    it('reports a failed blueprint load', async () => {
         renderPage(<AIEmailGenerator />, opts({ 'GET /persona-blueprints': fail(500) }));
         await expectLoadError({ emptyText: /persona blueprints \(0\)/i });
     });

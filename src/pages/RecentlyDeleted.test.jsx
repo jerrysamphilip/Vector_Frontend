@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RecentlyDeleted from './RecentlyDeleted';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 import { contact } from '../test/fixtures/crm';
 
 const deleted = (extra) => contact('c-1', { full_name: 'Gone Contact', deleted_at: '2026-10-20T10:00:00Z', purge_at: '2027-01-18T10:00:00Z', deleted_by_name: 'Ada', ...extra });
@@ -41,7 +41,7 @@ describe('RecentlyDeleted page', () => {
         expect(await screen.findByText('Gone Corp')).toBeInTheDocument();
     });
 
-    bug('reports a failed load instead of "No contacts deleted"', 'query error ignored: shows the empty state', async () => {
+    it('reports a failed load instead of "No contacts deleted"', async () => {
         renderPage(<RecentlyDeleted />, opts({ 'GET /contacts/deleted': fail(500) }));
         await expectLoadError({ emptyText: /no contacts deleted/i });
     });

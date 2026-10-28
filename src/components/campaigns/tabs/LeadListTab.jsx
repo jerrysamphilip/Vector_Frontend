@@ -11,6 +11,8 @@ import Loading from '../../common/Loading';
 import LoadError from '../../ui/LoadError';
 import DialogPanel from '../../common/DialogPanel';
 import LeadTimingCells, { LeadTimingHeaders } from './LeadTimingCells';
+import { useToast } from '../../ui/Toast';
+import { useConfirm } from '../../ui/ConfirmDialog';
 
 // Status badge colors matching theme.
 // Real backend CampaignProspect statuses: ACTIVE, OPENED, COMPLETED, PAUSED,
@@ -48,6 +50,8 @@ function ProspectStatusBadge({ status }) {
 
 export default function LeadListTab({ campaignId }) {
     const queryClient = useQueryClient();
+    const toast = useToast();
+    const confirm = useConfirm();
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
 
@@ -105,14 +109,20 @@ export default function LeadListTab({ campaignId }) {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['campaign-prospects', campaignId] });
             queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+            toast.success('Contact removed from the campaign');
         },
+        onError: (e) => toast.error(e),
     });
 
-    const handleRemove = (prospect) => {
+    const handleRemove = async (prospect) => {
         const name = prospect.name || prospect.email;
-        if (window.confirm(`Remove ${name} from this campaign?\n\nAny emails not yet sent to them will be cancelled. Emails already sent are unaffected.`)) {
-            removeMutation.mutate(prospect.prospect_id);
-        }
+        const ok = await confirm({
+            title: `Remove ${name} from this campaign?`,
+            message: 'Any emails not yet sent to them will be cancelled. Emails already sent are unaffected.',
+            confirmLabel: 'Remove',
+            danger: true,
+        });
+        if (ok) removeMutation.mutate(prospect.prospect_id);
     };
 
     const displayProspects = prospects || [];
@@ -285,7 +295,7 @@ export default function LeadListTab({ campaignId }) {
                         </button>
 
                         {/* Export Button */}
-                        <button onClick={() => reportsApi.exportProspectsCsv(campaignId).catch(e => window.alert(e?.response?.status === 403 ? 'You do not have permission to export data.' : 'Export failed'))}
+                        <button onClick={() => reportsApi.exportProspectsCsv(campaignId).catch(e => toast.error(e?.response?.status === 403 ? 'You do not have permission to export data.' : e, { fallback: 'Export failed' }))}
                             className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-all">
                             <Download className="w-3.5 h-3.5" />
                             Export

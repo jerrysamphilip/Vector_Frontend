@@ -2,6 +2,9 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import StaleVersionBanner from './components/common/StaleVersionBanner';
+import { ToastProvider } from './components/ui/Toast';
+import { AuthProvider } from './auth/AuthProvider';
+import { ConfirmProvider } from './components/ui/ConfirmDialog';
 import { handleStaleVersionError } from './lib/staleVersion';
 import Layout from './components/layout/Layout';
 import AdminLayout from './components/layout/AdminLayout';
@@ -18,6 +21,7 @@ const MagicLogin = lazy(() => import('./pages/MagicLogin'));
 const Campaigns = lazy(() => import('./pages/Campaigns'));
 const CreateCampaign = lazy(() => import('./pages/CreateCampaign'));
 const CampaignDetails = lazy(() => import('./pages/CampaignDetails'));
+const CampaignEdit = lazy(() => import('./pages/CampaignEdit'));
 const AIEmailGenerator = lazy(() => import('./pages/AIEmailGenerator'));
 const Prospects = lazy(() => import('./pages/Prospects'));
 const ProspectValidate = lazy(() => import('./pages/ProspectValidate'));
@@ -26,6 +30,8 @@ const ContactDetail = lazy(() => import('./pages/ContactDetail'));
 const Accounts = lazy(() => import('./pages/Accounts'));
 const AccountDetail = lazy(() => import('./pages/AccountDetail'));
 const Lists = lazy(() => import('./pages/Lists'));
+const Duplicates = lazy(() => import('./pages/Duplicates'));
+const ExportLogs = lazy(() => import('./pages/ExportLogs'));
 const ImportContacts = lazy(() => import('./pages/ImportContacts'));
 const Tasks = lazy(() => import('./pages/Tasks'));
 const RecentlyDeleted = lazy(() => import('./pages/RecentlyDeleted'));
@@ -53,6 +59,7 @@ const TestAutomation = lazy(() => import('./pages/TestAutomation'));
 const TeamManagement = lazy(() => import('./pages/TeamManagement'));
 const SetPassword = lazy(() => import('./pages/SetPassword'));
 const AccountSecurity = lazy(() => import('./pages/AccountSecurity'));
+const AccountSettings = lazy(() => import('./pages/Settings'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 import ErrorBoundary from './components/common/ErrorBoundary';
 import './index.css';
@@ -74,6 +81,9 @@ const queryClient = new QueryClient({
 function App() {
     return (
         <QueryClientProvider client={queryClient}>
+            <ToastProvider>
+            <ConfirmProvider>
+            <AuthProvider>
             <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
                 <Suspense fallback={<div className="p-8 text-sm text-slate-400">Loading…</div>}>
                 <Routes>
@@ -134,11 +144,13 @@ function App() {
                         <Route path="campaigns" element={<PermissionRoute permission="manage_campaigns"><Campaigns /></PermissionRoute>} />
                         <Route path="campaigns/new" element={<PermissionRoute permission="manage_campaigns"><CreateCampaign /></PermissionRoute>} />
                         <Route path="campaigns/:id" element={<PermissionRoute permission="manage_campaigns"><CampaignDetails /></PermissionRoute>} />
+                        <Route path="campaigns/:id/edit" element={<PermissionRoute permission="manage_campaigns"><CampaignEdit /></PermissionRoute>} />
                         <Route path="ai-email" element={<AIEmailGenerator />} />
                         <Route path="prospects" element={<PermissionRoute permission="manage_prospects"><Prospects /></PermissionRoute>} />
                         <Route path="prospects/validate" element={<PermissionRoute permission="manage_prospects"><ProspectValidate /></PermissionRoute>} />
                         {/* Contacts & accounts: everyone sees the ones they own; manage_prospects sees all */}
                         <Route path="contacts" element={<Contacts />} />
+                        <Route path="contacts/duplicates" element={<PermissionRoute permission="manage_prospects"><Duplicates /></PermissionRoute>} />
                         <Route path="contacts/:id" element={<ContactDetail />} />
                         <Route path="accounts" element={<Accounts />} />
                         <Route path="accounts/:id" element={<AccountDetail />} />
@@ -161,6 +173,8 @@ function App() {
                         <Route path="templates" element={<TemplateLibrary />} />
                         <Route path="connections" element={<Connections />} />
                         <Route path="account/security" element={<AccountSecurity />} />
+                        {/* Profile (name) and password; /app/settings stays the campaign analytics alias the help links use */}
+                        <Route path="account/profile" element={<AccountSettings />} />
                         <Route path="help" element={<HelpCenter />} />
                         <Route path="help/:articleId" element={<HelpCenter />} />
                         <Route path="recently-deleted" element={<PermissionRoute permission="manage_prospects"><RecentlyDeleted /></PermissionRoute>} />
@@ -183,6 +197,7 @@ function App() {
                         <Route path="team" element={<PermissionRoute permission="manage_team"><TeamManagement /></PermissionRoute>} />
                         {import.meta.env.DEV && <Route path="test-automation" element={<TestAutomation />} />}
                         <Route path="settings" element={<Dashboard />} />
+                        <Route path="settings/export-logs" element={<ExportLogs />} />
                         <Route path="*" element={<NotFound />} />
                     </Route>
 
@@ -207,6 +222,9 @@ function App() {
                 </Suspense>
                 <StaleVersionBanner />
             </BrowserRouter>
+            </AuthProvider>
+            </ConfirmProvider>
+            </ToastProvider>
         </QueryClientProvider>
     );
 }

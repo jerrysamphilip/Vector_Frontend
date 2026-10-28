@@ -11,6 +11,8 @@ import CampaignsTable from '../components/campaigns/CampaignsTable';
 import { Button } from '../components/ui/Button';
 import Pagination from '../components/ui/Pagination';
 import LoadError from '../components/ui/LoadError';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { errorText } from '../lib/apiErrors';
 import { ColumnPicker } from '../components/campaigns/CampaignsTable';
 import { loadVisibleCols, LS_KEY } from '../components/campaigns/campaignColumns';
 import BulkActionBar from '../components/campaigns/BulkActionBar';
@@ -34,7 +36,8 @@ const Campaigns = () => {
     const { openDialog, dialogs } = useCampaignDialogs({
         onOpenCopy: (copy) => navigate(`/app/campaigns/${copy.campaign_id}`),
     });
-    const showErr = (err) => { setPerformingActionId(null); setActionError(err?.response?.data?.detail || err?.message || 'Action failed'); };
+    const showErr = (err) => { setPerformingActionId(null); setActionError(errorText(err, 'Action failed')); };
+    const confirm = useConfirm();
 
     // Debounce: update debouncedSearch 300ms after user stops typing
     useEffect(() => {
@@ -159,10 +162,12 @@ const Campaigns = () => {
                 resumeMutation.mutate(campaign);
                 break;
             case 'delete':
-                if (confirm(`Delete "${campaign.campaign_name}"?`)) {
-                    setPerformingActionId(campaign.campaign_id);
-                    deleteMutation.mutate(campaign.campaign_id);
-                }
+                confirm({ title: `Delete "${campaign.campaign_name}"?`, message: 'This removes the campaign and its data.', confirmLabel: 'Delete', danger: true })
+                    .then((ok) => {
+                        if (!ok) return;
+                        setPerformingActionId(campaign.campaign_id);
+                        deleteMutation.mutate(campaign.campaign_id);
+                    });
                 break;
             case 'rename':
             case 'duplicate':
@@ -181,7 +186,13 @@ const Campaigns = () => {
     };
 
     const handleBulkAction = async (action) => {
-        if (!confirm(`Are you sure you want to ${action} ${selectedIds.length} campaigns?`)) return;
+        const ok = await confirm({
+            title: `${action[0].toUpperCase()}${action.slice(1)} ${selectedIds.length} campaign${selectedIds.length !== 1 ? 's' : ''}?`,
+            message: action === 'delete' ? 'This removes the selected campaigns and their data.' : undefined,
+            confirmLabel: `${action[0].toUpperCase()}${action.slice(1)}`,
+            danger: action === 'delete',
+        });
+        if (!ok) return;
 
         // Optimistic UI updates or parallel requests could be done here.
         // For now, we'll just loop and execute sequentially to be safe.

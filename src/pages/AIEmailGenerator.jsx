@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Sparkles, Mail, User, Building2, Briefcase, Copy, Check, RefreshCw, Layers, Target, Shield, Calendar, ChevronDown, ChevronUp,
@@ -7,6 +7,9 @@ import {
 import { aiEmailApi } from '../api/aiEmail';
 import PageTransition, { containerVariants, itemVariants } from '../components/layout/PageTransition';
 import Loading from '../components/common/Loading';
+import LoadError from '../components/ui/LoadError';
+import { useApiQuery } from '../lib/useApiQuery';
+import { errorText } from '../lib/apiErrors';
 
 export default function AIEmailGenerator() {
     const [designation, setDesignation] = useState('');
@@ -20,10 +23,9 @@ export default function AIEmailGenerator() {
     const [activeTab, setActiveTab] = useState('single'); // single | sequence
 
     // Fetch blueprints
-    const { data: blueprints = [], isLoading: blueprintsLoading } = useQuery({
-        queryKey: ['blueprints'],
-        queryFn: () => aiEmailApi.getBlueprints(),
-    });
+    const { data: blueprintsData, isLoading: blueprintsLoading, error: blueprintsError, refetch: refetchBlueprints } = useApiQuery(
+        ['blueprints'], () => aiEmailApi.getBlueprints());
+    const blueprints = blueprintsData || [];
 
     // Classification mutation
     const classifyMutation = useMutation({
@@ -249,7 +251,7 @@ export default function AIEmailGenerator() {
                                 </motion.button>
                                 {classifyMutation.isError && (
                                     <p role="alert" className="mt-3 text-sm text-red-600">
-                                        {typeof classifyMutation.error?.response?.data?.detail === 'string' ? classifyMutation.error.response.data.detail : 'Could not classify this prospect. Please try again.'}
+                                        {errorText(classifyMutation.error, 'Could not classify this prospect. Please try again.')}
                                     </p>
                                 )}
                             </div>
@@ -453,13 +455,15 @@ export default function AIEmailGenerator() {
                     {/* Blueprints Grid */}
                     <motion.div variants={itemVariants} className="card border border-slate-200 bg-white p-6 shadow-sm rounded-xl">
                         <h3 className="text-sm font-semibold text-slate-700 mb-4">
-                            Available Persona Blueprints ({blueprints.length})
+                            Available Persona Blueprints{blueprintsError ? '' : ` (${blueprints.length})`}
                         </h3>
 
                         {blueprintsLoading ? (
                             <div className="h-20 flex items-center justify-center">
                                 <Loading size="sm" />
                             </div>
+                        ) : blueprintsError ? (
+                            <LoadError error={blueprintsError} onRetry={refetchBlueprints} title="Couldn't load the persona blueprints" compact />
                         ) : (
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
                                 {blueprints.map((bp) => (

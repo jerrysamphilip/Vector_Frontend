@@ -3,12 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, SlidersHorizontal } from 'lucide-react';
 import { contactsApi, errorMessage } from '../../api/contacts';
 import { ErrorNote, Field, inputClass, Modal, PrimaryButton, SecondaryButton } from './shared';
+import { useConfirm } from '../ui/ConfirmDialog';
 
 const TYPE_LABELS = { TEXT: 'Text', NUMBER: 'Number', DATE: 'Date', SELECT: 'Dropdown', RADIO: 'Radio select', MULTI_CHECKBOX: 'Multiple checkboxes', PHONE: 'Phone number', URL: 'Link' };
 const CHOICE_TYPES = ['SELECT', 'RADIO', 'MULTI_CHECKBOX'];
 
 /** Define the extra fields every contact in the workspace can have. */
 export default function CustomFieldsModal({ onClose }) {
+    const confirm = useConfirm();
     const queryClient = useQueryClient();
     const { data: fields = [] } = useQuery({ queryKey: ['contact-fields'], queryFn: contactsApi.fields });
     const [label, setLabel] = useState('');
@@ -52,7 +54,7 @@ export default function CustomFieldsModal({ onClose }) {
                                         {f.group_name ? `${f.group_name} · ` : ''}{TYPE_LABELS[f.field_type] || f.field_type}{f.options.length ? ` · ${f.options.join(', ')}` : ''}{f.required ? ' · required' : ''}
                                     </p>
                                 </div>
-                                <button onClick={() => window.confirm(`Delete "${f.label}"? Values already saved on contacts will be hidden.`) && remove.mutate(f.field_id)}
+                                <button onClick={async () => { if (await confirm({ title: `Delete "${f.label}"?`, message: 'Values already saved on contacts will be hidden.', confirmLabel: 'Delete', danger: true })) remove.mutate(f.field_id); }}
                                     className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg" aria-label={`Delete ${f.label}`}>
                                     <Trash2 className="w-4 h-4" />
                                 </button>

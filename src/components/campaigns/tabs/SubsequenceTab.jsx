@@ -10,9 +10,11 @@ import AttachmentManager from '../../common/AttachmentManager';
 import { sanitizeHtml, htmlToText } from '../../../lib/sanitizeHtml';
 import { withVersion } from '../../../lib/staleVersion';
 import SubjectVariantsEditor from '../SubjectVariantsEditor';
+import { useToast } from '../../ui/Toast';
 
 export default function SubsequenceTab({ campaignId }) {
     const queryClient = useQueryClient();
+    const toast = useToast();
     const [expandedStep, setExpandedStep] = useState(null);
     const [regeneratingId, setRegeneratingId] = useState(null);
 
@@ -89,7 +91,7 @@ export default function SubsequenceTab({ campaignId }) {
             setEditingTemplateId(null);
         },
         onError: (error) => {
-            alert(`❌ Error saving template: ${error.response?.data?.detail || error.message}`);
+            toast.error(error, { title: 'Error saving template' });
         }
     });
 

@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SalesTargets from './SalesTargets';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 
 const targets = {
     fy: 2026, label: 'FY 2026-27', start_month: 4,
@@ -39,7 +39,7 @@ describe('SalesTargets page', () => {
         await waitFor(() => expect(h.requests.find(r => r.method === 'PUT')?.body).toEqual({ user_id: 'u-1', fy: 2026, quarter: 2, amount: 2500 }));
     });
 
-    bug('reports a failed load', 'query error ignored: renders an empty table with zero totals', async () => {
+    it('reports a failed load', async () => {
         renderPage(<SalesTargets />, { route: '/app/sales-targets', http: http({ 'GET /sales/targets': fail(500) }) });
         await expectLoadError();
     });

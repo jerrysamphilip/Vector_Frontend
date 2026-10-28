@@ -29,7 +29,7 @@ describe('ResetPassword page', () => {
     it('shows the API error', async () => {
         renderPage(<ResetPassword />, opts({ 'POST /auth/reset-password': fail(400, 'Reset link expired') }));
         await fill();
-        expect(await screen.findByText('Reset link expired')).toBeInTheDocument();
+        expect(await screen.findByText(/Reset link expired.*Reference: req-test-0001/)).toBeInTheDocument();
     });
 
     it('shows a server failure', async () => {

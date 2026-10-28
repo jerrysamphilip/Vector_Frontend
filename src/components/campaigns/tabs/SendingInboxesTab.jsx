@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Mail, Shield, Clock, Settings, RefreshCw, Save, X, CheckCircle2, Zap } from 'lucide-react';
 import { inboxesApi } from '../../../api/inboxes';
+import { useToast } from '../../ui/Toast';
 import { motion } from 'framer-motion';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';
 
 export default function SendingInboxesTab({ campaign }) {
+    const toast = useToast();
     const [inboxes, setInboxes] = useState(campaign?.sending_inboxes || []);
     const [editingInbox, setEditingInbox] = useState(null);
     const [syncing, setSyncing] = useState(null);
@@ -41,8 +43,7 @@ export default function SendingInboxesTab({ campaign }) {
             setInboxes(inboxes.map(i => i.inbox_id === inboxId ? updated : i));
             setEditingInbox(null);
         } catch (error) {
-            console.error('Failed to update inbox', error);
-            alert('Failed to save credentials');
+            toast.error(error, { title: 'Failed to save credentials' });
         }
     };
 
@@ -53,8 +54,7 @@ export default function SendingInboxesTab({ campaign }) {
             const refreshed = await inboxesApi.get(inboxId);
             setInboxes(inboxes.map(i => i.inbox_id === inboxId ? refreshed : i));
         } catch (error) {
-            console.error('Sync failed', error);
-            alert('Sync failed - check your IMAP credentials');
+            toast.error(error, { title: 'Sync failed - check your IMAP credentials' });
         } finally {
             setSyncing(null);
         }

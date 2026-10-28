@@ -19,6 +19,8 @@ import {
 import MentionTextarea, { MentionText, activeMentions } from '../components/contacts/MentionTextarea';
 import ContactCompaniesCard from '../components/contacts/ContactCompaniesCard';
 import ContactScoreCard from '../components/contacts/ContactScoreCard';
+import ContactIdentityCard from '../components/contacts/merge/ContactIdentityCard';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const CALL_OUTCOMES = ['Connected', 'Left voicemail', 'No answer', 'Wrong number', 'Busy'];
 
@@ -134,6 +136,7 @@ function Composer({ contactId, owners, onLogged }) {
 
 // ── Timeline ────────────────────────────────────────────────────
 function ActivityBody({ item, onChanged }) {
+    const confirm = useConfirm();
     const a = item.activity;
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState({ subject: a.subject || '', body: a.body || '', outcome: a.outcome || '' });
@@ -174,7 +177,7 @@ function ActivityBody({ item, onChanged }) {
                 <span>{a.created_by_name ? `by ${a.created_by_name}` : ''}</span>
                 {item.can_edit && <>
                     <button onClick={() => setEditing(true)} className="hover:text-indigo-600 flex items-center gap-1"><Pencil className="w-3 h-3" /> Edit</button>
-                    <button onClick={() => window.confirm('Delete this activity?') && remove.mutate()} className="hover:text-red-600 flex items-center gap-1"><Trash2 className="w-3 h-3" /> Delete</button>
+                    <button onClick={async () => { if (await confirm({ title: 'Delete this activity?', confirmLabel: 'Delete', danger: true })) remove.mutate(); }} className="hover:text-red-600 flex items-center gap-1"><Trash2 className="w-3 h-3" /> Delete</button>
                 </>}
             </div>
         </div>
@@ -251,6 +254,7 @@ function TimelineItem({ item, onChanged }) {
 
 // ── Left column: CRM properties + details ───────────────────────
 function CrmCard({ contact, meta, onUpdate, error }) {
+    const confirm = useConfirm();
     const unsub = contact.consent_status === 'UNSUBSCRIBED';
     return (
         <div className={card} style={cardShadow}>
@@ -273,9 +277,12 @@ function CrmCard({ contact, meta, onUpdate, error }) {
                     <span id="email-subscription-label" className="block text-xs font-medium text-slate-600 mb-1.5">Email subscription</span>
                     <div className="flex items-center justify-between gap-2">
                         <span className={`text-sm font-semibold ${unsub ? 'text-red-600' : 'text-emerald-700'}`}>{unsub ? 'Unsubscribed' : 'Subscribed'}</span>
-                        <button onClick={() => window.confirm(unsub
-                            ? 'Resubscribe this contact? They are removed from the global unsubscribe list and can be emailed again. Only do this with their consent.'
-                            : 'Unsubscribe this contact? They are added to the global unsubscribe list and queued emails are cancelled.') && onUpdate({ consent_status: unsub ? 'OPT_IN' : 'UNSUBSCRIBED' })}
+                        <button onClick={async () => {
+                            const ok = await confirm(unsub
+                                ? { title: 'Resubscribe this contact?', message: 'They are removed from the global unsubscribe list and can be emailed again. Only do this with their consent.', confirmLabel: 'Resubscribe' }
+                                : { title: 'Unsubscribe this contact?', message: 'They are added to the global unsubscribe list and queued emails are cancelled.', confirmLabel: 'Unsubscribe', danger: true });
+                            if (ok) onUpdate({ consent_status: unsub ? 'OPT_IN' : 'UNSUBSCRIBED' });
+                        }}
                             className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">{unsub ? 'Resubscribe' : 'Unsubscribe'}</button>
                     </div>
                 </div>
@@ -493,6 +500,7 @@ function SalesCard({ contact }) {
 
 // ── Page ────────────────────────────────────────────────────────
 export default function ContactDetail() {
+    const confirm = useConfirm();
     const { id } = useParams();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -602,7 +610,7 @@ export default function ContactDetail() {
                                 : <p className="text-sm font-medium text-slate-800">{contact.owner_name || 'Unassigned'}</p>}
                         </div>
                         {contact.can_delete && (
-                            <button onClick={() => window.confirm(`Delete ${contact.full_name}? You can restore them from Recently deleted for 90 days.`) && remove.mutate()}
+                            <button onClick={async () => { if (await confirm({ title: `Delete ${contact.full_name}?`, message: 'You can restore them from Recently deleted for 90 days.', confirmLabel: 'Delete', danger: true })) remove.mutate(); }}
                                 className="h-9 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center gap-1.5 border border-red-100">
                                 {remove.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Delete contact
                             </button>
@@ -658,6 +666,7 @@ export default function ContactDetail() {
                     <ContactScoreCard contactId={id} card={card} cardShadow={cardShadow} />
                     <SalesCard contact={contact} />
                     <ContactCompaniesCard contact={contact} onChanged={refresh} card={card} cardShadow={cardShadow} />
+                    <ContactIdentityCard prospectId={id} />
                     <TasksCard contactId={id} onChanged={refresh} />
                     <SideCard title="Lists" empty="Not on any list.">
                         {contact.lists.length > 0 && (

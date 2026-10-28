@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import LoadError from '../components/ui/LoadError';
+import { useApiQuery } from '../lib/useApiQuery';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Inbox, AlertCircle, Rocket } from 'lucide-react';
 import { leadsApi } from '../api/sales';
@@ -13,7 +15,7 @@ export default function SqlQueue() {
     const queryClient = useQueryClient();
     const [owner, setOwner] = useState('');
     const [converting, setConverting] = useState(null);
-    const { data, isLoading } = useQuery({ queryKey: ['leads', 'sql-queue', owner], queryFn: () => leadsApi.sqlQueue({ owner }) });
+    const { data, error, isLoading, refetch } = useApiQuery(['leads', 'sql-queue', owner], () => leadsApi.sqlQueue({ owner }));
     const items = data?.items || [];
 
     return (
@@ -42,6 +44,7 @@ export default function SqlQueue() {
             )}
             <div className={`${card} overflow-hidden`} style={cardShadow}>
                 {isLoading ? <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+                    : error ? <LoadError error={error} onRetry={refetch} title="Couldn't load the SQL queue" compact />
                     : !items.length ? <Empty icon={Inbox} title="The SQL queue is empty" text="Leads appear here once all qualification criteria are confirmed." /> : (
                         <div className="overflow-x-auto">
                             <table className="w-full">

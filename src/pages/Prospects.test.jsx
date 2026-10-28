@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Prospects from './Prospects';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 
 const lists = { items: [{ list_id: 'pl-1', list_name: 'October leads', prospect_count: 120, uploaded_at: '2026-10-01T10:00:00Z' }], total: 1, page: 1, page_size: 20 };
 const http = (over = {}) => ({
@@ -39,7 +39,7 @@ describe('Prospects page', () => {
         expect(await screen.findByRole('dialog')).toBeInTheDocument();
     });
 
-    bug('reports a failed list load instead of the empty state', 'lists query error ignored: shows the "upload your first list" empty state', async () => {
+    it('reports a failed list load instead of the empty state', async () => {
         renderPage(<Prospects />, opts({ 'GET /prospect-lists': fail(500) }));
         await expectLoadError({ emptyText: /no lists yet/i });
     });

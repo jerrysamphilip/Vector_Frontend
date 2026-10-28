@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { NavLink, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -8,9 +8,10 @@ import {
 } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import { authApi } from '../../api/auth';
-import { clearAuthSession, getStoredUser } from '../../lib/authStorage';
+import { useAuth } from '../../auth/AuthProvider';
 import { useDialog } from '../common/useDialog';
 import { useNavDrawer } from './useNavDrawer';
+import { errorText } from '../../lib/apiErrors';
 
 const adminNav = [
     { name: 'Dashboard',  href: '/admin',         icon: LayoutDashboard },
@@ -60,7 +61,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
             setTimeout(() => setForgotMsg(''), 5000);
         },
         onError: (err) => {
-            setForgotMsg(err?.response?.data?.detail || 'Failed to send reset link');
+            setForgotMsg(errorText(err, 'Failed to send reset link'));
             setTimeout(() => setForgotMsg(''), 5000);
         },
     });
@@ -76,7 +77,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
             setSuccess(true);
             setTimeout(onClose, 2000);
         } catch (err) {
-            setError(err?.response?.data?.detail || 'Failed to change password');
+            setError(errorText(err, 'Failed to change password'));
         } finally {
             setLoading(false);
         }
@@ -172,7 +173,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
 export default function AdminLayout() {
     const location = useLocation();
     const navigate = useNavigate();
-    const currentUser = getStoredUser();
+    const { user: currentUser, logout } = useAuth();
 
     const [profileOpen, setProfileOpen] = useState(false);
     const [changePwOpen, setChangePwOpen] = useState(false);
@@ -182,11 +183,8 @@ export default function AdminLayout() {
     const isDrawer = !drawer.isDesktop;
     const drawerOpen = isDrawer && drawer.open;
 
-    const queryClient = useQueryClient();
     const handleLogout = async () => {
-        try { await authApi.logout(); } catch { /* sign out locally anyway */ }
-        clearAuthSession();
-        queryClient.clear();
+        await logout(); // revokes the session server side; drops this user's cached data
         navigate('/login', { replace: true });
     };
 

@@ -14,6 +14,7 @@ import {
 import { campaignApi } from '../../api/campaigns';
 import RevalidateModal from '../campaigns/RevalidateModal';
 import { useDialog } from '../common/useDialog';
+import { errorText } from '../../lib/apiErrors';
 
 function formatDate(value) {
     if (!value) return '-';
@@ -108,7 +109,7 @@ export default function BouncedRevalidationModal({ onClose }) {
                         ) : error ? (
                             <div className="flex items-center gap-2 text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-4 py-3 text-sm">
                                 <AlertTriangle className="w-4 h-4" />
-                                {error?.response?.data?.detail || error?.message || 'Failed to load candidates.'}
+                                {errorText(error, 'Failed to load candidates.')}
                             </div>
                         ) : candidates.length === 0 ? (
                             <div className="py-14 text-center">

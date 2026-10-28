@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PlatformAdmin from './PlatformAdmin';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 
 const tenants = [
     { tenant_id: 'tenant-0001', tenant_name: 'Acme', status: 'ACTIVE', user_count: 3, campaign_count: 2, created_at: '2026-01-01T00:00:00Z' },
@@ -55,7 +55,7 @@ describe('PlatformAdmin page', () => {
         await expectLoadError({ emptyText: /no users/i });
     });
 
-    bug('reports a failed tenants load instead of "no tenants found"', 'TenantRosterCard ignores the query error and shows the empty roster', async () => {
+    it('reports a failed tenants load instead of "no tenants found"', async () => {
         renderPage(<PlatformAdmin view="tenants" />, opts({ 'GET /api/admin/tenants': fail(500) }));
         await expectLoadError({ emptyText: /no tenants found/i });
     });

@@ -84,7 +84,7 @@ export async function fetchDraftSnapshot({ editCampaignId }) {
  * @param {boolean} opts.isFreshStart
  * @param {object} opts.state    the saved wizard state (campaignId, currentStep, formData, selectedLists, ...)
  * @param {object} opts.setters  the matching state setters (setCampaignId, setCurrentStep, setFormData, ...)
- * @returns {{ draftLoaded: boolean, lastSaved: Date|null, isSavingDraft: boolean }}
+ * @returns {{ draftLoaded: boolean, lastSaved: Date|null, isSavingDraft: boolean, snapError: Error|null }}
  */
 export function useCampaignDraft({ editCampaignId, isFreshStart, campaignVersionRef, state, setters }) {
     const [draftLoaded, setDraftLoaded] = useState(false);
@@ -274,5 +274,6 @@ export function useCampaignDraft({ editCampaignId, isFreshStart, campaignVersion
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [formData, selectedLists, sequenceSteps, currentStep, selectedProfileId, uploadMode, processingResult, selectedPersona, customInstruction, creativeEmail, draftLoaded]);
 
-    return { draftLoaded, lastSaved, isSavingDraft };
+    // snapError: the failed draft / campaign read (null when it loaded or nothing was read), for the page to show
+    return { draftLoaded, lastSaved, isSavingDraft, snapError: snapError || null };
 }

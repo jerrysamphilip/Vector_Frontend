@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { authApi } from "../api/auth";
-import { isAuthenticated, consumeFirstLogin, getStoredUser } from "../lib/authStorage";
+import { useAuth } from "../auth/AuthProvider";
 import MfaChallenge from "../components/auth/MfaChallenge";
 import { safeReturnPath } from "../lib/returnTo";
 import { SESSION_IDLE_MINUTES } from "../api/activity";
@@ -15,6 +14,7 @@ import neutrinoLogo from "../assets/Neutrino.png";
 const LoginPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const auth = useAuth();
     // Back to the page that was requested / in use: route state from ProtectedRoute (path + query + hash), or
     // ?next= from the http.js session-expiry redirect. Internal /app or /admin paths only (no open redirect).
     const params = new URLSearchParams(location.search);
@@ -22,7 +22,7 @@ const LoginPage = () => {
     const fromPath = safeReturnPath(from ? `${from.pathname || ""}${from.search || ""}${from.hash || ""}` : null)
         || safeReturnPath(params.get("next"))
         || "/app/dashboard";
-    const reason = params.get("reason");
+    const reason = params.get("reason") || auth.endReason;
     const notice = reason === "suspended"
         ? "Your workspace is suspended. Contact your administrator to restore access."
         : reason === "idle" ? `Signed out after ${SESSION_IDLE_MINUTES} minutes of inactivity. Sign in again to continue where you left off.`
@@ -34,30 +34,23 @@ const LoginPage = () => {
     const [remember, setRemember] = useState(false);
     const [error, setError] = useState("");
     const [submitting, setSubmitting] = useState(false);
-    const [mfaToken, setMfaToken] = useState("");
+    const mfaPending = auth.status === "mfa-required";
 
-    /* Load remembered email */
+    /* Load remembered email (a signed-in user never gets here: PublicRoute) */
     useEffect(() => {
-        if (isAuthenticated()) {
-            navigate("/app/dashboard", { replace: true });
-            return;
-        }
-
         const saved = localStorage.getItem("rememberedEmail");
         if (saved) {
             setEmail(saved);
             setRemember(true);
         }
-    }, [navigate]);
+    }, []);
 
-    const finishSignIn = () => {
-        const isFirst = consumeFirstLogin();
-        const user = getStoredUser();
-        if (user?.mfa_setup_required) {
+    const finishSignIn = (result) => {
+        if (result?.user?.mfa_setup_required) {
             navigate("/app/account/security", { replace: true });
             return;
         }
-        navigate(isFirst ? '/set-password' : fromPath, { replace: true });
+        navigate(result?.firstLogin ? '/set-password' : fromPath, { replace: true });
     };
 
     const handleLogin = async () => {
@@ -70,7 +63,7 @@ const LoginPage = () => {
 
         try {
             setSubmitting(true);
-            const response = await authApi.login(email, password);
+            const result = await auth.login(email, password);
 
             if (remember) {
                 localStorage.setItem("rememberedEmail", email);
@@ -78,13 +71,12 @@ const LoginPage = () => {
                 localStorage.removeItem("rememberedEmail");
             }
 
-            if (response?.mfa_required) {
-                // Password OK; the session is issued after the second step
+            if (result.mfaRequired) {
+                // Password OK; the session is issued after the second step (AuthProvider holds the mfa_token)
                 setPassword("");
-                setMfaToken(response.mfa_token);
                 return;
             }
-            finishSignIn();
+            finishSignIn(result);
         } catch (err) {
             setError(err?.response?.data?.detail || "Invalid email or password");
         } finally {
@@ -130,11 +122,10 @@ const LoginPage = () => {
                     </div>
                 </div>
 
-                {mfaToken ? (
+                {mfaPending ? (
                     <MfaChallenge
-                        mfaToken={mfaToken}
                         onSuccess={finishSignIn}
-                        onCancel={() => { setMfaToken(""); setError(""); }}
+                        onCancel={() => { auth.cancelMfa(); setError(""); }}
                     />
                 ) : (<>
                 {/* WHY THE USER IS HERE (session expired / workspace suspended) */}

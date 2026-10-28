@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, Building2, CheckCircle2, Copy, X } from 'lucide-react';
 import { platformAdminApi } from '../../api/platformAdmin';
 import { useDialog } from '../common/useDialog';
+import { errorText } from '../../lib/apiErrors';
 
 // Platform admin: create a tenant with its first admin. The admin gets a set-password link by email
 // (never a password); the API returns the link here once only on local development without email.
@@ -123,7 +124,7 @@ export default function CreateTenantModal({ onClose, onCreated }) {
                                 {mutation.isError && (
                                     <div className="flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
                                         <AlertTriangle className="h-4 w-4 shrink-0" />
-                                        {mutation.error?.response?.data?.detail || 'Failed to create tenant.'}
+                                        {errorText(mutation.error, 'Failed to create tenant.')}
                                     </div>
                                 )}
 

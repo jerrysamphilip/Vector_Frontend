@@ -1,23 +1,28 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Unplug, Mail, CalendarDays, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { connectionsApi } from '../api/sales';
 import { PageHeader, card, cardShadow } from '../components/sales/shared';
 import { PrimaryButton, SecondaryButton, ErrorNote, formatDateTime } from '../components/contacts/shared';
+import LoadError from '../components/ui/LoadError';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useApiQuery } from '../lib/useApiQuery';
+import { errorText } from '../lib/apiErrors';
 
 const PROVIDERS = [
     { key: 'google', code: 'GOOGLE', name: 'Google', detail: 'Gmail and Google Calendar' },
     { key: 'microsoft', code: 'MICROSOFT', name: 'Microsoft', detail: 'Outlook mail and calendar (Microsoft 365)' },
 ];
-const errText = (e) => e?.response?.data?.detail || 'Something went wrong';
+const errText = (e) => errorText(e);
 
 /** Connect your own mailbox and calendar: emails and meetings with contacts land on their timelines (BR-SF-16). */
 export default function Connections() {
     const qc = useQueryClient();
     const [params, setParams] = useSearchParams();
     const [result, setResult] = useState(null);
-    const { data, isLoading } = useQuery({ queryKey: ['connections'], queryFn: connectionsApi.list });
+    const { data, error: loadError, isLoading, refetch } = useApiQuery(['connections'], () => connectionsApi.list());
+    const confirm = useConfirm();
     const refresh = () => qc.invalidateQueries({ queryKey: ['connections'] });
     const start = useMutation({ mutationFn: connectionsApi.start, onSuccess: (r) => { window.location.href = r.authorize_url; } });
     const update = useMutation({ mutationFn: ({ id, ...p }) => connectionsApi.update(id, p), onSuccess: refresh });
@@ -37,7 +42,9 @@ export default function Connections() {
             )}
             {status === 'error' && <ErrorNote message={`Could not connect: ${params.get('message') || 'unknown error'}`} />}
             <ErrorNote message={(start.error || sync.error || update.error || remove.error) && errText(start.error || sync.error || update.error || remove.error)} />
-            {isLoading ? <p className="text-sm text-slate-400">Loading…</p> : PROVIDERS.map(p => {
+            {isLoading ? <p className="text-sm text-slate-400">Loading…</p>
+                : loadError ? <div className={card} style={cardShadow}><LoadError error={loadError} onRetry={refetch} title="Couldn't load your connections" compact /></div>
+                : PROVIDERS.map(p => {
                 const conn = data?.connections.find(c => c.provider === p.code);
                 const available = data?.available?.[p.code];
                 return (
@@ -52,7 +59,7 @@ export default function Connections() {
                                     <SecondaryButton onClick={() => sync.mutate(conn.connection_id)} disabled={sync.isPending}>
                                         <RefreshCw className={`w-4 h-4 ${sync.isPending ? 'animate-spin' : ''}`} /> Sync now
                                     </SecondaryButton>
-                                    <SecondaryButton onClick={() => window.confirm(`Disconnect ${conn.account_email}? Items already logged stay.`) && remove.mutate(conn.connection_id)}>
+                                    <SecondaryButton onClick={async () => { if (await confirm({ title: `Disconnect ${conn.account_email}?`, message: 'Items already logged stay.', confirmLabel: 'Disconnect', danger: true })) remove.mutate(conn.connection_id); }}>
                                         <Unplug className="w-4 h-4" /> Disconnect
                                     </SecondaryButton>
                                 </div>

@@ -22,3 +22,12 @@ if (!Element.prototype.__rectsStubbed) {
 if (!window.matchMedia) {
     window.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} });
 }
+
+// Radix UI popups (menus) measure their trigger with ResizeObserver, which jsdom lacks
+if (!window.ResizeObserver) {
+    window.ResizeObserver = class ResizeObserver {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+    };
+}

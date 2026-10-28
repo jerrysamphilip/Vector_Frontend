@@ -1,4 +1,5 @@
 import KpiTile from '../../ui/KpiTile';
+import { errorReference, errorText as apiErrorText } from '../../../lib/apiErrors';
 
 // Shared constants and small presentational pieces of the Email Accounts page (pages/EmailAccounts.jsx).
 
@@ -139,9 +140,11 @@ export function EventRow({ event }) {
 // ─── Detail panel tabs ────────────────────────────────────────────────────────
 export const TABS = ['Overview', 'Connection', 'Settings', 'Activity'];
 
+// A failed request as one line with the request reference (lib/apiErrors.js); a 422 lists every invalid field
 export const errorText = (err, fallback) => {
     const d = err?.response?.data?.detail;
-    if (typeof d === 'string') return d;
-    if (Array.isArray(d)) return d.map(x => x.msg).filter(Boolean).join('; ') || fallback;
-    return fallback;
+    if (!Array.isArray(d)) return apiErrorText(err, fallback);
+    const ref = errorReference(err);
+    const msg = d.map(x => x.msg).filter(Boolean).join('; ') || fallback;
+    return ref ? `${msg} (Reference: ${ref})` : msg;
 };

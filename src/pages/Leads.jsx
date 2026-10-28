@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Search, Loader2, Target, LayoutGrid, List, AlertCircle, MessageSquareReply, ChevronDown, ChevronUp, PanelLeft } from 'lucide-react';
 import { LeadPanel } from './LeadDetail';
+import LoadError from '../components/ui/LoadError';
+import { useApiQuery } from '../lib/useApiQuery';
 import { contactsApi, errorMessage } from '../api/contacts';
 import { leadsApi } from '../api/sales';
 import { Avatar, ErrorNote, Field, Modal, PrimaryButton, SecondaryButton, inputClass, relativeDate } from '../components/contacts/shared';
@@ -125,8 +127,9 @@ function SplitView({ filters, stage, onStage, meta }) {
     const [params, setParams] = useSearchParams();
     const selected = params.get('lead');
     const listRef = useRef(null);
-    const { data, isLoading } = useQuery({ queryKey: ['leads', 'split', filters, stage], placeholderData: keepPreviousData,
-        queryFn: () => leadsApi.list({ ...filters, stage: stage || undefined, open_only: !stage, page_size: 200, sort_by: 'stage_changed_at', sort_order: 'desc' }) });
+    const { data, error, isLoading, refetch } = useApiQuery(['leads', 'split', filters, stage],
+        () => leadsApi.list({ ...filters, stage: stage || undefined, open_only: !stage, page_size: 200, sort_by: 'stage_changed_at', sort_order: 'desc' }),
+        { placeholderData: keepPreviousData });
     const items = data?.items || [];
     const select = (id) => setParams(p => { const n = new URLSearchParams(p); if (id) n.set('lead', id); else n.delete('lead'); return n; }, { replace: true });
     useEffect(() => { if (!selected && items.length) select(items[0].lead_id); }, [items.length]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -154,7 +157,8 @@ function SplitView({ filters, stage, onStage, meta }) {
                 </div>
                 <div ref={listRef} className="max-h-[calc(100vh-260px)] overflow-y-auto divide-y divide-slate-100">
                     {isLoading && <div className="py-10 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-indigo-500" /></div>}
-                    {!isLoading && !items.length && <Empty icon={Target} title="No leads here" />}
+                    {!isLoading && error && <LoadError error={error} onRetry={refetch} title="Couldn't load leads" compact />}
+                    {!isLoading && !error && !items.length && <Empty icon={Target} title="No leads here" />}
                     {items.map(l => (
                         <button key={l.lead_id} data-id={l.lead_id} onClick={() => select(l.lead_id)}
                             className={`w-full text-left px-4 py-3 ${selected === l.lead_id ? 'bg-indigo-50 shadow-[inset_3px_0_0_#2d6bbf]' : 'hover:bg-slate-50'}`}>
@@ -196,9 +200,9 @@ export default function Leads() {
     const update = (patch) => setParams(p => { const n = new URLSearchParams(p); Object.entries(patch).forEach(([k, v]) => (v ? n.set(k, v) : n.delete(k))); return n; });
 
     const filters = { owner, source, q };
-    const list = useQuery({ queryKey: ['leads', 'list', filters, stage, page], enabled: mode === 'list', placeholderData: keepPreviousData,
-        queryFn: () => leadsApi.list({ ...filters, stage, page, page_size: 50 }) });
-    const board = useQuery({ queryKey: ['leads', 'board', filters], enabled: mode === 'board', queryFn: () => leadsApi.board(filters) });
+    const list = useApiQuery(['leads', 'list', filters, stage, page], () => leadsApi.list({ ...filters, stage, page, page_size: 50 }),
+        { enabled: mode === 'list', placeholderData: keepPreviousData });
+    const board = useApiQuery(['leads', 'board', filters], () => leadsApi.board(filters), { enabled: mode === 'board' });
 
     return (
         <div className="w-full space-y-5">
@@ -234,7 +238,8 @@ export default function Leads() {
             {mode === 'split' ? (
                 <SplitView filters={filters} stage={stage} onStage={v => update({ stage: v, lead: '' })} meta={meta} />
             ) : mode === 'board' ? (
-                board.isLoading ? <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div> : (
+                board.isLoading ? <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+                : board.error ? <LoadError error={board.error} onRetry={board.refetch} title="Couldn't load the lead board" /> : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                         {(board.data?.columns || []).map(col => (
                             <div key={col.stage} className="bg-slate-50/80 rounded-2xl p-3 min-h-[200px]">
@@ -256,6 +261,7 @@ export default function Leads() {
             ) : (
                 <div className={`${card} overflow-hidden`} style={cardShadow}>
                     {list.isLoading ? <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+                        : list.error ? <LoadError error={list.error} onRetry={list.refetch} title="Couldn't load leads" compact />
                         : !(list.data?.items || []).length ? <Empty icon={Target} title="No leads" text="Create a lead from a contact to start qualifying it." /> : (
                             <div className="overflow-x-auto">
                                 <table className="w-full">

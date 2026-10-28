@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SalesSettings from './SalesSettings';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 import { owners } from '../test/fixtures/sales';
 
 const settings = (canEdit = true) => ({
@@ -49,7 +49,7 @@ describe('SalesSettings page', () => {
         expect(screen.getByLabelText('Bob Builder')).toBeInTheDocument();
     });
 
-    bug('reports a failed load', 'query error ignored: "Loading…" stays forever (isLoading || !settings)', async () => {
+    it('reports a failed load', async () => {
         renderPage(<SalesSettings />, opts({ 'GET /sales/settings': fail(500) }));
         await expectLoadError();
     });

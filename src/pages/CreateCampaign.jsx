@@ -1,4 +1,6 @@
 import { AnimatePresence } from 'framer-motion';
+import { AlertTriangle } from 'lucide-react';
+import { errorMessage, errorReference } from '../lib/apiErrors';
 import PageTransition from '../components/layout/PageTransition';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import EnrollmentResultModal from '../components/campaigns/EnrollmentResultModal';
@@ -23,9 +25,25 @@ export default function CreateCampaign() {
     );
 }
 
+function DraftLoadError({ error, editing }) {
+    const reference = errorReference(error);
+    return (
+        <div role="alert" className="max-w-7xl mx-auto px-8 pt-4">
+            <div className="flex items-start gap-2.5 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+                <div>
+                    <p className="font-semibold">{editing ? "Couldn't load this campaign for editing." : "Couldn't load your saved draft."} You are starting from a blank form.</p>
+                    <p>{errorMessage(error)}{reference && <span className="text-red-500"> Reference: <span className="font-mono select-all">{reference}</span></span>}</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function CreateCampaignContent() {
     const wizard = useCreateCampaignWizard();
-    const { currentStep, enrollReport, setEnrollReport, navigate } = wizard;
+    const { currentStep, enrollReport, setEnrollReport, navigate, editCampaignId } = wizard;
+    const draftError = wizard.snapError;
 
     return (
         <PageTransition>
@@ -47,6 +65,7 @@ function CreateCampaignContent() {
             )}
             <div className="min-h-screen pb-12" style={{ background: 'var(--canvas-bg, #F6F4EE)' }}>
                 <WizardHeader wizard={wizard} />
+                {draftError && <DraftLoadError error={draftError} editing={Boolean(editCampaignId)} />}
 
                 <main className="max-w-7xl mx-auto px-8 pt-6 pb-12 font-inter">
                     <AnimatePresence mode="wait">

@@ -1,47 +1,33 @@
-import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { isAuthenticated, getStoredUser, hasPermission } from '../../lib/authStorage';
-import { authApi } from '../../api/auth';
+import { useAuth } from '../../auth/AuthProvider';
+import { safeReturnPath } from '../../lib/returnTo';
 
 const SECURITY_PATH = '/app/account/security';
 const ADMIN_SECURITY_PATH = '/admin/security';
 
-// Once per page load, confirm the cookie session with the API and refresh the stored user
-// (role, permissions, two-factor state). A dead session ends on the login page via the
-// http.js 401 → refresh → redirect path.
-let sessionCheck = null;
-function checkSessionOnce() {
-    if (!sessionCheck) {
-        sessionCheck = authApi.session()
-            .then(() => window.dispatchEvent(new Event('auth-user-changed')))
-            .catch(() => { sessionCheck = null; });
-    }
-    return sessionCheck;
+function SessionCheck() {
+    return <div role="status" className="p-8 text-sm text-slate-400">Checking your session…</div>;
 }
 
-/** The stored user, re-read whenever it changes (session check, two-factor enabled, ...). */
-function useStoredUser() {
-    const [user, setUser] = useState(() => getStoredUser());
-    useEffect(() => {
-        const update = () => setUser(getStoredUser());
-        window.addEventListener('auth-user-changed', update);
-        window.addEventListener('storage', update);
-        if (isAuthenticated()) checkSessionOnce();
-        return () => {
-            window.removeEventListener('auth-user-changed', update);
-            window.removeEventListener('storage', update);
-        };
-    }, []);
-    return user;
+/** To the login page, remembering the page (route state) and why the session ended (?reason=). */
+function ToLogin({ reason }) {
+    const location = useLocation();
+    return (
+        <Navigate
+            to={{ pathname: '/login', search: reason ? `?reason=${encodeURIComponent(reason)}` : '' }}
+            state={{ from: location }}
+            replace
+        />
+    );
 }
 
+/** Tenant routes (/app): signed in, not a platform admin, two-factor set up when the workspace requires it. */
 export function ProtectedRoute({ children }) {
     const location = useLocation();
-    const user = useStoredUser();
+    const { user, status, endReason } = useAuth();
 
-    if (!user) {
-        return <Navigate to="/login" state={{ from: location }} replace />;
-    }
+    if (status === 'loading') return <SessionCheck />;
+    if (!user) return <ToLogin reason={endReason} />;
 
     // PLATFORM_ADMIN should never access tenant routes — redirect to admin panel
     if (user.role === 'PLATFORM_ADMIN' && !location.pathname.startsWith('/admin')) {
@@ -58,13 +44,12 @@ export function ProtectedRoute({ children }) {
 
 export function PlatformAdminRoute({ children }) {
     const location = useLocation();
-    const user = useStoredUser();
+    const { user, status, endReason, hasRole } = useAuth();
 
-    if (!user) {
-        return <Navigate to="/login" state={{ from: location }} replace />;
-    }
+    if (status === 'loading') return <SessionCheck />;
+    if (!user) return <ToLogin reason={endReason} />;
 
-    if (user.role !== 'PLATFORM_ADMIN') {
+    if (!hasRole('PLATFORM_ADMIN')) {
         return <Navigate to="/app/dashboard" replace />;
     }
 
@@ -75,15 +60,17 @@ export function PlatformAdminRoute({ children }) {
     return children;
 }
 
+/** Sign-in pages: a signed-in user goes on to the app (or the ?next= page). */
 export function PublicRoute({ children }) {
-    const user = getStoredUser();
+    const location = useLocation();
+    const { user, status } = useAuth();
 
-    if (user) {
-        // PLATFORM_ADMIN goes to admin panel, others go to app
+    if (status === 'signed-in' && user) {
         if (user.role === 'PLATFORM_ADMIN') {
             return <Navigate to="/admin" replace />;
         }
-        return <Navigate to="/app/dashboard" replace />;
+        const next = safeReturnPath(new URLSearchParams(location.search).get('next'));
+        return <Navigate to={next && next.startsWith('/app') ? next : '/app/dashboard'} replace />;
     }
     return children;
 }
@@ -93,8 +80,15 @@ export function PublicRoute({ children }) {
  * This guards routes at the router level so that even direct URL navigation is blocked.
  */
 export function PermissionRoute({ permission, children }) {
+    const { hasPermission } = useAuth();
     if (!hasPermission(permission)) {
         return <Navigate to="/app/dashboard" replace />;
     }
     return children;
+}
+
+/** Renders children only for one of `roles` (else `fallback`, default nothing). */
+export function RoleGate({ roles, fallback = null, children }) {
+    const { hasRole } = useAuth();
+    return hasRole(roles) ? children : fallback;
 }

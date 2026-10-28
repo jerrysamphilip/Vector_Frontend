@@ -14,6 +14,8 @@ const detail = (extra) => contact('c-1', {
 const http = (over = {}) => ({
     'GET /contacts/meta': contactMeta(),
     'GET /contacts/:id': () => detail(),
+    'GET /contacts/:id/emails': { current: null, items: [] },
+    'GET /contacts/:id/merges': { items: [] },
     'GET /contacts/owners': owners,
     'GET /contacts/fields': [],
     'GET /contacts/facets': { tags: [], lists: [] },

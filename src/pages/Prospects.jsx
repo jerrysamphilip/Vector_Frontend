@@ -6,14 +6,17 @@ import {
 } from 'lucide-react';
 import { prospectsApi } from '../api/prospects';
 import { uploadsApi } from '../api/uploads';
-import { getStoredUser, hasPermission } from '../lib/authStorage';
+import { useAuth } from '../auth/AuthProvider';
 import Loading from '../components/common/Loading';
 import ProspectListsTable from '../components/prospects/ProspectListsTable';
 import ProspectListModal from '../components/prospects/ProspectListModal';
 import ListRenameModal from '../components/contacts/ListRenameModal';
 import BouncedRevalidationModal from '../components/prospects/BouncedRevalidationModal';
 import KpiTile from '../components/ui/KpiTile';
+import LoadError from '../components/ui/LoadError';
+import { useApiQuery } from '../lib/useApiQuery';
 import { useDialog } from '../components/common/useDialog';
+import { errorText } from '../lib/apiErrors';
 
 // ── GradientCard ─────────────────────────────────────────────────
 function GradientCard(props) {
@@ -103,7 +106,7 @@ function UploadModal({ onClose }) {
                 state: { ...validation, title: name },
             });
         } catch (err) {
-            setError(err.response?.data?.detail || err.message || 'Upload failed. Try again.');
+            setError(errorText(err, 'Upload failed. Try again.'));
         } finally {
             setLoading(false);
         }
@@ -210,8 +213,7 @@ function DeleteModal({ title, message, onConfirm, onCancel, loading }) {
 // ══════════════════════════════════════════════════════════════════
 export default function Prospects() {
     const queryClient = useQueryClient();
-    const currentUser = getStoredUser();
-    const canRevalidateBounced = ['SUPER_ADMIN', 'ADMIN'].includes(currentUser?.role);
+    const { isAdmin: canRevalidateBounced, hasPermission } = useAuth();
 
     const [search, setSearch]           = useState('');
     const [page, setPage]               = useState(1);
@@ -230,10 +232,8 @@ export default function Prospects() {
         queryFn: prospectsApi.getStats,
     });
 
-    const { data: listsData, isLoading: listsLoading } = useQuery({
-        queryKey: ['prospect-lists', page, search, sortBy, sortOrder],
-        queryFn: () => prospectsApi.getLists({ page, search, sortBy, sortOrder }),
-    });
+    const { data: listsData, isLoading: listsLoading, error: listsError, refetch: refetchLists } = useApiQuery(
+        ['prospect-lists', page, search, sortBy, sortOrder], () => prospectsApi.getLists({ page, search, sortBy, sortOrder }));
 
     const deleteMutation = useMutation({
         mutationFn: id => prospectsApi.deleteList(id),
@@ -349,7 +349,7 @@ export default function Prospects() {
                         <div>
                             <p className="text-sm font-semibold text-gray-800">Contact Lists</p>
                             <p className="text-xs text-gray-400">
-                                {total > 0 ? `${total} list${total !== 1 ? 's' : ''}` : 'No lists yet'}
+                                {listsError ? 'Not loaded' : total > 0 ? `${total} list${total !== 1 ? 's' : ''}` : 'No lists yet'}
                             </p>
                         </div>
                     </div>
@@ -390,6 +390,9 @@ export default function Prospects() {
                 </div>
 
                 {/* Table */}
+                {listsError ? (
+                    <LoadError error={listsError} onRetry={refetchLists} title="Couldn't load your lists" compact />
+                ) : (
                 <ProspectListsTable
                     lists={lists}
                     isLoading={listsLoading}
@@ -403,6 +406,7 @@ export default function Prospects() {
                     onSelectionChange={setSelectedIds}
                     onUpload={() => setShowUpload(true)}
                 />
+                )}
 
                 {/* Pagination */}
                 {totalPages > 1 && (

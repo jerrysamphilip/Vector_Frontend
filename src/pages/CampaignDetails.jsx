@@ -8,6 +8,7 @@ import { isStaleVersion } from '../lib/staleVersion';
 import StatusBadge from '../components/campaigns/StatusBadge';
 import Loading from '../components/common/Loading';
 import LoadError from '../components/ui/LoadError';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { errorMessage, isNotFound } from '../lib/apiErrors';
 import PageTransition, { containerVariants, itemVariants } from '../components/layout/PageTransition';
 
@@ -27,6 +28,7 @@ export default function CampaignDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const confirm = useConfirm();
     const [activeTab, setActiveTab] = useState('Analytics');
     const [chartFilter, setChartFilter] = useState('Daily');
 
@@ -123,8 +125,9 @@ export default function CampaignDetails() {
 
     const launchMutation = useMutation({
         mutationFn: (id) => campaignApi.launch(id, campaign?.row_version),
-        onSuccess: () => {
-            setBanner(null);
+        onSuccess: (result) => {
+            // F-04: the plan sends more per day than the mailboxes can in the window
+            setBanner(result?.pacing_warning ? { tone: 'warning', text: result.pacing_warning.message } : null);
             queryClient.invalidateQueries({ queryKey: ['campaign', id] });
             queryClient.invalidateQueries({ queryKey: ['campaigns'], exact: false });
         },
@@ -147,8 +150,9 @@ export default function CampaignDetails() {
     const { openDialog, dialogs } = useCampaignDialogs({
         onOpenCopy: (copy) => { setActiveTab('Analytics'); navigate(`/app/campaigns/${copy.campaign_id}`); },
     });
-    const handleMenuAction = (action) => {
+    const handleMenuAction = async (action) => {
         switch (action) {
+            case 'edit': navigate(`/app/campaigns/${id}/edit`); break;
             case 'rename':
             case 'duplicate':
                 openDialog(action, campaign);
@@ -157,7 +161,11 @@ export default function CampaignDetails() {
             case 'pause': pauseMutation.mutate(id); break;
             case 'resume': resumeMutation.mutate(id); break;
             case 'delete':
-                if (window.confirm(`Delete "${campaign.campaign_name}"? This removes the campaign and its data.`)) {
+                if (await confirm({
+                    title: `Delete "${campaign.campaign_name}"?`,
+                    message: 'This removes the campaign and its data.',
+                    confirmLabel: 'Delete', danger: true,
+                })) {
                     deleteMutation.mutate(id);
                 }
                 break;
@@ -294,8 +302,12 @@ export default function CampaignDetails() {
                                 )}
                                 {campaign.status === 'ACTIVE' && (
                                     <button
-                                        onClick={() => {
-                                            if (window.confirm("⚠️ Force Send Now?\n\nThis will bypass all schedules/office hours and immediately send the next email to all queued prospects.\n\nAre you sure?")) {
+                                        onClick={async () => {
+                                            if (await confirm({
+                                                title: 'Force send now?',
+                                                message: 'This bypasses all schedules and office hours and immediately sends the next email to all queued prospects.',
+                                                confirmLabel: 'Send now', danger: true,
+                                            })) {
                                                 sendNowMutation.mutate(id);
                                             }
                                         }}
@@ -337,7 +349,7 @@ export default function CampaignDetails() {
                 {dialogs}
 
                 {banner && (
-                    <div role={banner.tone === 'error' ? 'alert' : 'status'} className={`mt-4 flex items-start justify-between gap-3 rounded-lg border px-4 py-2.5 text-sm ${banner.tone === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                    <div role={banner.tone === 'error' ? 'alert' : 'status'} className={`mt-4 flex items-start justify-between gap-3 rounded-lg border px-4 py-2.5 text-sm ${{ error: 'border-red-200 bg-red-50 text-red-700', warning: 'border-amber-200 bg-amber-50 text-amber-800' }[banner.tone] || 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
                         <span>{banner.text}</span>
                         <button onClick={() => setBanner(null)} aria-label="Dismiss" className="opacity-70 hover:opacity-100">x</button>
                     </div>

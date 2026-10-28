@@ -21,9 +21,9 @@ const wrap = (ui) => {
 describe('campaign actions menu', () => {
     it('offers actions by status and role', () => {
         const actions = (status, role) => menuItems({ status }, { role }).map(i => i.action);
-        expect(actions('DRAFT', 'ADMIN')).toEqual(['rename', 'duplicate', 'launch', 'delete']);
-        expect(actions('ACTIVE', 'MANAGER')).toEqual(['rename', 'duplicate', 'pause']);
-        expect(actions('PAUSED', 'SUPER_ADMIN')).toEqual(['rename', 'duplicate', 'resume', 'delete']);
+        expect(actions('DRAFT', 'ADMIN')).toEqual(['edit', 'rename', 'duplicate', 'launch', 'delete']);
+        expect(actions('ACTIVE', 'MANAGER')).toEqual(['edit', 'rename', 'duplicate', 'pause']);
+        expect(actions('PAUSED', 'SUPER_ADMIN')).toEqual(['edit', 'rename', 'duplicate', 'resume', 'delete']);
         expect(actions('ACTIVE', 'AGENT')).toEqual(['rename', 'duplicate']);
         expect(menuItems({ status: 'COMPLETED' }, { role: 'ADMIN', showView: true }).map(i => i.action))
             .toEqual(['rename', 'duplicate', 'view', 'delete']);

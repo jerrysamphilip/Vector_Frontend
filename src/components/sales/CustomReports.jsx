@@ -5,6 +5,7 @@ import { errorMessage } from '../../api/contacts';
 import { customReportsApi, money } from '../../api/sales';
 import { ErrorNote, PrimaryButton, SecondaryButton } from '../contacts/shared';
 import { HBar, Seg, card, cardShadow, selectSm } from './shared';
+import { useConfirm } from '../ui/ConfirmDialog';
 
 const blank = { object: 'deals', group_by: 'stage', group_by_2: '', measure: 'count', filters: [], date_field: '', date_from: '', date_to: '', chart: 'bar' };
 
@@ -53,6 +54,7 @@ function Result({ result, chart }) {
 
 /** Build, save and share reports on leads, deals, contacts, activities and tasks (BR-SF-14). */
 export default function CustomReports() {
+    const confirm = useConfirm();
     const qc = useQueryClient();
     const { data: meta } = useQuery({ queryKey: ['custom-report-meta'], queryFn: customReportsApi.meta, staleTime: 300000 });
     const { data: saved = [] } = useQuery({ queryKey: ['custom-reports'], queryFn: customReportsApi.list });
@@ -163,7 +165,7 @@ export default function CustomReports() {
                             <input className={`${selectSm} flex-1 min-w-[200px]`} value={name} onChange={e => setName(e.target.value)} placeholder="Report name" />
                             <label className="flex items-center gap-1.5 text-sm text-slate-600"><input type="checkbox" className="accent-indigo-600" checked={shared} onChange={e => setShared(e.target.checked)} /> Share with workspace</label>
                             <SecondaryButton onClick={() => save.mutate()} disabled={!name.trim() || save.isPending}><Save className="w-4 h-4" /> {active?.can_edit ? 'Save changes' : 'Save report'}</SecondaryButton>
-                            {active?.can_edit && <button onClick={() => window.confirm(`Delete "${active.name}"?`) && remove.mutate(active.report_id)} className="p-2 text-slate-400 hover:text-red-600" aria-label="Delete report"><Trash2 className="w-4 h-4" /></button>}
+                            {active?.can_edit && <button onClick={async () => { if (await confirm({ title: `Delete "${active.name}"?`, confirmLabel: 'Delete', danger: true })) remove.mutate(active.report_id); }} className="p-2 text-slate-400 hover:text-red-600" aria-label="Delete report"><Trash2 className="w-4 h-4" /></button>}
                         </div>
                         <p className="text-xs text-slate-400">Everyone who opens a shared report sees only their own and their team's records.</p>
                     </div>

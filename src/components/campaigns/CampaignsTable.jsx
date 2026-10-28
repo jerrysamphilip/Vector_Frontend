@@ -109,6 +109,10 @@ export default function CampaignsTable({
     visibleCols = [], searchTerm = ''
 }) {
     const navigate = useNavigate();
+    // The menu's Edit opens the campaign editor (F-04); every other action goes to the page
+    const onMenuAction = (action, campaign, e) => (action === 'edit'
+        ? navigate(`/app/campaigns/${campaign.campaign_id}/edit`)
+        : onAction(action, campaign, e));
 
     const allSelected = campaigns.length > 0 && selectedIds.length === campaigns.length;
 
@@ -414,7 +418,7 @@ export default function CampaignsTable({
                                                                 {campaign.status === 'ACTIVE' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                                                             </button>
                                                         )}
-                                                        <CampaignActionsMenu campaign={campaign} onAction={onAction} />
+                                                        <CampaignActionsMenu campaign={campaign} onAction={onMenuAction} />
                                                         <button
                                                             onClick={() => navigate(`/app/campaigns/${campaign.campaign_id}`)}
                                                             className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors lg:hidden"

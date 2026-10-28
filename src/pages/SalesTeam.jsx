@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Network, Loader2, ChevronRight } from 'lucide-react';
 import { hierarchyApi } from '../api/sales';
 import { errorMessage } from '../api/contacts';
 import { Avatar, ErrorNote } from '../components/contacts/shared';
+import LoadError from '../components/ui/LoadError';
+import { useApiQuery } from '../lib/useApiQuery';
 import { PageHeader, card, cardShadow, selectSm } from '../components/sales/shared';
 
 const LEVEL_TONE = { 1: 'bg-violet-100 text-violet-800', 2: 'bg-indigo-100 text-indigo-800', 3: 'bg-sky-100 text-sky-800', 4: 'bg-teal-100 text-teal-800' };
@@ -66,7 +68,7 @@ function Row({ user, depth, byManager, data, edit, busyId }) {
 
 export default function SalesTeam() {
     const queryClient = useQueryClient();
-    const { data, isLoading } = useQuery({ queryKey: ['hierarchy'], queryFn: hierarchyApi.get });
+    const { data, error: loadError, isLoading, refetch } = useApiQuery(['hierarchy'], () => hierarchyApi.get());
     const [error, setError] = useState(null);
     const [busyId, setBusyId] = useState(null);
     const save = useMutation({
@@ -103,7 +105,8 @@ export default function SalesTeam() {
                 <div className="grid grid-cols-[1fr_220px_240px_90px] gap-3 px-5 py-3 bg-slate-50/80 border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-wide">
                     <span>Person</span><span>Level</span><span>Reports to</span><span className="text-right">Team</span>
                 </div>
-                {isLoading ? <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div> : (
+                {isLoading ? <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+                    : loadError ? <LoadError error={loadError} onRetry={refetch} title="Couldn't load the sales team" compact /> : (
                     <>
                         {roots.map(u => <Row key={u.user_id} user={u} depth={0} byManager={byManager} data={data} edit={edit} busyId={busyId} />)}
                         {outside.length > 0 && (

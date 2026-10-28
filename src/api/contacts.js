@@ -1,6 +1,7 @@
 // Contacts, companies, lists, views, tasks, imports and search (CRM, BRD v2.0 section 5.2)
 
 import { apiClient as api } from './http';
+import { errorText } from '../lib/apiErrors';
 
 function toParams(filters = {}) {
     const params = new URLSearchParams();
@@ -129,11 +130,8 @@ export const searchApi = {
     search: (q) => get('/search', { q }),
 };
 
-// FastAPI errors come back as {detail: string | {message} | [{msg}]}
+// The text to show for a failed request (F-23): a plain sentence (the server's detail when it is a human
+// message) plus the request reference. See lib/apiErrors.js.
 export function errorMessage(err, fallback = 'Something went wrong. Try again.') {
-    const detail = err?.response?.data?.detail;
-    if (typeof detail === 'string') return detail;
-    if (detail?.message) return detail.message;
-    if (Array.isArray(detail) && detail[0]?.msg) return detail[0].msg.replace(/^Value error, /, '');
-    return err?.response?.data?.error || err?.message || fallback;
+    return errorText(err, fallback);
 }

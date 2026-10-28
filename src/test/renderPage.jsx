@@ -22,6 +22,10 @@ import { Suspense } from 'react';
 import axios from 'axios';
 import { apiClient, apiV1Client } from '../api/http';
 import { USER_KEY } from '../lib/authStorage';
+import { ToastProvider } from '../components/ui/Toast';
+import { ConfirmProvider } from '../components/ui/ConfirmDialog';
+import { AUTH_QUERY_KEY, AuthProvider } from '../auth/AuthProvider';
+import { ROLE_DEFAULT_PERMISSIONS } from '../auth/permissions';
 
 const REPLY = Symbol('reply');
 const PENDING = Symbol('pending');
@@ -35,15 +39,8 @@ export const fail = (status = 500, detail = 'Internal Server Error') => reply(st
 /** A request that never settles (keeps the page in its loading state). */
 export const pending = () => PENDING;
 
-// Roles and their default permissions (backend app/core/auth.py ROLE_DEFAULT_PERMISSIONS).
-const ALL = ['manage_campaigns', 'manage_templates', 'manage_inboxes', 'manage_prospects', 'view_analytics', 'export_data', 'manage_team'];
-export const ROLE_PERMISSIONS = {
-    PLATFORM_ADMIN: ['manage_platform'],
-    SUPER_ADMIN: ALL,
-    ADMIN: ALL,
-    MANAGER: ['manage_campaigns', 'manage_templates', 'view_analytics'],
-    AGENT: ['manage_campaigns'],
-};
+// Roles and their default permissions (backend app/domain/identity.py ROLE_DEFAULT_PERMISSIONS, src/auth/permissions.js).
+export const ROLE_PERMISSIONS = ROLE_DEFAULT_PERMISSIONS;
 
 export function makeUser(role = 'SUPER_ADMIN', overrides = {}) {
     return {
@@ -53,7 +50,7 @@ export function makeUser(role = 'SUPER_ADMIN', overrides = {}) {
         last_name: 'Lovelace',
         role,
         tenant_id: 't-1',
-        permissions: ROLE_PERMISSIONS[role] || [],
+        permissions: [...(ROLE_PERMISSIONS[role] || [])],
         mfa_enabled: false,
         ...overrides,
     };
@@ -149,20 +146,28 @@ export function createTestQueryClient() {
 /**
  * Render `ui` at `path` (matched by `route`) as a signed-in user.
  * options: route, path, role ('SUPER_ADMIN'), user (overrides), signedIn (true), http ({}),
- *          allowConsoleError ([]), queryClient.
+ *          allowConsoleError ([]), queryClient, idleTimeout (false: the AuthProvider's inactivity timer).
+ * The page gets the AuthProvider with that user already in its react-query cache (AUTH_QUERY_KEY), so no
+ * GET /auth/me is made; the localStorage mirror (lib/authStorage) is written too for synchronous readers.
  */
 export function renderPage(ui, options = {}) {
     const {
         route = '/', path = route, role = 'SUPER_ADMIN', user = {}, signedIn = true,
         http = {}, allowConsoleError = [], strict = true, queryClient = createTestQueryClient(), extraRoutes = null,
+        idleTimeout = false,
     } = options;
     if (active) active.http.restore();
-    if (signedIn) localStorage.setItem(USER_KEY, JSON.stringify(makeUser(role, user)));
+    const signedInUser = signedIn ? makeUser(role, user) : null;
+    if (signedInUser) localStorage.setItem(USER_KEY, JSON.stringify(signedInUser));
+    queryClient.setQueryData(AUTH_QUERY_KEY, signedInUser);
     const state = installHttp(http);
     const consoleErrors = vi.spyOn(console, 'error').mockImplementation(() => {});
     active = { http: state, consoleErrors, allowConsoleError, strict };
     const result = render(
         <QueryClientProvider client={queryClient}>
+            <ToastProvider>
+            <ConfirmProvider>
+            <AuthProvider idleTimeout={idleTimeout}>
             <MemoryRouter initialEntries={[path]}>
                 <Suspense fallback={<div>Loading page…</div>}>
                     <Routes>
@@ -172,6 +177,9 @@ export function renderPage(ui, options = {}) {
                     </Routes>
                 </Suspense>
             </MemoryRouter>
+            </AuthProvider>
+            </ConfirmProvider>
+            </ToastProvider>
         </QueryClientProvider>,
     );
     return { ...result, http: state, queryClient, consoleErrors };

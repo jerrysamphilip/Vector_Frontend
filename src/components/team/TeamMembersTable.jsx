@@ -1,6 +1,7 @@
 import Loading from '../common/Loading';
 import TeamMemberRow from './TeamMemberRow';
 import { Search, Users } from 'lucide-react';
+import { errorText } from '../../lib/apiErrors';
 
 // Team members card: search + status filter toolbar and the members table.
 export default function TeamMembersTable({ team }) {
@@ -49,7 +50,7 @@ export default function TeamMembersTable({ team }) {
                 <Loading text="Loading team members..." size="md" />
             ) : usersQuery.isError ? (
                 <div className="py-16 text-center">
-                    <p className="text-sm text-rose-600">{usersQuery.error?.response?.data?.detail || 'Failed to load users'}</p>
+                    <p className="text-sm text-rose-600">{errorText(usersQuery.error, 'Failed to load users')}</p>
                 </div>
             ) : filteredUsers.length === 0 ? (
                 <div className="py-16 text-center">

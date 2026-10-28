@@ -6,6 +6,8 @@ import { dealsApi, moneyShort, pct, salesReportsApi } from '../api/sales';
 import { Avatar, formatDateTime } from '../components/contacts/shared';
 import { HBar, MemberFilter, PageHeader, PeriodFilter, StatTile, card, cardShadow, periodRange } from '../components/sales/shared';
 import { CrmKpisCard } from '../components/sales/KpiCards';
+import LoadError from '../components/ui/LoadError';
+import { useApiQuery } from '../lib/useApiQuery';
 
 const VIEW_TITLE = {
     SALES_HEAD: ['Sales head dashboard', 'Every team, every rep'],
@@ -55,7 +57,7 @@ export default function SalesDashboard() {
     const [period, setPeriod] = useState('90');
     const [member, setMember] = useState('');
     const range = periodRange(period);
-    const { data, isLoading } = useQuery({ queryKey: ['sales-dashboard', period, member], queryFn: () => salesReportsApi.dashboard({ ...range, member }) });
+    const { data, error: loadError, isLoading, refetch } = useApiQuery(['sales-dashboard', period, member], () => salesReportsApi.dashboard({ ...range, member }));
     const { data: limit } = useQuery({ queryKey: ['daily-limit'], queryFn: salesReportsApi.dailyLimit });
     const [title, subtitle] = VIEW_TITLE[data?.role_view] || ['Sales dashboard', ''];
     const k = data?.kpis;
@@ -71,7 +73,8 @@ export default function SalesDashboard() {
                     <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />{limit.message}
                 </div>
             )}
-            {isLoading || !data ? <div className="py-24 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div> : (<>
+            {loadError ? <LoadError error={loadError} onRetry={refetch} title="Couldn't load the sales dashboard" />
+                : isLoading || !data ? <div className="py-24 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div> : (<>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <StatTile label="New leads" value={k.new_leads} sub={`${k.sqls} became SQL · ${k.open_sqls} SQLs open`} />
                     <StatTile label="Opportunities" value={k.opportunities_created} sub={`created · ${k.lost_count} lost`} />

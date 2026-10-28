@@ -4,6 +4,7 @@ import deliverabilityApi from '../../api/deliverability';
 import DnsRecordsPanel from './DnsRecordsPanel';
 import { useDialog } from '../common/useDialog';
 import { useApiQuery } from '../../lib/useApiQuery';
+import { errorText } from '../../lib/apiErrors';
 
 const LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const TLD = /^(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/;
@@ -18,10 +19,7 @@ export function normalizeDomain(raw) {
     return name;
 }
 
-const detail = (err, fallback) => {
-    const d = err?.response?.data?.detail;
-    return typeof d === 'string' ? d : fallback;
-};
+const detail = (err, fallback) => errorText(err, fallback);
 
 /**
  * "Add domain" (domainName null: form, then the DNS records to publish) or the DNS records

@@ -3,7 +3,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Leads from './Leads';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 import { lead, leadsMeta, owners } from '../test/fixtures/sales';
 
 const leads = [lead('l-1', { contact_name: 'Carol Contact' }), lead('l-2', { contact_name: 'Dan Driver', stage: 'SQL', stage_label: 'SQL' })];
@@ -44,7 +44,7 @@ describe('Leads page', () => {
         expect(within(await screen.findByRole('dialog')).getByPlaceholderText('Search your contacts…')).toBeInTheDocument();
     });
 
-    bug('reports a failed load instead of "No leads here"', 'split-view query error ignored: shows the empty state', async () => {
+    it('reports a failed load instead of "No leads here"', async () => {
         renderPage(<Leads />, opts({ 'GET /leads': fail(500) }));
         await expectLoadError({ emptyText: /no leads here/i });
     });

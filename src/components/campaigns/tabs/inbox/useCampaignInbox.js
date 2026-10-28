@@ -6,6 +6,8 @@ import { conversationsApi, inboxesApi } from '../../../../api/inboxes';
 import { leadsApi } from '../../../../api/sales';
 import { cleanInboxBody } from './inboxShared';
 import { useApiQuery } from '../../../../lib/useApiQuery';
+import { useToast } from '../../../ui/Toast';
+import { errorText } from '../../../../lib/apiErrors';
 
 export const POLL_INTERVAL = 30000;
 export const PAGE_SIZE = 30;
@@ -72,10 +74,9 @@ export function useCampaignInbox({ campaignId, inboxIds = [] }) {
             const lead = await leadsApi.fromMessage(messageId);
             navigate(`/app/leads/${lead.lead_id}`);
         } catch (err) {
-            const detail = err?.response?.data?.detail;
             const info = err?.response?.data?.detail_data;
             if (err?.response?.status === 409 && info?.lead_id) navigate(`/app/leads/${info.lead_id}`);
-            else setLeadError(typeof detail === 'string' ? detail : 'Could not create the lead');
+            else setLeadError(errorText(err, 'Could not create the lead'));
         } finally { setLeadBusy(null); }
     };
 
@@ -134,6 +135,7 @@ export function useCampaignInbox({ campaignId, inboxIds = [] }) {
 
     useEffect(() => { messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' }); }, [messages]);
 
+    const toast = useToast();
     const reply = useMutation({
         mutationFn: ({ id, text }) => conversationsApi.reply(id, text),
         onMutate: async ({ id, text }) => {
@@ -165,7 +167,8 @@ export function useCampaignInbox({ campaignId, inboxIds = [] }) {
         try {
             await reply.mutateAsync({ id: selectedId, text: trimmed });
         } catch (err) {
-            console.error('Error sending reply:', err);
+            // the draft is put back by onError; say why it was not sent
+            toast.error(err, { title: 'Your reply was not sent' });
         }
     };
 
@@ -192,7 +195,7 @@ export function useCampaignInbox({ campaignId, inboxIds = [] }) {
             );
             const failed = results
                 .filter(r => r.status === 'rejected')
-                .map(r => r.reason?.response?.data?.detail || r.reason?.message || 'Unknown error');
+                .map(r => errorText(r.reason, 'Unknown error'));
             if (failed.length) {
                 const msg = failed[0];
                 // If the error is about missing IMAP credentials, show the guide
@@ -205,7 +208,7 @@ export function useCampaignInbox({ campaignId, inboxIds = [] }) {
             await list.refetch();
             setImapReady(true);
         } catch (err) {
-            const msg = err?.response?.data?.detail || err.message;
+            const msg = errorText(err);
             if (msg?.toLowerCase().includes('imap')) {
                 setImapReady(false);
             } else {

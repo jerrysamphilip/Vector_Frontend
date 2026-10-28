@@ -14,11 +14,13 @@ import { ApprovalBadge } from '../components/sales/QuoteApproval';
 import { useMediaQuery } from '../components/layout/useNavDrawer';
 import { withVersion } from '../lib/staleVersion';
 import { useRecordVersion, versionedSave } from '../lib/useRecordVersion';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const PROPOSAL_TONE = { DRAFT: 'bg-slate-100 text-slate-600', SENT: 'bg-sky-50 text-sky-700', UNDER_REVIEW: 'bg-amber-50 text-amber-700',
     ACCEPTED: 'bg-emerald-50 text-emerald-700', REJECTED: 'bg-red-50 text-red-700' };
 
 function Proposals({ deal, onChanged }) {
+    const confirm = useConfirm();
     const meta = useLeadsMeta();
     const [title, setTitle] = useState('');
     const [amount, setAmount] = useState('');
@@ -38,7 +40,7 @@ function Proposals({ deal, onChanged }) {
                     <li key={p.proposal_id} className="p-3 rounded-lg border border-slate-200">
                         <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-medium text-slate-800 min-w-0 truncate">{p.title}</p>
-                            <button onClick={() => window.confirm('Delete this proposal?') && remove.mutate(p.proposal_id)} className="p-0.5 text-slate-300 hover:text-red-500 shrink-0" aria-label="Delete proposal"><Trash2 className="w-4 h-4" /></button>
+                            <button onClick={async () => { if (await confirm({ title: 'Delete this proposal?', confirmLabel: 'Delete', danger: true })) remove.mutate(p.proposal_id); }} className="p-0.5 text-slate-300 hover:text-red-500 shrink-0" aria-label="Delete proposal"><Trash2 className="w-4 h-4" /></button>
                         </div>
                         <p className="text-xs text-slate-500 mt-0.5">{canSee ? moneyExact(p.amount) : 'Amount hidden'}{p.line_count ? ` · ${p.line_count} line${p.line_count === 1 ? '' : 's'}` : ''}{p.sent_at ? ` · sent ${relativeDate(p.sent_at)}` : ''}{p.decided_at ? ` · decided ${relativeDate(p.decided_at)}` : ''}</p>
                         <div className="flex items-center gap-2 mt-2">
@@ -67,6 +69,7 @@ function Proposals({ deal, onChanged }) {
 }
 
 export default function DealDetail() {
+    const confirm = useConfirm();
     const { id } = useParams();
     // the Proposals card sits in the middle column below xl and in the right column from xl: render it once
     const isWide = useMediaQuery('(min-width: 1280px)');
@@ -203,10 +206,10 @@ export default function DealDetail() {
                 </div>
                 <div className="hidden xl:block space-y-5">
                     {isWide && <Proposals deal={deal} onChanged={refresh} />}
-                    <button onClick={() => window.confirm('Delete this opportunity and its proposals?') && remove.mutate()} className="text-sm font-semibold text-red-600 hover:text-red-800 flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Delete opportunity</button>
+                    <button onClick={async () => { if (await confirm({ title: 'Delete this opportunity?', message: 'The opportunity and its proposals are deleted.', confirmLabel: 'Delete', danger: true })) remove.mutate(); }} className="text-sm font-semibold text-red-600 hover:text-red-800 flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Delete opportunity</button>
                 </div>
             </div>
-            <button onClick={() => window.confirm('Delete this opportunity and its proposals?') && remove.mutate()} className="xl:hidden text-sm font-semibold text-red-600 hover:text-red-800 flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Delete opportunity</button>
+            <button onClick={async () => { if (await confirm({ title: 'Delete this opportunity?', message: 'The opportunity and its proposals are deleted.', confirmLabel: 'Delete', danger: true })) remove.mutate(); }} className="xl:hidden text-sm font-semibold text-red-600 hover:text-red-800 flex items-center gap-1.5"><Trash2 className="w-4 h-4" /> Delete opportunity</button>
             {closing && <CloseReasonModal stage={closing} dealName={deal.name} initial={deal.closed_reason || ''} busy={save.isPending}
                 onClose={() => setClosing(null)} onConfirm={reason => save.mutate({ stage_id: closing.stage_id, closed_reason: reason })} />}
         </div>

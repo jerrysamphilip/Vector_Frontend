@@ -5,6 +5,7 @@ import PageTransition from '../components/layout/PageTransition';
 import { Button } from '../components/ui/Button';
 import { authApi } from '../api/auth';
 import { getStoredUser, setAuthSession } from '../lib/authStorage';
+import { errorText } from '../lib/apiErrors';
 
 export default function SettingsPage() {
     const currentUser = getStoredUser();
@@ -28,7 +29,7 @@ export default function SettingsPage() {
             setTimeout(() => setProfileSuccess(false), 3000);
         },
         onError: (err) => {
-            setProfileError(err?.response?.data?.detail || 'Failed to update profile');
+            setProfileError(errorText(err, 'Failed to update profile'));
             setProfileSuccess(false);
         },
     });
@@ -50,7 +51,7 @@ export default function SettingsPage() {
             setTimeout(() => setForgotMsg(''), 5000);
         },
         onError: (err) => {
-            setForgotMsg(err?.response?.data?.detail || 'Failed to send reset link');
+            setForgotMsg(errorText(err, 'Failed to send reset link'));
             setTimeout(() => setForgotMsg(''), 5000);
         },
     });
@@ -66,7 +67,7 @@ export default function SettingsPage() {
             setTimeout(() => setPwSuccess(false), 4000);
         },
         onError: (err) => {
-            setPwError(err?.response?.data?.detail || 'Failed to change password');
+            setPwError(errorText(err, 'Failed to change password'));
             setPwSuccess(false);
         },
     });

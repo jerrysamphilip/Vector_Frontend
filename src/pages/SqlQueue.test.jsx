@@ -3,7 +3,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SqlQueue from './SqlQueue';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 import { leadsMeta, owners } from '../test/fixtures/sales';
 
 const queue = {
@@ -32,7 +32,7 @@ describe('SqlQueue page', () => {
         expect(within(dialog).getByText('Convert to opportunity')).toBeInTheDocument();
     });
 
-    bug('reports a failed load instead of an empty queue', 'useQuery error ignored: renders "The SQL queue is empty"', async () => {
+    it('reports a failed load instead of an empty queue', async () => {
         renderPage(<SqlQueue />, { route: '/app/sql-queue', http: http({ 'GET /leads/sql-queue': fail(500) }) });
         await expectLoadError({ emptyText: /sql queue is empty/i });
     });

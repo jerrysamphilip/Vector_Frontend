@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Home, Mail, Users, Activity, MessageSquare, Inbox, BarChart3, Shield, KeyRound, Eye, EyeOff, CheckCircle, LogOut, X, Contact, Building2, ListChecks, CheckSquare, Gauge, Target, Inbox as InboxIcon, Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star, LifeBuoy, ShieldCheck, Webhook,
+    Home, Mail, Users, Activity, MessageSquare, Inbox, BarChart3, Shield, KeyRound, Eye, EyeOff, CheckCircle, LogOut, X, Contact, Building2, ListChecks, CheckSquare, Gauge, Target, Inbox as InboxIcon, Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star, LifeBuoy, ShieldCheck, Webhook, UserCog, FileDown,
 } from 'lucide-react';
 import logoMark from '../../assets/logo-mark.png';
 import { authApi } from '../../api/auth';
 import { tasksApi, viewsApi } from '../../api/contacts';
 import { BUILT_IN_VIEWS, contactViewHref } from '../../lib/contactViews';
-import { clearAuthSession, getStoredUser, hasPermission, setAuthSession } from '../../lib/authStorage';
+import { useAuth } from '../../auth/AuthProvider';
 import { useDialog } from '../common/useDialog';
-import { useApiQuery } from '../../lib/useApiQuery';
+import { errorText } from '../../lib/apiErrors';
 
 // Grouped navigation. permission: null = everyone; admin: admins only.
 const NAV = [
@@ -51,6 +51,7 @@ const NAV = [
     { name: 'Sales settings', href: '/app/sales-settings', icon: Settings2, admin: true },
     { name: 'Webhooks', href: '/app/webhooks', icon: Webhook, admin: true },
     { name: 'Contact scoring', href: '/app/contact-scoring', icon: Gauge, admin: true },
+    { name: 'Export log', href: '/app/settings/export-logs', icon: FileDown, admin: true },
     { name: 'Calendar sync', href: '/app/connections', icon: CalendarSync },
   ] },
 ];
@@ -99,7 +100,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
       setTimeout(() => setForgotMsg(''), 5000);
     },
     onError: (err) => {
-      setForgotMsg(err?.response?.data?.detail || 'Failed to send reset link');
+      setForgotMsg(errorText(err, 'Failed to send reset link'));
       setTimeout(() => setForgotMsg(''), 5000);
     },
   });
@@ -115,7 +116,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
       setSuccess(true);
       setTimeout(onClose, 2000);
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Failed to change password');
+      setError(errorText(err, 'Failed to change password'));
     } finally {
       setLoading(false);
     }
@@ -276,6 +277,7 @@ function ContactViews({ isAdmin }) {
   const { data: saved = [] } = useQuery({ queryKey: ['views', 'CONTACT'], queryFn: () => viewsApi.list('CONTACT'), staleTime: 60000 });
   const params = new URLSearchParams(location.search);
   const current = location.pathname === '/app/contacts' ? (params.get('view') || 'all') : null;
+  const { hasPermission } = useAuth();
   const canManage = isAdmin || hasPermission('manage_prospects');
   const views = [...BUILT_IN_VIEWS.filter(v => !v.manageOnly || canManage).map(v => ({ id: v.id, name: v.name })),
     ...saved.map(v => ({ id: v.view_id, name: v.name, saved: true }))];
@@ -300,16 +302,9 @@ function ContactViews({ isAdmin }) {
 // ── Sidebar ────────────────────────────────────────────────
 export default function Sidebar({ drawer = null }) {
   const location = useLocation();
-  const [storedUser] = useState(() => getStoredUser());
-  // A stored session from before tenant_name was kept: fetch the user once to show the workspace name
-  const { data: freshUser } = useApiQuery(['auth-me', 'sidebar'], async () => {
-    const fresh = await authApi.me();
-    if (fresh) setAuthSession({ user: fresh });
-    return fresh || null;
-  }, { enabled: Boolean(storedUser?.tenant_id && !storedUser.tenant_name), retry: false, staleTime: Infinity });
-  const currentUser = freshUser || storedUser;
+  // The user comes from GET /auth/me (AuthProvider), which includes tenant_name
+  const { user: currentUser, isAdmin, hasPermission } = useAuth();
   const role = currentUser?.role || '';
-  const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(role);
   const { data: dueTasks } = useQuery({ queryKey: ['tasks', 'nav-due'], queryFn: () => tasksApi.list({ due: 'today', page_size: 1 }), refetchInterval: 120000 });
   const badges = { tasks: dueTasks?.total || 0 };
 
@@ -389,18 +384,15 @@ export function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const [changePwOpen, setChangePwOpen] = useState(false);
   const accountBtnRef = useRef(null);
-  const currentUser = getStoredUser();
+  const { user: currentUser, logout } = useAuth();
   const role = currentUser?.role || '';
   useEffect(() => {
     const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, []);
-  const queryClient = useQueryClient();
   const handleLogout = async () => {
-    try { await authApi.logout(); } catch { /* ignore */ }
-    clearAuthSession();
-    queryClient.clear(); // don't leave this user's data cached for the next sign-in
+    await logout(); // revokes the session server side; drops this user's cached data
     navigate('/login', { replace: true });
   };
   return (
@@ -421,6 +413,9 @@ export function ProfileMenu() {
                 <KeyRound className="w-4 h-4 text-slate-400" /> Change password
               </button>
             )}
+            <button onClick={() => { setOpen(false); navigate('/app/account/profile'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+              <UserCog className="w-4 h-4 text-slate-400" /> Profile settings
+            </button>
             <button onClick={() => { setOpen(false); navigate('/app/account/security'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
               <ShieldCheck className="w-4 h-4 text-slate-400" /> Security (two-factor)
               {currentUser?.mfa_enabled && <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">On</span>}

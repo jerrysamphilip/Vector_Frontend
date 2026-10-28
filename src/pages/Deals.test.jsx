@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Deals from './Deals';
 import { fail, pending, renderPage } from '../test/renderPage';
-import { bug, expectLoadError, expectLoading } from '../test/pageAssertions';
+import { expectLoadError, expectLoading } from '../test/pageAssertions';
 import { leadsMeta, opportunity, owners, salesStages } from '../test/fixtures/sales';
 
 const board = { columns: [
@@ -47,12 +47,12 @@ describe('Deals page', () => {
         expect(await screen.findByText('Listed deal')).toBeInTheDocument();
     });
 
-    bug('reports a failed board load', 'board query error ignored: renders an empty board', async () => {
+    it('reports a failed board load', async () => {
         renderPage(<Deals />, opts({ 'GET /opportunities/board': fail(500) }));
         await expectLoadError();
     });
 
-    bug('reports a failed list load instead of "No opportunities"', 'list query error ignored: shows the empty state', async () => {
+    it('reports a failed list load instead of "No opportunities"', async () => {
         renderPage(<Deals />, opts({ 'GET /opportunities': fail(500) }, undefined, '/app/deals?mode=list'));
         await expectLoadError({ emptyText: /no opportunities/i });
     });

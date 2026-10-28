@@ -1,7 +1,7 @@
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useId, useState } from 'react';
-import { getDisplayName, hasPermission } from '../../lib/authStorage';
+import { useAuth } from '../../auth/AuthProvider';
 
 function getGreeting() {
     const h = new Date().getHours();
@@ -140,9 +140,8 @@ function CoffeeCup() {
 
 export default function Header({ actionSlot = null }) {
     const navigate  = useNavigate();
-    const [userName, setUserName] = useState('');
-
-    useEffect(() => { setUserName(getDisplayName()); }, []);
+    const { user, hasPermission } = useAuth();
+    const userName = user?.first_name || 'User';
 
     return (
         <header className="w-full flex items-center justify-between flex-wrap gap-4 mb-8">

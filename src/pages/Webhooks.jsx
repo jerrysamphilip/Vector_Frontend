@@ -1,15 +1,22 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import LoadError from '../components/ui/LoadError';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useApiQuery } from '../lib/useApiQuery';
+import { errorReference, errorText } from '../lib/apiErrors';
 import { Plus, Trash2, Pencil, Send, KeyRound, Copy, Check, RotateCcw, ChevronDown, ChevronRight, Webhook, Power } from 'lucide-react';
 import { webhooksApi } from '../api/webhooks';
 import { PageHeader, card, cardShadow, Empty } from '../components/sales/shared';
 import { Modal, Field, inputClass, PrimaryButton, SecondaryButton, ErrorNote, formatDateTime } from '../components/contacts/shared';
-import { getStoredUser } from '../lib/authStorage';
+import { useAuth } from '../auth/AuthProvider';
 
+// A failed request as one line with the request reference; a 422 lists every invalid field
 const errText = (e) => {
     const d = e?.response?.data?.detail;
-    if (Array.isArray(d)) return d.map(x => x?.msg).filter(Boolean).join('; ') || 'Check the form';
-    return typeof d === 'string' ? d : d?.message || 'Something went wrong';
+    if (!Array.isArray(d)) return errorText(e);
+    const ref = errorReference(e);
+    const msg = d.map(x => x?.msg).filter(Boolean).join('; ') || 'Check the form';
+    return ref ? `${msg} (Reference: ${ref})` : msg;
 };
 
 const STATUS_TONES = {
@@ -131,13 +138,12 @@ function EndpointModal({ endpoint, eventTypes, onClose, onCreated }) {
 }
 
 function PayloadModal({ endpointId, deliveryId, onClose }) {
-    const { data, isLoading } = useQuery({
-        queryKey: ['webhook-delivery', endpointId, deliveryId],
-        queryFn: () => webhooksApi.delivery(endpointId, deliveryId),
-    });
+    const { data, error: loadError, isLoading, refetch } = useApiQuery(['webhook-delivery', endpointId, deliveryId],
+        () => webhooksApi.delivery(endpointId, deliveryId));
     return (
         <Modal title="Delivery" subtitle={data ? `${data.event_type} · ${data.status}` : ''} width="max-w-2xl" onClose={onClose}>
-            {isLoading || !data ? <p className="text-sm text-slate-400">Loading…</p> : (
+            {loadError ? <LoadError error={loadError} onRetry={refetch} title="Couldn't load the delivery" compact />
+                : isLoading || !data ? <p className="text-sm text-slate-400">Loading…</p> : (
                 <div className="space-y-3 text-sm">
                     {data.last_error && <ErrorNote message={data.last_error} />}
                     <pre className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs overflow-auto max-h-96" data-testid="webhook-payload">
@@ -154,11 +160,8 @@ function DeliveryLog({ endpoint }) {
     const [status, setStatus] = useState('');
     const [viewing, setViewing] = useState(null);
     const [error, setError] = useState('');
-    const { data, isLoading } = useQuery({
-        queryKey: ['webhooks', 'deliveries', endpoint.endpoint_id, status],
-        queryFn: () => webhooksApi.deliveries(endpoint.endpoint_id, { status, limit: 50 }),
-        refetchInterval: 15000,
-    });
+    const { data, error: loadError, isLoading, refetch } = useApiQuery(['webhooks', 'deliveries', endpoint.endpoint_id, status],
+        () => webhooksApi.deliveries(endpoint.endpoint_id, { status, limit: 50 }), { refetchInterval: 15000 });
     const redeliver = useMutation({
         mutationFn: (deliveryId) => webhooksApi.redeliver(endpoint.endpoint_id, deliveryId),
         onSuccess: () => { setError(''); qc.invalidateQueries({ queryKey: ['webhooks', 'deliveries', endpoint.endpoint_id] }); },
@@ -176,7 +179,9 @@ function DeliveryLog({ endpoint }) {
                 </select>
             </div>
             <ErrorNote message={error} />
-            {isLoading ? <p className="text-sm text-slate-400 py-3">Loading…</p> : !items.length ? (
+            {isLoading ? <p className="text-sm text-slate-400 py-3">Loading…</p>
+                : loadError ? <LoadError error={loadError} onRetry={refetch} title="Couldn't load the delivery log" compact />
+                : !items.length ? (
                 <p className="text-sm text-slate-400 py-3 text-center">No deliveries yet.</p>
             ) : (
                 <div className="overflow-x-auto">
@@ -223,6 +228,7 @@ function EndpointCard({ endpoint, eventTypes, onEdit, onSecret }) {
     const [error, setError] = useState('');
     const refresh = () => qc.invalidateQueries({ queryKey: ['webhooks'] });
     const onError = (e) => setError(errText(e));
+    const confirm = useConfirm();
     const test = useMutation({
         mutationFn: () => webhooksApi.test(endpoint.endpoint_id),
         onSuccess: (d) => { setError(''); setTestResult(d); refresh(); },
@@ -271,12 +277,12 @@ function EndpointCard({ endpoint, eventTypes, onEdit, onSecret }) {
                         <Send className="w-4 h-4" /> {test.isPending ? 'Sending…' : 'Send test'}
                     </SecondaryButton>
                     <button onClick={() => onEdit(endpoint)} className="p-2 text-slate-400 hover:text-slate-700" aria-label="Edit endpoint" data-testid="webhook-edit"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => { if (window.confirm('Create a new signing secret? The current one stops working immediately.')) rotate.mutate(); }}
+                    <button onClick={async () => { if (await confirm({ title: 'Create a new signing secret?', message: 'The current one stops working immediately.', confirmLabel: 'Rotate secret', danger: true })) rotate.mutate(); }}
                         className="p-2 text-slate-400 hover:text-slate-700" aria-label="Rotate secret" title="Rotate secret" data-testid="webhook-rotate"><KeyRound className="w-4 h-4" /></button>
                     <button onClick={() => toggle.mutate()} disabled={toggle.isPending}
                         className="p-2 text-slate-400 hover:text-slate-700" aria-label={endpoint.active ? 'Turn off' : 'Turn on'}
                         title={endpoint.active ? 'Turn off' : 'Turn on'} data-testid="webhook-toggle"><Power className="w-4 h-4" /></button>
-                    <button onClick={() => { if (window.confirm('Delete this endpoint and its delivery log?')) remove.mutate(); }}
+                    <button onClick={async () => { if (await confirm({ title: 'Delete this endpoint?', message: 'The endpoint and its delivery log are deleted.', confirmLabel: 'Delete', danger: true })) remove.mutate(); }}
                         className="p-2 text-slate-400 hover:text-red-600" aria-label="Delete endpoint" data-testid="webhook-delete"><Trash2 className="w-4 h-4" /></button>
                 </div>
             </div>
@@ -299,11 +305,10 @@ function EndpointCard({ endpoint, eventTypes, onEdit, onSecret }) {
 }
 
 export default function Webhooks() {
-    const user = getStoredUser();
-    const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(user?.role);
+    const { isAdmin } = useAuth();
     const [editing, setEditing] = useState(null);   // {} = new, endpoint = edit
     const [secretFor, setSecretFor] = useState(null);
-    const { data, isLoading, error } = useQuery({ queryKey: ['webhooks', 'list'], queryFn: webhooksApi.list, enabled: isAdmin });
+    const { data, isLoading, error, refetch } = useApiQuery(['webhooks', 'list'], () => webhooksApi.list(), { enabled: isAdmin });
     const { data: eventTypes = [] } = useQuery({ queryKey: ['webhooks', 'event-types'], queryFn: webhooksApi.eventTypes, enabled: isAdmin, staleTime: 600000 });
 
     if (!isAdmin) {
@@ -319,8 +324,9 @@ export default function Webhooks() {
                     <Plus className="w-4 h-4" /> Add endpoint
                 </PrimaryButton>
             </PageHeader>
-            {error && <ErrorNote message={errText(error)} />}
-            {isLoading ? <p className="text-sm text-slate-400">Loading…</p> : !items.length ? (
+            {isLoading ? <p className="text-sm text-slate-400">Loading…</p>
+                : error ? <div className={card} style={cardShadow}><LoadError error={error} onRetry={refetch} title="Couldn't load the webhook endpoints" /></div>
+                : !items.length ? (
                 <div className={card} style={cardShadow}>
                     <Empty icon={Webhook} title="No webhook endpoints yet" text="Add an HTTPS endpoint and choose which events it receives." />
                 </div>

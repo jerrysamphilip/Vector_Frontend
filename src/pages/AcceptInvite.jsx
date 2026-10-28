@@ -5,6 +5,7 @@ import usersApi from "../api/users";
 
 import bg from "../assets/bg.png";
 import logo from "../assets/logo.png";
+import { errorText } from '../lib/apiErrors';
 
 export default function AcceptInvite() {
     const navigate = useNavigate();
@@ -53,7 +54,7 @@ export default function AcceptInvite() {
             setSuccess("Account created successfully. Redirecting to login...");
             setTimeout(() => navigate("/login", { replace: true }), 1500);
         } catch (err) {
-            setError(err?.response?.data?.detail || "Failed to accept invitation");
+            setError(errorText(err, "Failed to accept invitation"));
         } finally {
             setSubmitting(false);
         }
