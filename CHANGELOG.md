@@ -64,6 +64,8 @@ Release candidate for BRD v2.0 Phase 1 (R1.0) and Phase 2 (R2.1), released toget
   `formatDate`) reads them as UTC and shows the viewer's zone with its abbreviation (1:54 PM EDT); about 20
   screens use it (inbox, schedule, trigger logs, mailboxes, charts, lead detail). Date-only chart buckets are
   local calendar days, so Oct 26 no longer shows under "Oct 25" and Nov 1 no longer lands in October.
+- Import wizard: the "More than one column maps to the same property; the last one wins" notice is back (lost in
+  the drawer rewrite); it does not block the import.
 - Bounce "Delivery Failed" notes show as bounces, not replies (inbox list badge, thread, no "Create lead").
 - UAT campaign analytics labels: "Enrolled" (was "Total Leads Contacted"), "Emails sent (incl. bounced)"
   (was "Contacts enrolled"), "In sequence" (was "In Progress"), "Opened (unique)", rates name their
