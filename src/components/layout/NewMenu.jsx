@@ -8,7 +8,7 @@ import { DealFormModal } from '../../pages/Deals';
 import { NewTaskModal } from '../../pages/Tasks';
 import { useTeamOwners } from '../sales/shared';
 import { BRAND_GRADIENT } from '../contacts/shared';
-import { getStoredUser, hasPermission } from '../../lib/authStorage';
+import { useAuth } from '../../auth/AuthProvider';
 
 /** One "+ New" button for the records people create most. */
 export default function NewMenu() {
@@ -18,8 +18,8 @@ export default function NewMenu() {
     const ref = useRef(null);
     const [open, setOpen] = useState(false);
     const [modal, setModal] = useState(null);
-    const me = getStoredUser();
-    const canAssign = ['SUPER_ADMIN', 'ADMIN', 'MANAGER'].includes(me?.role);
+    const { hasRole, hasPermission } = useAuth();
+    const canAssign = hasRole('SUPER_ADMIN', 'ADMIN', 'MANAGER');
     useEffect(() => {
         const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
         document.addEventListener('mousedown', close);

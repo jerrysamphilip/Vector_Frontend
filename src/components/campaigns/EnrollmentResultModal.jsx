@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useId } from 'react';
 import { CheckCircle2, AlertTriangle, Download, X } from 'lucide-react';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
+import { downloadCsv } from '../../lib/csv';
 
 /**
  * Result of enrolling contacts into a campaign: how many were enrolled and, for every
@@ -8,7 +9,7 @@ import { useDialog } from '../common/useDialog';
  * [{prospect_id, email, name, reason_code, reason}].
  */
 export default function EnrollmentResultModal({ title = 'Enrollment result', enrolled = 0, rejected = [], rejectedCount, note, limitNotice, onClose, closeLabel = 'Done' }) {
-    const { titleId, dialogProps } = useDialog({ onClose });
+    const titleId = useId();
     const total = rejectedCount ?? rejected.length;
     const byReason = useMemo(() => {
         const groups = {};
@@ -16,20 +17,14 @@ export default function EnrollmentResultModal({ title = 'Enrollment result', enr
         return Object.entries(groups).sort((a, b) => b[1] - a[1]);
     }, [rejected]);
 
-    const downloadCsv = () => {
-        const escape = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-        const rows = [['Name', 'Email', 'Reason'], ...rejected.map(r => [r.name, r.email, r.reason])];
-        const blob = new Blob([rows.map(r => r.map(escape).join(',')).join('\n')], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = Object.assign(document.createElement('a'), { href: url, download: 'not-enrolled.csv' });
-        a.click();
-        URL.revokeObjectURL(url);
+    const downloadRejected = () => {
+        downloadCsv('not-enrolled.csv', [['Name', 'Email', 'Reason'], ...rejected.map(r => [r.name, r.email, r.reason])]);
     };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-            <div {...dialogProps} className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden outline-none">
+            <DialogPanel onClose={onClose} labelledBy={titleId} className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden outline-none">
                 <div className="h-1.5 w-full flex-shrink-0" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }} />
                 <div className="px-6 pt-5 pb-3 flex items-start justify-between">
                     <h2 id={titleId} className="text-lg font-bold text-gray-900">{title}</h2>
@@ -80,13 +75,13 @@ export default function EnrollmentResultModal({ title = 'Enrollment result', enr
                 </div>
                 <div className="px-6 pb-6 pt-2 flex gap-2.5">
                     {rejected.length > 0 && (
-                        <button onClick={downloadCsv} className="h-10 px-4 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-2">
+                        <button onClick={downloadRejected} className="h-10 px-4 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-2">
                             <Download className="w-4 h-4" /> Download list
                         </button>
                     )}
                     <button onClick={onClose} className="ml-auto h-10 px-5 text-sm font-semibold text-white rounded-xl" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>{closeLabel}</button>
                 </div>
-            </div>
+            </DialogPanel>
         </div>
     );
 }

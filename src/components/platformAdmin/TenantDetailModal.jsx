@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
+import { useId } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ShieldCheck, Users, X } from 'lucide-react';
 import { platformAdminApi } from '../../api/platformAdmin';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
 import { Skeleton, SectionCard, StatusBadge, RoleBadge, StatPill, formatDate } from './adminShared';
 
 // Platform admin: one tenant's details, users and usage.
@@ -13,7 +14,7 @@ export default function TenantDetailModal({ tenantId, onClose }) {
         queryFn: () => platformAdminApi.getTenantDetail(tenantId),
         enabled: !!tenantId,
     });
-    const { titleId, dialogProps } = useDialog({ onClose });
+    const titleId = useId();
 
     if (!tenantId) return null;
 
@@ -26,8 +27,7 @@ export default function TenantDetailModal({ tenantId, onClose }) {
                 exit={{ opacity: 0 }}
             >
                 <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onClick={onClose} />
-                <motion.div
-                    {...dialogProps}
+                <DialogPanel as={motion.div} onClose={onClose} labelledBy={titleId}
                     aria-label={isLoading ? 'Tenant detail' : undefined}
                     className="relative flex max-h-[84vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl outline-none"
                     initial={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -112,7 +112,7 @@ export default function TenantDetailModal({ tenantId, onClose }) {
                             </div>
                         ) : null}
                     </div>
-                </motion.div>
+                </DialogPanel>
             </motion.div>
         </AnimatePresence>
     );

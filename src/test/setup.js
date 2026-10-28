@@ -11,7 +11,7 @@ afterEach(() => {
     });
 });
 
-// jsdom does no layout: every element reports no client rects, which useDialog reads as "not visible".
+// jsdom does no layout: every element reports no client rects, which the dialog focus helpers (ui/focus.js) read as "not visible".
 // Report one rect so focusable controls count as rendered.
 if (!Element.prototype.__rectsStubbed) {
     Element.prototype.getClientRects = function getClientRects() { return [{ width: 1, height: 1 }]; };
@@ -21,4 +21,13 @@ if (!Element.prototype.__rectsStubbed) {
 // framer-motion / charts may query these
 if (!window.matchMedia) {
     window.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} });
+}
+
+// Radix UI popups (menus) measure their trigger with ResizeObserver, which jsdom lacks
+if (!window.ResizeObserver) {
+    window.ResizeObserver = class ResizeObserver {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+    };
 }

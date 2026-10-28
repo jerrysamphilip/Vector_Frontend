@@ -4,6 +4,7 @@ import { hierarchyError } from '../../lib/hierarchy';
 import { HierarchyFields } from './HierarchyModal';
 import { Crown, Mail, UserPlus, X } from 'lucide-react';
 import { INVITE_ROLES } from './teamShared';
+import { errorText } from '../../lib/apiErrors';
 
 // Invite dialog: email, role and optional sales level / manager.
 export default function InviteMemberModal({ team }) {
@@ -85,7 +86,7 @@ export default function InviteMemberModal({ team }) {
 
                     {inviteMutation.isError && (
                         <div className="px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">
-                            {inviteMutation.error?.response?.data?.detail || 'Failed to invite user. Please try again.'}
+                            {errorText(inviteMutation.error, 'Failed to invite user. Please try again.')}
                         </div>
                     )}
 

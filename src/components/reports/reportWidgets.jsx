@@ -1,4 +1,5 @@
 import KpiTile from '../ui/KpiTile';
+import { localISODate } from '../../lib/dates';
 
 // Analytics & Reports (pages/Reports.jsx): date-range helpers and the shared skeleton / KPI cards.
 
@@ -15,8 +16,8 @@ export function formatDateRange(days) {
     const start = new Date();
     start.setDate(start.getDate() - days + 1);
     return {
-        start_date: start.toISOString().split('T')[0],
-        end_date:   end.toISOString().split('T')[0],
+        start_date: localISODate(start),
+        end_date:   localISODate(end),
     };
 }
 

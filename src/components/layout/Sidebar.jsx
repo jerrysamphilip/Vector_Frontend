@@ -1,17 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useId } from 'react';
 import { createPortal } from 'react-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Home, Mail, Users, Activity, MessageSquare, Inbox, BarChart3, Shield, KeyRound, Eye, EyeOff, CheckCircle, LogOut, X, Contact, Building2, ListChecks, CheckSquare, Gauge, Target, Inbox as InboxIcon, Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star, LifeBuoy, ShieldCheck, Webhook,
+    Home, Mail, Users, Activity, MessageSquare, Inbox, BarChart3, Shield, KeyRound, Eye, EyeOff, CheckCircle, LogOut, X, Contact, Building2, ListChecks, CheckSquare, Gauge, Target, Inbox as InboxIcon, Briefcase, TrendingUp, PieChart, Network, Crosshair, FileText, Settings2, CalendarSync, ChevronDown, Sparkles, Star, LifeBuoy, ShieldCheck, Webhook, UserCog, FileDown,
 } from 'lucide-react';
 import logoMark from '../../assets/logo-mark.png';
 import { authApi } from '../../api/auth';
 import { tasksApi, viewsApi } from '../../api/contacts';
 import { BUILT_IN_VIEWS, contactViewHref } from '../../lib/contactViews';
-import { clearAuthSession, getStoredUser, hasPermission, setAuthSession } from '../../lib/authStorage';
-import { useDialog } from '../common/useDialog';
+import { useAuth } from '../../auth/AuthProvider';
+import DialogPanel from '../ui/DialogPanel';
+import { NavDrawerBackdrop, NavDrawerScope } from './NavDrawerLayer';
+import { errorText } from '../../lib/apiErrors';
 
 // Grouped navigation. permission: null = everyone; admin: admins only.
 const NAV = [
@@ -50,6 +52,7 @@ const NAV = [
     { name: 'Sales settings', href: '/app/sales-settings', icon: Settings2, admin: true },
     { name: 'Webhooks', href: '/app/webhooks', icon: Webhook, admin: true },
     { name: 'Contact scoring', href: '/app/contact-scoring', icon: Gauge, admin: true },
+    { name: 'Export log', href: '/app/settings/export-logs', icon: FileDown, admin: true },
     { name: 'Calendar sync', href: '/app/connections', icon: CalendarSync },
   ] },
 ];
@@ -89,7 +92,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
   const [forgotMsg, setForgotMsg] = useState('');
 
   // role=dialog, focus trap, Escape closes, focus returns to the Account button
-  const { titleId, dialogProps } = useDialog({ onClose, returnFocusRef });
+  const titleId = useId();
 
   const forgotPwMutation = useMutation({
     mutationFn: () => authApi.forgotPassword(currentUser?.email),
@@ -98,7 +101,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
       setTimeout(() => setForgotMsg(''), 5000);
     },
     onError: (err) => {
-      setForgotMsg(err?.response?.data?.detail || 'Failed to send reset link');
+      setForgotMsg(errorText(err, 'Failed to send reset link'));
       setTimeout(() => setForgotMsg(''), 5000);
     },
   });
@@ -114,7 +117,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
       setSuccess(true);
       setTimeout(onClose, 2000);
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Failed to change password');
+      setError(errorText(err, 'Failed to change password'));
     } finally {
       setLoading(false);
     }
@@ -123,8 +126,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <motion.div
-        {...dialogProps}
+      <DialogPanel as={motion.div} onClose={onClose} returnFocusRef={returnFocusRef} labelledBy={titleId}
         className="relative w-full max-w-md max-h-[90vh] max-h-[90dvh] overflow-x-hidden overflow-y-auto bg-white rounded-2xl shadow-2xl outline-none"
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -240,7 +242,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
             {loading ? 'Updating...' : 'Update Password'}
           </button>
         </form>
-      </motion.div>
+      </DialogPanel>
     </div>
   );
 }
@@ -275,6 +277,7 @@ function ContactViews({ isAdmin }) {
   const { data: saved = [] } = useQuery({ queryKey: ['views', 'CONTACT'], queryFn: () => viewsApi.list('CONTACT'), staleTime: 60000 });
   const params = new URLSearchParams(location.search);
   const current = location.pathname === '/app/contacts' ? (params.get('view') || 'all') : null;
+  const { hasPermission } = useAuth();
   const canManage = isAdmin || hasPermission('manage_prospects');
   const views = [...BUILT_IN_VIEWS.filter(v => !v.manageOnly || canManage).map(v => ({ id: v.id, name: v.name })),
     ...saved.map(v => ({ id: v.view_id, name: v.name, saved: true }))];
@@ -299,18 +302,11 @@ function ContactViews({ isAdmin }) {
 // ── Sidebar ────────────────────────────────────────────────
 export default function Sidebar({ drawer = null }) {
   const location = useLocation();
-  const [currentUser, setCurrentUser] = useState(() => getStoredUser());
+  // The user comes from GET /auth/me (AuthProvider), which includes tenant_name
+  const { user: currentUser, isAdmin, hasPermission } = useAuth();
   const role = currentUser?.role || '';
-  const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(role);
   const { data: dueTasks } = useQuery({ queryKey: ['tasks', 'nav-due'], queryFn: () => tasksApi.list({ due: 'today', page_size: 1 }), refetchInterval: 120000 });
   const badges = { tasks: dueTasks?.total || 0 };
-
-  useEffect(() => {
-    const user = getStoredUser();
-    if (user?.tenant_id && !user.tenant_name) {
-      authApi.me().then(fresh => { if (fresh) { setAuthSession({ user: fresh }); setCurrentUser(fresh); } }).catch(() => {});
-    }
-  }, []);
 
   const groups = NAV.map(g => ({ ...g, items: g.items.filter(i => (!i.permission || hasPermission(i.permission)) && (!i.admin || isAdmin)) }))
     .filter(g => g.items.length);
@@ -324,9 +320,8 @@ export default function Sidebar({ drawer = null }) {
   return (
     <>
     {/* Below lg: off-canvas drawer (useNavDrawer in Layout). Backdrop closes it. */}
-    {isDrawer && drawerOpen && (
-      <div className="fixed top-0 right-0 bottom-0 left-0 z-40 bg-slate-900/50 lg:hidden" onClick={drawer.closeDrawer} aria-hidden="true" />
-    )}
+    {isDrawer && drawerOpen && <NavDrawerBackdrop onClose={drawer.closeDrawer} />}
+    <NavDrawerScope open={drawerOpen}>
     <aside id="app-sidebar" ref={drawer?.drawerRef} aria-label={drawerOpen ? 'Navigation' : 'Main navigation'} inert={isDrawer && !drawerOpen ? true : undefined}
       role={drawerOpen ? 'dialog' : undefined} aria-modal={drawerOpen ? 'true' : undefined}
       className={`fixed top-0 left-0 w-60 h-screen h-[100dvh] lg:h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-blue-600 text-white transition-transform duration-200 lg:translate-x-0 lg:z-40 ${drawerOpen ? 'translate-x-0 z-50 shadow-2xl' : '-translate-x-full z-40'}`}>
@@ -377,6 +372,7 @@ export default function Sidebar({ drawer = null }) {
         </NavLink>
       </div>
     </aside>
+    </NavDrawerScope>
     </>
   );
 }
@@ -388,18 +384,15 @@ export function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const [changePwOpen, setChangePwOpen] = useState(false);
   const accountBtnRef = useRef(null);
-  const currentUser = getStoredUser();
+  const { user: currentUser, logout } = useAuth();
   const role = currentUser?.role || '';
   useEffect(() => {
     const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, []);
-  const queryClient = useQueryClient();
   const handleLogout = async () => {
-    try { await authApi.logout(); } catch { /* ignore */ }
-    clearAuthSession();
-    queryClient.clear(); // don't leave this user's data cached for the next sign-in
+    await logout(); // revokes the session server side; drops this user's cached data
     navigate('/login', { replace: true });
   };
   return (
@@ -420,6 +413,9 @@ export function ProfileMenu() {
                 <KeyRound className="w-4 h-4 text-slate-400" /> Change password
               </button>
             )}
+            <button onClick={() => { setOpen(false); navigate('/app/account/profile'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+              <UserCog className="w-4 h-4 text-slate-400" /> Profile settings
+            </button>
             <button onClick={() => { setOpen(false); navigate('/app/account/security'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
               <ShieldCheck className="w-4 h-4 text-slate-400" /> Security (two-factor)
               {currentUser?.mfa_enabled && <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">On</span>}

@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { X, Server, Loader2, Plus } from 'lucide-react';
 import deliverabilityApi from '../../api/deliverability';
 import DnsRecordsPanel from './DnsRecordsPanel';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
+import { useApiQuery } from '../../lib/useApiQuery';
+import { errorText } from '../../lib/apiErrors';
 
 const LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const TLD = /^(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/;
@@ -17,10 +19,7 @@ export function normalizeDomain(raw) {
     return name;
 }
 
-const detail = (err, fallback) => {
-    const d = err?.response?.data?.detail;
-    return typeof d === 'string' ? d : fallback;
-};
+const detail = (err, fallback) => errorText(err, fallback);
 
 /**
  * "Add domain" (domainName null: form, then the DNS records to publish) or the DNS records
@@ -28,24 +27,25 @@ const detail = (err, fallback) => {
  */
 export default function DomainDnsModal({ domainName: initialName = null, canManage, onClose, onChanged }) {
     const [domainName, setDomainName] = useState(initialName);
-    const { dialogProps } = useDialog({ onClose });
+    
     const [input, setInput] = useState('');
-    const [info, setInfo] = useState(null);       // { dns_records, dkim_tokens_available, *_status }
-    const [loading, setLoading] = useState(!!initialName);
+    const [fresh, setInfo] = useState(null);      // { dns_records, dkim_tokens_available, *_status } after add / check
     const [adding, setAdding] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
-    const [error, setError] = useState(null);
+    const [actionError, setError] = useState(null);
+
+    // The records of an existing domain (initialName); add / "Check status" replace them with their own answer
+    const initial = useApiQuery(['deliverability-dns', initialName], () => deliverabilityApi.getDnsRecords(initialName),
+        { enabled: !!initialName, retry: false, staleTime: 0, gcTime: 0 });
+    const info = fresh ?? initial.data ?? null;
+    const loading = !!initialName && initial.isLoading;
+    const error = actionError ?? (!fresh && initial.error ? detail(initial.error, 'Could not load the DNS records') : null);
 
     const load = async (name) => {
         const data = await deliverabilityApi.getDnsRecords(name);
         setInfo(data);
         return data;
     };
-
-    useEffect(() => {
-        if (!initialName) return;
-        load(initialName).catch(err => setError(detail(err, 'Could not load the DNS records'))).finally(() => setLoading(false));
-    }, [initialName]);
 
     const valid = normalizeDomain(input);
 
@@ -78,11 +78,11 @@ export default function DomainDnsModal({ domainName: initialName = null, canMana
         }
     };
 
-    // The accessible name stays the aria-label ("DNS records for <domain>" / "Add sending domain"); useDialog adds
+    // The accessible name stays the aria-label ("DNS records for <domain>" / "Add sending domain"); DialogPanel adds
     // aria-modal, the focus trap, Escape and focus return.
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div {...dialogProps} aria-labelledby={undefined} aria-label={domainName ? `DNS records for ${domainName}` : 'Add sending domain'}
+            <DialogPanel onClose={onClose} aria-label={domainName ? `DNS records for ${domainName}` : 'Add sending domain'}
                 className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto outline-none">
                 <div className="px-6 py-5 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                     <div className="flex items-center gap-3">
@@ -123,7 +123,8 @@ export default function DomainDnsModal({ domainName: initialName = null, canMana
 
                     {domainName && info && (
                         <DnsRecordsPanel domainName={domainName} records={info.dns_records || []} statuses={info}
-                            dkimTokensAvailable={info.dkim_tokens_available} onRefresh={refresh} refreshing={refreshing} canRefresh={canManage} />
+                            dkimTokensAvailable={info.dkim_tokens_available} onRefresh={refresh} refreshing={refreshing} canRefresh={canManage}
+                            liveSummary={info.live_summary} liveCheckedAt={info.live_checked_at} />
                     )}
 
                     {domainName && info && (
@@ -132,7 +133,7 @@ export default function DomainDnsModal({ domainName: initialName = null, canMana
                         </div>
                     )}
                 </div>
-            </div>
+            </DialogPanel>
         </div>
     );
 }

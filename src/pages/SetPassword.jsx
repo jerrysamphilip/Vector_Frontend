@@ -5,6 +5,7 @@ import { authApi } from "../api/auth";
 import { getStoredUser } from "../lib/authStorage";
 import bg from "../assets/bg.png";
 import logo from "../assets/logo.png";
+import { errorText } from '../lib/apiErrors';
 
 export default function SetPassword() {
     const navigate = useNavigate();
@@ -29,7 +30,7 @@ export default function SetPassword() {
             setSuccess(true);
             setTimeout(() => navigate("/app/dashboard", { replace: true }), 2000);
         } catch (err) {
-            setError(err?.response?.data?.detail || "Failed to set password");
+            setError(errorText(err, "Failed to set password"));
         } finally {
             setLoading(false);
         }

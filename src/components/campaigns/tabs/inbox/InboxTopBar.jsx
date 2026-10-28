@@ -1,10 +1,11 @@
 import { Mail, RefreshCw, Search } from 'lucide-react';
+import { REPLY_LABEL_META } from './inboxBadges';
 
-// Inbox top bar: unread count, search, IMAP sync and refresh.
+// Inbox top bar: unread count, server-side search, reply-label filter, IMAP sync and refresh.
 export default function InboxTopBar({ inbox }) {
     const {
         fetchConversations, fetchMessages, handleSyncNow, loading, searchQuery, selectedId, setSearchQuery, syncing,
-        unreadCount
+        unreadCount, labelFilter = '', setLabelFilter,
     } = inbox;
     return (
         <div className="shrink-0 flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 bg-white">
@@ -23,11 +24,22 @@ export default function InboxTopBar({ inbox }) {
                 <input
                     type="text"
                     placeholder="Search by name, email or subject…"
+                    aria-label="Search conversations"
+                    maxLength={200}
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl py-1.5 pl-9 pr-3 text-xs text-gray-700 placeholder-gray-400 focus:outline-none focus:border-blue-400 transition-all"
                 />
             </div>
+            {setLabelFilter && (
+                <select aria-label="Filter by reply label" value={labelFilter} onChange={e => setLabelFilter(e.target.value)}
+                    className="shrink-0 bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-2 text-xs text-gray-600 focus:outline-none focus:border-blue-400">
+                    <option value="">All replies</option>
+                    {Object.entries(REPLY_LABEL_META).map(([value, meta]) => (
+                        <option key={value} value={value}>{meta.label}</option>
+                    ))}
+                </select>
+            )}
             <div className="flex items-center gap-1 shrink-0">
                 <button
                     onClick={handleSyncNow}

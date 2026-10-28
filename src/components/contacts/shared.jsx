@@ -2,7 +2,9 @@ import { Children, cloneElement, isValidElement, useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X, Loader2, AlertTriangle } from 'lucide-react';
 import { contactsApi } from '../../api/contacts';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
+import { COUNTRIES } from '../../lib/countries';
+import { BOOLEAN_CHOICES, booleanValue, choiceLabel, choicesOf, isChoiceType, maxLengthOf } from '../../lib/customProperties';
 
 export const BRAND_GRADIENT = 'linear-gradient(135deg, #2d6bbf, #73C8D2)';
 
@@ -115,20 +117,37 @@ export function TagInput({ value = [], onChange, suggestions = [], placeholder =
 
 export const inputClass = 'w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all';
 
-export function Field({ label, children, hint, className = '' }) {
+export function Field({ label, children, hint, error, className = '' }) {
     const labelId = useId();
+    const errorId = `${labelId}-error`;
     // A <textarea> wrapped in its <label> gets the typed text in its accessible name ("BodyWe help ..."),
     // so name it by the label text only.
     const only = Children.count(children) === 1 && isValidElement(children) ? children : null;
-    const control = only && only.type === 'textarea' && !only.props['aria-label'] && !only.props['aria-labelledby']
-        ? cloneElement(only, { 'aria-labelledby': labelId }) : children;
+    const extra = {};
+    if (only && only.type === 'textarea' && !only.props['aria-label'] && !only.props['aria-labelledby']) extra['aria-labelledby'] = labelId;
+    // F-07 / F-08: an error marks the control invalid and describes it by the message (outside the <label>, so the
+    // message is not part of the field's name)
+    if (only && typeof only.type === 'string') {
+        extra['aria-invalid'] = error ? 'true' : only.props['aria-invalid'];
+        extra['aria-describedby'] = [only.props['aria-describedby'], error ? errorId : null].filter(Boolean).join(' ') || undefined;
+        if (error) extra.className = `${only.props.className || ''} !border-red-400 focus:!ring-red-100`;
+    }
+    const control = only && Object.keys(extra).length ? cloneElement(only, extra) : children;
     return (
-        <label className={`block ${className}`}>
-            <span id={labelId} className="block text-xs font-medium text-slate-600 mb-1.5">{label}</span>
-            {control}
-            {hint && <span className="block text-xs text-gray-400 mt-1">{hint}</span>}
-        </label>
+        <div className={`block ${className}`}>
+            <label className="block">
+                <span id={labelId} className="block text-xs font-medium text-slate-600 mb-1.5">{label}</span>
+                {control}
+                {hint && <span className="block text-xs text-gray-400 mt-1">{hint}</span>}
+            </label>
+            {error && <p id={errorId} role="alert" className="mt-1 text-xs font-medium text-red-600">{error}</p>}
+        </div>
     );
+}
+
+/** <datalist id="country-names"> of the ISO countries, for a Country input's list="country-names". */
+export function CountryOptions({ id = 'country-names' }) {
+    return <datalist id={id}>{COUNTRIES.map(c => <option key={c.code} value={c.name} />)}</datalist>;
 }
 
 export function OwnerSelect({ owners = [], value, onChange, allowUnassigned = true, className = inputClass, disabled, ariaLabel }) {
@@ -140,22 +159,38 @@ export function OwnerSelect({ owners = [], value, onChange, allowUnassigned = tr
     );
 }
 
-/** Input for one tenant-defined custom property. */
-export function CustomFieldInput({ field, value, onChange }) {
+/**
+ * Input for one tenant-defined custom property. Choice inputs show the option labels and store the values
+ * (C-17); BOOLEAN is a Yes / No picker (stores true / false); LONG_TEXT is a textarea; text inputs stop at the
+ * property's max_length. `invalid` marks the control for an error shown by the surrounding Field.
+ */
+export function CustomFieldInput({ field, value, onChange, invalid = false }) {
+    const aria = invalid ? { 'aria-invalid': 'true' } : {};
+    const choices = choicesOf(field);
     if (field.field_type === 'SELECT') {
         return (
-            <select value={value ?? ''} onChange={e => onChange(e.target.value)} className={inputClass}>
+            <select value={value ?? ''} onChange={e => onChange(e.target.value)} className={inputClass} {...aria}>
                 <option value="">—</option>
-                {field.options.map(o => <option key={o} value={o}>{o}</option>)}
+                {choices.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+        );
+    }
+    if (field.field_type === 'BOOLEAN') {
+        const current = booleanValue(value);
+        return (
+            <select value={current === null ? '' : String(current)} onChange={e => onChange(e.target.value === '' ? '' : e.target.value === 'true')}
+                className={inputClass} {...aria}>
+                <option value="">—</option>
+                {BOOLEAN_CHOICES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
         );
     }
     if (field.field_type === 'RADIO') {
         return (
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 py-1">
-                {field.options.map(o => (
-                    <label key={o} className="flex items-center gap-1.5 text-sm text-slate-700">
-                        <input type="radio" className="accent-indigo-600" checked={value === o} onChange={() => onChange(o)} /> {o}
+                {choices.map(o => (
+                    <label key={o.value} className="flex items-center gap-1.5 text-sm text-slate-700">
+                        <input type="radio" className="accent-indigo-600" checked={value === o.value} onChange={() => onChange(o.value)} /> {o.label}
                     </label>
                 ))}
                 {value && <button type="button" onClick={() => onChange('')} className="text-xs text-slate-400 hover:text-slate-600">clear</button>}
@@ -166,21 +201,37 @@ export function CustomFieldInput({ field, value, onChange }) {
         const selected = Array.isArray(value) ? value : [];
         return (
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 py-1">
-                {field.options.map(o => (
-                    <label key={o} className="flex items-center gap-1.5 text-sm text-slate-700">
-                        <input type="checkbox" className="accent-indigo-600" checked={selected.includes(o)}
-                            onChange={() => onChange(selected.includes(o) ? selected.filter(x => x !== o) : [...selected, o])} /> {o}
+                {choices.map(o => (
+                    <label key={o.value} className="flex items-center gap-1.5 text-sm text-slate-700">
+                        <input type="checkbox" className="accent-indigo-600" checked={selected.includes(o.value)}
+                            onChange={() => onChange(selected.includes(o.value) ? selected.filter(x => x !== o.value) : [...selected, o.value])} /> {o.label}
                     </label>
                 ))}
             </div>
         );
     }
+    const limit = maxLengthOf(field);
+    if (field.field_type === 'LONG_TEXT') {
+        return (
+            <textarea rows={4} value={value ?? ''} maxLength={limit} onChange={e => onChange(e.target.value)} {...aria}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+        );
+    }
     const type = { NUMBER: 'number', DATE: 'date', URL: 'url', PHONE: 'tel' }[field.field_type] || 'text';
-    return <input type={type} value={value ?? ''} onChange={e => onChange(type === 'number' && e.target.value !== '' && !Number.isNaN(Number(e.target.value)) ? Number(e.target.value) : e.target.value)} className={inputClass} />;
+    return <input type={type} value={value ?? ''} maxLength={limit ?? undefined} {...aria}
+        onChange={e => onChange(type === 'number' && e.target.value !== '' && !Number.isNaN(Number(e.target.value)) ? Number(e.target.value) : e.target.value)} className={inputClass} />;
 }
 
+/** A stored custom value as text: choice labels instead of values, Yes / No for BOOLEAN; null when empty. */
 export function formatCustomValue(field, value) {
     if (value === undefined || value === null || value === '' || (Array.isArray(value) && !value.length)) return null;
+    if (field?.field_type === 'BOOLEAN' || typeof value === 'boolean') {
+        const b = booleanValue(value);
+        return b === null ? String(value) : (b ? 'Yes' : 'No');
+    }
+    if (field && isChoiceType(field.field_type)) {
+        return (Array.isArray(value) ? value : [value]).map(v => choiceLabel(field, v)).join(', ');
+    }
     if (Array.isArray(value)) return value.join(', ');
     if (field?.field_type === 'NUMBER' && typeof value === 'number') return value.toLocaleString();
     return String(value);
@@ -230,13 +281,13 @@ export function ErrorNote({ message }) {
 }
 
 /** Overlay dialog: role=dialog named by its title, aria-modal, focus trap, Escape closes, focus returns to the opener
- *  (useDialog). Fits small screens: max 90% of the viewport height, the body scrolls inside. */
+ *  (DialogPanel). Fits small screens: max 90% of the viewport height, the body scrolls inside. */
 export function Modal({ title, subtitle, onClose, children, footer, width = 'max-w-lg', returnFocusRef }) {
-    const { titleId, dialogProps } = useDialog({ onClose, returnFocusRef });
+    const titleId = useId();
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
             <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} />
-            <div {...dialogProps} className={`relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${width} max-h-[90vh] max-h-[90dvh] flex flex-col overflow-hidden outline-none`}
+            <DialogPanel onClose={onClose} returnFocusRef={returnFocusRef} labelledBy={titleId} className={`relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full ${width} max-h-[90vh] max-h-[90dvh] flex flex-col overflow-hidden outline-none`}
                 onClick={e => e.stopPropagation()}>
                 <div className="h-1.5 w-full flex-shrink-0" style={{ background: BRAND_GRADIENT }} />
                 <div className="px-4 sm:px-6 pt-5 pb-3 flex items-start justify-between gap-3 flex-shrink-0">
@@ -250,7 +301,7 @@ export function Modal({ title, subtitle, onClose, children, footer, width = 'max
                 </div>
                 <div className="px-4 sm:px-6 pb-4 overflow-y-auto min-h-0">{children}</div>
                 {footer && <div className="px-4 sm:px-6 pb-5 sm:pb-6 pt-2 flex gap-2.5 flex-shrink-0">{footer}</div>}
-            </div>
+            </DialogPanel>
         </div>
     );
 }

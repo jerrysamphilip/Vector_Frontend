@@ -1,28 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { campaignApi } from '../api/campaigns';
+import { useApiQuery } from '../lib/useApiQuery';
+
+export function automationStatus({ data, error, isFetching }) {
+    if (error) return `Error: ${error.message}`;
+    if (isFetching && !data) return 'Fetching campaigns...';
+    if (!data) return 'Loading...';
+    return `Loaded ${(data.items || data || []).length} campaign(s)`;
+}
 
 export default function TestAutomation() {
-    const [campaigns, setCampaigns] = useState([]);
-    const [status, setStatus] = useState('Loading...');
     const [selectedCampaign, setSelectedCampaign] = useState('');
-
-    useEffect(() => {
-        fetchCampaigns();
-    }, []);
-
-    const fetchCampaigns = async () => {
-        try {
-            setStatus('Fetching campaigns...');
-            const data = await campaignApi.list();
-            console.log('[TestAutomation] Raw API response:', data);
-            console.log('[TestAutomation] data.items:', data.items);
-            setCampaigns(data.items || data || []);
-            setStatus(`Loaded ${(data.items || data || []).length} campaign(s)`);
-        } catch (error) {
-            console.error('[TestAutomation] Error:', error);
-            setStatus(`Error: ${error.message}`);
-        }
-    };
+    const query = useApiQuery(['campaigns', 'all', 'test-automation'], () => campaignApi.listAll(), { retry: false });
+    const campaigns = query.data?.items || query.data || [];
+    const status = automationStatus(query);
 
     return (
         <div className="p-8 max-w-2xl mx-auto">
@@ -43,7 +34,7 @@ export default function TestAutomation() {
                     <option value="">Select a campaign...</option>
                     {campaigns.map((c, index) => (
                         <option key={c.campaign_id || index} value={c.campaign_id}>
-                            {c.campaign_name || 'Unnamed Campaign'} (ID: {c.campaign_id?.slice(0, 8)})
+                            {c.campaign_name || 'Unnamed Campaign'} (ID: {c.campaign_id?.slice(-8)})
                         </option>
                     ))}
                 </select>

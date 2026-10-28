@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { X, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
 import { PERMISSION_LIST, RoleBadge, Avatar } from './teamShared';
 
 // Per-member permission overrides (super admins): toggle, save or reset to the role defaults.
@@ -10,7 +10,7 @@ import { PERMISSION_LIST, RoleBadge, Avatar } from './teamShared';
 export default function PermissionsModal({ user, onClose, onSave, onReset, isSaving, isResetting }) {
     const [draft, setDraft] = useState(new Set(user.permissions || []));
     const hasChanges = JSON.stringify([...draft].sort()) !== JSON.stringify([...(user.permissions || [])].sort());
-    const { titleId, dialogProps } = useDialog({ onClose });
+    const titleId = useId();
 
     const toggle = (key) => {
         setDraft(prev => {
@@ -23,7 +23,7 @@ export default function PermissionsModal({ user, onClose, onSave, onReset, isSav
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-            <div {...dialogProps} className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden outline-none">
+            <DialogPanel onClose={onClose} labelledBy={titleId} className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden outline-none">
 
                 {/* Gradient header */}
                 <div className="px-6 py-5" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
@@ -92,7 +92,7 @@ export default function PermissionsModal({ user, onClose, onSave, onReset, isSav
                         </button>
                     </div>
                 </div>
-            </div>
+            </DialogPanel>
         </div>
     );
 }

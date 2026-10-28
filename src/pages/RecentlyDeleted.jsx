@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import LoadError from '../components/ui/LoadError';
+import { useApiQuery } from '../lib/useApiQuery';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, RotateCcw, Search, Loader2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { accountsApi, contactsApi, errorMessage } from '../api/contacts';
@@ -17,9 +19,8 @@ function DeletedContacts({ setNotice, setError }) {
     const [confirmPurge, setConfirmPurge] = useState(false);
     useEffect(() => { const t = setTimeout(() => { setQ(search); setPage(1); }, 300); return () => clearTimeout(t); }, [search]);
 
-    const { data, isLoading } = useQuery({
-        queryKey: ['contacts-deleted', q, page], queryFn: () => contactsApi.deleted({ q, page, page_size: PAGE_SIZE }), placeholderData: keepPreviousData,
-    });
+    const { data, error: loadError, isLoading, refetch } = useApiQuery(['contacts-deleted', q, page],
+        () => contactsApi.deleted({ q, page, page_size: PAGE_SIZE }), { placeholderData: keepPreviousData });
     const restore = useMutation({
         mutationFn: ids => contactsApi.restore(ids),
         onSuccess: res => {
@@ -68,6 +69,8 @@ function DeletedContacts({ setNotice, setError }) {
             </div>
             {isLoading ? (
                 <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+            ) : loadError ? (
+                <LoadError error={loadError} onRetry={refetch} title="Couldn't load deleted contacts" compact />
             ) : items.length === 0 ? (
                 <p className="py-14 text-center text-sm text-slate-400">No contacts deleted in the last 90 days.</p>
             ) : (
@@ -131,7 +134,7 @@ function DeletedContacts({ setNotice, setError }) {
 
 function DeletedCompanies({ setNotice, setError }) {
     const queryClient = useQueryClient();
-    const { data, isLoading } = useQuery({ queryKey: ['accounts-deleted'], queryFn: accountsApi.deleted });
+    const { data, error: loadError, isLoading, refetch } = useApiQuery(['accounts-deleted'], () => accountsApi.deleted());
     const restore = useMutation({
         mutationFn: accountsApi.restore,
         onSuccess: () => {
@@ -145,6 +148,8 @@ function DeletedCompanies({ setNotice, setError }) {
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             {isLoading ? (
                 <div className="py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+            ) : loadError ? (
+                <LoadError error={loadError} onRetry={refetch} title="Couldn't load deleted companies" compact />
             ) : items.length === 0 ? (
                 <p className="py-14 text-center text-sm text-slate-400">No companies deleted in the last 90 days.</p>
             ) : (

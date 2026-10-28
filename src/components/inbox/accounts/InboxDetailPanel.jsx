@@ -5,13 +5,16 @@ import InboxActivityTab from './InboxActivityTab';
 import ConnectionPanel from './ConnectionPanel';
 import { ShieldCheck, X } from 'lucide-react';
 import { TABS } from './shared';
+import { ResumeButton } from './PausedMailbox';
+import { isPaused } from './useEmailAccounts';
 
 // Right-hand panel: the selected inbox's Overview / Connection / Settings / Activity tabs.
 export default function InboxDetailPanel({ accounts }) {
     const {
         detailLoading, detailTab, inboxes, openConnectionWizard, selectedInboxId, selectedInboxSummary,
-        setDetailTab, setSelectedInboxId
+        setDetailTab, setSelectedInboxId, resumeMutation,
     } = accounts;
+    const listed = (inboxes || []).find(i => i.inbox_id === selectedInboxId);
     return (
         <div className="min-w-0">
             <div className="card-anim sticky top-6 rounded-2xl bg-white/80 shadow-sm overflow-hidden" style={{ animationDelay: '160ms' }}>
@@ -37,6 +40,19 @@ export default function InboxDetailPanel({ accounts }) {
                         </button>
                     )}
                 </div>
+
+                {listed && isPaused(listed) && (
+                    <div role="status" className="flex items-start justify-between gap-3 border-b border-amber-100 bg-amber-50 px-5 py-3">
+                        <div className="min-w-0">
+                            <p className="text-xs font-semibold text-amber-800">Sending is paused</p>
+                            <p className="text-[11px] text-amber-700 break-words">{listed.paused_reason || 'Paused by a user'}</p>
+                        </div>
+                        {resumeMutation && (
+                            <ResumeButton onResume={() => resumeMutation.mutate(listed.inbox_id)}
+                                busy={resumeMutation.isPending} />
+                        )}
+                    </div>
+                )}
 
                 {/* Empty state */}
                 {!selectedInboxId ? (

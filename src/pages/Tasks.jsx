@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import LoadError from '../components/ui/LoadError';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useApiQuery } from '../lib/useApiQuery';
 import { Link } from 'react-router-dom';
 import { CheckSquare, Square, Plus, Loader2, AlertCircle, Bell, Trash2, Phone, Mail, CalendarDays, ListTodo } from 'lucide-react';
 import { contactsApi, tasksApi, errorMessage } from '../api/contacts';
-import { getStoredUser, hasPermission } from '../lib/authStorage';
+import { useAuth } from '../auth/AuthProvider';
 import {
     BRAND_GRADIENT, ErrorNote, Field, inputClass, Modal, OwnerSelect, PrimaryButton, SecondaryButton, formatDateTime, relativeDate,
 } from '../components/contacts/shared';
@@ -12,7 +15,7 @@ const TYPE_ICON = { TODO: ListTodo, CALL: Phone, EMAIL: Mail, MEETING: CalendarD
 const PRIORITY_STYLE = { HIGH: 'bg-red-50 text-red-700', MEDIUM: 'bg-amber-50 text-amber-700', LOW: 'bg-slate-100 text-slate-500' };
 
 export function NewTaskModal({ owners, canAssign, onClose, onSaved }) {
-    const me = getStoredUser();
+    const { user: me } = useAuth();
     const [form, setForm] = useState({ title: '', notes: '', task_type: 'TODO', priority: 'MEDIUM', due_at: '', reminder_at: '', owner_id: me?.user_id || '' });
     const [error, setError] = useState(null);
     const set = key => e => setForm(f => ({ ...f, [key]: e?.target ? e.target.value : e }));
@@ -59,6 +62,7 @@ export function NewTaskModal({ owners, canAssign, onClose, onSaved }) {
 
 export default function Tasks() {
     const queryClient = useQueryClient();
+    const { hasPermission } = useAuth();
     const canManage = hasPermission('manage_prospects');
     const [scope, setScope] = useState('mine');
     const [due, setDue] = useState('');
@@ -67,7 +71,8 @@ export default function Tasks() {
     const [error, setError] = useState(null);
 
     const params = { scope, status, due: due || undefined, page_size: 200 };
-    const { data, isLoading, isFetching } = useQuery({ queryKey: ['tasks', params], queryFn: () => tasksApi.list(params), placeholderData: keepPreviousData });
+    const { data, error: loadError, isLoading, isFetching, refetch } = useApiQuery(['tasks', params], () => tasksApi.list(params), { placeholderData: keepPreviousData });
+    const confirm = useConfirm();
     const { data: owners = [] } = useQuery({ queryKey: ['contact-owners'], queryFn: contactsApi.owners });
 
     const refresh = () => queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -127,6 +132,8 @@ export default function Tasks() {
 
                 {isLoading ? (
                     <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+                ) : loadError ? (
+                    <LoadError error={loadError} onRetry={refetch} title="Couldn't load tasks" compact />
                 ) : items.length === 0 ? (
                     <div className="py-20 text-center">
                         <CheckSquare className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
@@ -165,7 +172,7 @@ export default function Tasks() {
                                         ) : <p className="text-xs text-slate-400">No due date</p>}
                                         {done && t.completed_at && <p className="text-[11px] text-slate-400">done {relativeDate(t.completed_at)}</p>}
                                     </div>
-                                    <button onClick={() => window.confirm(`Delete the task "${t.title}"?`) && remove.mutate(t.task_id)}
+                                    <button onClick={async () => { if (await confirm({ title: 'Delete task?', message: `Delete the task "${t.title}"?`, confirmLabel: 'Delete', danger: true })) remove.mutate(t.task_id); }}
                                         className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg" aria-label="Delete task"><Trash2 className="w-4 h-4" /></button>
                                 </li>
                             );

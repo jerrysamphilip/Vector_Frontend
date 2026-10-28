@@ -58,7 +58,7 @@ export const OUTREACH_ARTICLES = [
         related: ['campaign-details', 'email-accounts', 'prospect-lists'],
     },
     {
-        id: 'campaign-details', category: 'Outreach', title: 'A campaign\'s page', routes: ['/app/campaigns/:id'],
+        id: 'campaign-details', category: 'Outreach', title: 'A campaign\'s page', routes: ['/app/campaigns/:id', '/app/campaigns/:id/edit'],
         summary: 'Results, replies, prospects, emails, schedule and senders for one campaign.',
         keywords: ['campaign tabs', 'analytics', 'schedule', 'prospects', 'subsequence', 'send now', 'paused'],
         body: [

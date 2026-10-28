@@ -539,6 +539,31 @@ const WORKSPACE = [
         related: ['deal-page', 'contact-record'],
     },
     {
+        id: 'export-log', category: 'Workspace & settings', title: 'Export log',
+        routes: ['/app/settings/export-logs'],
+        summary: 'Every export of contacts, lists and companies: who exported what, with which view, how many rows and when. Admins only.',
+        keywords: ['export', 'export log', 'audit', 'csv', 'download', 'who exported'],
+        body: [
+            { p: 'Open it from the sidebar → **Export log** (admins only). Each row is one export: the person, what was exported (contacts, a list or companies), the view or filters used, the number of rows and the time.' },
+            { p: 'Filter by type with the selector at the top; use the arrows to page through older exports.' },
+        ],
+        related: ['contacts'],
+    },
+    {
+        id: 'profile-settings', category: 'Workspace & settings', title: 'Profile settings (name and password)',
+        routes: ['/app/account/profile'],
+        summary: 'Change the name shown on your records and change your password.',
+        keywords: ['profile', 'name', 'first name', 'last name', 'password', 'change password', 'account settings'],
+        body: [
+            { p: 'Open it from your initials in the top bar → **Profile settings**.' },
+            { h: 'Profile' },
+            { p: 'Edit your **First name** and **Last name** and click **Save Changes**. Your email address is your sign-in and cannot be changed here; ask an admin to invite the new address instead.' },
+            { h: 'Change Password' },
+            { p: 'Enter your current password, then the new one twice (at least 8 characters). Forgot the current one? Use the link next to **Current password** to get a reset link by email.' },
+        ],
+        related: ['account-security'],
+    },
+    {
         id: 'account-security', category: 'Workspace & settings', title: 'Two-factor authentication (account security)',
         routes: ['/app/account/security', '/admin/security'],
         summary: 'Protect your sign-in with a 6-digit code from an authenticator app, keep recovery codes, and require two-factor for the whole workspace.',

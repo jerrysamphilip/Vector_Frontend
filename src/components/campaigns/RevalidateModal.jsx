@@ -5,13 +5,13 @@
  * Voluntary unsubscribes are blocked at the API layer AND shown clearly in the UI.
  */
 
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, ShieldAlert, Mail, CheckCircle, AlertCircle, Loader2, AlertTriangle
 } from 'lucide-react';
 import { campaignApi } from '../../api/campaigns';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
 
 export default function RevalidateModal({ prospect, onClose, onSuccess }) {
     const [newEmail, setNewEmail] = useState('');
@@ -19,7 +19,7 @@ export default function RevalidateModal({ prospect, onClose, onSuccess }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [done, setDone] = useState(null);
-    const { titleId, dialogProps } = useDialog({ onClose });
+    const titleId = useId();
 
     async function handleSubmit(e) {
         e.preventDefault();
@@ -48,8 +48,7 @@ export default function RevalidateModal({ prospect, onClose, onSuccess }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <motion.div
-                {...dialogProps}
+            <DialogPanel as={motion.div} onClose={onClose} labelledBy={titleId}
                 initial={{ opacity: 0, scale: 0.95, y: 16 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 16 }}
@@ -192,7 +191,7 @@ export default function RevalidateModal({ prospect, onClose, onSuccess }) {
                         )}
                     </AnimatePresence>
                 </div>
-            </motion.div>
+            </DialogPanel>
         </div>
     );
 }

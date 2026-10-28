@@ -9,6 +9,11 @@ import { campaignApi } from '../../../api/campaigns';
 import KpiTile from '../../ui/KpiTile';
 import DialogPanel from '../../common/DialogPanel';
 import SubjectVariantsStats from '../SubjectVariantsStats';
+import { inboxesApi } from '../../../api/inboxes';
+import { getStoredUser } from '../../../lib/authStorage';
+import { useApiQuery } from '../../../lib/useApiQuery';
+import { useToast } from '../../ui/Toast';
+import { campaignInboxIds, formatSentToday, sentTodayVsCapacity } from './sentToday';
 
 // Dashboard Theme Colors
 const COLORS = {
@@ -35,6 +40,7 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
     const [selectedStep, setSelectedStep] = useState(null);
     const [stepEmailsData, setStepEmailsData] = useState(null);
     const [stepEmailsLoading, setStepEmailsLoading] = useState(false);
+    const toast = useToast();
 
     const handleViewEmails = async (step) => {
         if (!campaign?.campaign_id) return;
@@ -44,11 +50,18 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
             const data = await campaignApi.getSequenceStepEmails(campaign.campaign_id, step);
             setStepEmailsData(data);
         } catch (error) {
-            console.error("Failed to load step emails:", error);
+            setSelectedStep(null);
+            toast.error(error, { title: `Could not load the emails of step ${step}` });
         } finally {
             setStepEmailsLoading(false);
         }
     };
+
+    // Sent today / daily capacity of the campaign's inboxes. GET /inboxes is admin-only: other roles see "—".
+    const canReadInboxes = ['SUPER_ADMIN', 'ADMIN'].includes(getStoredUser()?.role);
+    const hasInboxes = campaignInboxIds(campaign).length > 0;
+    const { data: inboxList } = useApiQuery(['inboxes'], () => inboxesApi.list(), { enabled: canReadInboxes && hasInboxes, retry: false });
+    const todayStats = sentTodayVsCapacity(campaign, canReadInboxes ? inboxList : null);
 
     // Calculate rates
     const sent = metrics?.sent_count || 0;
@@ -247,13 +260,14 @@ export default function AnalyticsTab({ metrics, barData, sequences, leadStats, c
                             <span className="w-2 h-2 rounded-full bg-green-500"></span>
                             Total Sent Today / Limit
                         </h3>
-                        <button className="text-xs bg-white border border-green-200 text-green-700 px-3 py-1 rounded-full font-medium shadow-sm">
-                            View Plan
-                        </button>
                     </div>
                     <div>
-                        <span className="text-4xl font-bold text-slate-800">55</span>
-                        <span className="text-sm text-slate-500 ml-2">Total emails filling your queue</span>
+                        <span className="text-4xl font-bold text-slate-800" data-testid="sent-today-value">{formatSentToday(todayStats)}</span>
+                        <span className="text-sm text-slate-500 ml-2">
+                            {todayStats.inboxCount
+                                ? `Sent today by this campaign's ${todayStats.inboxCount === 1 ? 'inbox' : `${todayStats.inboxCount} inboxes`} (all campaigns) / daily capacity`
+                                : 'Not available'}
+                        </span>
                     </div>
                 </div>
             </motion.div>

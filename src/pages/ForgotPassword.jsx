@@ -5,6 +5,7 @@ import { authApi } from "../api/auth";
 
 import bg from "../assets/bg.png";
 import logo from "../assets/logo.png";
+import { errorText } from '../lib/apiErrors';
 
 export default function ForgotPassword() {
     const [email, setEmail] = useState("");
@@ -27,7 +28,7 @@ export default function ForgotPassword() {
             const res = await authApi.forgotPassword(email.trim());
             setSuccess(res?.message || "If an account exists, a reset link has been sent.");
         } catch (err) {
-            setError(err?.response?.data?.detail || "Failed to send reset email");
+            setError(errorText(err, "Failed to send reset email"));
         } finally {
             setSubmitting(false);
         }

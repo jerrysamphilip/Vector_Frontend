@@ -1,6 +1,7 @@
 // Contacts, companies, lists, views, tasks, imports and search (CRM, BRD v2.0 section 5.2)
 
 import { apiClient as api } from './http';
+import { errorText } from '../lib/apiErrors';
 
 function toParams(filters = {}) {
     const params = new URLSearchParams();
@@ -65,7 +66,9 @@ export const contactsApi = {
     merge: (primaryId, duplicateIds, choices = {}) =>
         post('/contacts/merge', { primary_id: primaryId, duplicate_ids: duplicateIds, choices }),
 
-    fields: () => get('/contacts/fields'),
+    // params.include_inactive: also the deactivated properties (settings, C-17); forms use the active ones
+    // (it is also used directly as a react-query queryFn, so only include_inactive is read from the argument)
+    fields: (params) => get('/contacts/fields', params?.include_inactive ? { include_inactive: true } : undefined),
     createField: (payload) => post('/contacts/fields', payload),
     updateField: (id, payload) => patch(`/contacts/fields/${id}`, payload),
     deleteField: (id) => del(`/contacts/fields/${id}`),
@@ -129,11 +132,8 @@ export const searchApi = {
     search: (q) => get('/search', { q }),
 };
 
-// FastAPI errors come back as {detail: string | {message} | [{msg}]}
+// The text to show for a failed request (F-23): a plain sentence (the server's detail when it is a human
+// message) plus the request reference. See lib/apiErrors.js.
 export function errorMessage(err, fallback = 'Something went wrong. Try again.') {
-    const detail = err?.response?.data?.detail;
-    if (typeof detail === 'string') return detail;
-    if (detail?.message) return detail.message;
-    if (Array.isArray(detail) && detail[0]?.msg) return detail[0].msg.replace(/^Value error, /, '');
-    return err?.response?.data?.error || err?.message || fallback;
+    return errorText(err, fallback);
 }

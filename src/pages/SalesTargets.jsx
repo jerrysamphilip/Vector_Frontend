@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { targetsApi, money } from '../api/sales';
 import { PageHeader, card, cardShadow } from '../components/sales/shared';
 import { ErrorNote } from '../components/contacts/shared';
+import LoadError from '../components/ui/LoadError';
+import { useApiQuery } from '../lib/useApiQuery';
+import { errorText } from '../lib/apiErrors';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -32,7 +35,7 @@ export default function SalesTargets() {
     const qc = useQueryClient();
     const [fy, setFy] = useState(null);
     const [error, setError] = useState(null);
-    const { data, isLoading } = useQuery({ queryKey: ['sales-targets', fy], queryFn: () => targetsApi.list(fy) });
+    const { data, error: loadError, isLoading, refetch } = useApiQuery(['sales-targets', fy], () => targetsApi.list(fy));
     const year = data?.fy;
     const startMonth = data?.start_month || 4;
     const quarterLabel = (q) => {
@@ -46,7 +49,7 @@ export default function SalesTargets() {
             qc.invalidateQueries({ queryKey: ['sales-targets'] });
             qc.invalidateQueries({ queryKey: ['sales-report'] });
         } catch (e) {
-            setError(e?.response?.data?.detail || 'Could not save the target');
+            setError(errorText(e, 'Could not save the target'));
             throw e;
         }
     };
@@ -56,14 +59,15 @@ export default function SalesTargets() {
         <div className="space-y-6">
             <PageHeader title="Revenue targets" subtitle="Quarterly targets per person. Managers set targets for their team; admins and L1 for anyone.">
                 <div className="flex items-center gap-1">
-                    <button onClick={() => setFy((fy || year) - 1)} className="p-2 rounded-lg hover:bg-white text-slate-500" aria-label="Previous year"><ChevronLeft className="w-4 h-4" /></button>
+                    <button onClick={() => setFy((fy || year) - 1)} disabled={!year} className="p-2 rounded-lg hover:bg-white text-slate-500" aria-label="Previous year"><ChevronLeft className="w-4 h-4" /></button>
                     <span className="text-sm font-semibold text-slate-800 min-w-[90px] text-center">{data?.label || '…'}</span>
-                    <button onClick={() => setFy((fy || year) + 1)} className="p-2 rounded-lg hover:bg-white text-slate-500" aria-label="Next year"><ChevronRight className="w-4 h-4" /></button>
+                    <button onClick={() => setFy((fy || year) + 1)} disabled={!year} className="p-2 rounded-lg hover:bg-white text-slate-500" aria-label="Next year"><ChevronRight className="w-4 h-4" /></button>
                 </div>
             </PageHeader>
             <ErrorNote message={error} />
             <div className={`${card} overflow-x-auto`} style={cardShadow}>
-                {isLoading ? <p className="p-6 text-sm text-slate-400">Loading…</p> : (
+                {isLoading ? <p className="p-6 text-sm text-slate-400">Loading…</p>
+                    : loadError ? <LoadError error={loadError} onRetry={refetch} title="Couldn't load the targets" compact /> : (
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="text-left text-xs text-slate-400 uppercase tracking-wide border-b border-slate-100">

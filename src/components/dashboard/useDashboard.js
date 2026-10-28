@@ -5,6 +5,7 @@ import { AlertCircle, MailOpen, MessageSquare, Send, TrendingUp } from 'lucide-r
 import { campaignApi } from '../../api/campaigns';
 import deliverabilityApi from '../../api/deliverability';
 import { reportsApi } from '../../api/reports';
+import { useApiQuery } from '../../lib/useApiQuery';
 import { formatTimeseries, getTabParams, getTabSubtitle } from './chartData';
 import { normalizeApiTimestamp, readSeenAlertIds, writeSeenAlertIds } from './dashboardAlerts';
 
@@ -54,10 +55,8 @@ export function useDashboard() {
         staleTime: 60_000,
     });
 
-    const { data: campaignsData, isLoading } = useQuery({
-        queryKey: ['campaigns'],
-        queryFn: () => campaignApi.list({ page_size: 20 }),
-    });
+    // Totals and status counts need every campaign, not the first page
+    const { data: campaignsData, isLoading, error: loadError, refetch: retryLoad } = useApiQuery(['campaigns', 'all'], () => campaignApi.listAll());
 
     const { data: dashboardAlerts = [] } = useQuery({
         queryKey: ['dashboard-alerts-v2'],
@@ -188,7 +187,7 @@ export function useDashboard() {
 
     return {
         navigate, activeTab, chartTab, chartFade, isAlertOpen, setIsAlertOpen, unseenAlertIds, alertPopupRef,
-        handleTabChange, isLoading, dashboardAlerts, totals, openRate, replyRate, bounceRate, unsubscribeRate,
+        handleTabChange, isLoading, loadError, retryLoad, dashboardAlerts, totals, openRate, replyRate, bounceRate, unsubscribeRate,
         statusCounts, areaData, tabSubtitle, donutData, recent, topCampaigns, relTime, statusColors,
         activityIconStyles, bellShouldRing, unreadAlertSet, markAlertsAsRead, markAllAsRead, toggleAlertPanel,
     };

@@ -10,9 +10,11 @@ import AttachmentManager from '../../common/AttachmentManager';
 import { sanitizeHtml, htmlToText } from '../../../lib/sanitizeHtml';
 import { withVersion } from '../../../lib/staleVersion';
 import SubjectVariantsEditor from '../SubjectVariantsEditor';
+import { useToast } from '../../ui/Toast';
 
 export default function SubsequenceTab({ campaignId }) {
     const queryClient = useQueryClient();
+    const toast = useToast();
     const [expandedStep, setExpandedStep] = useState(null);
     const [regeneratingId, setRegeneratingId] = useState(null);
 
@@ -33,7 +35,7 @@ export default function SubsequenceTab({ campaignId }) {
         mutationFn: ({ templateId, options }) =>
             campaignApi.regenerateTemplate(campaignId, templateId, options),
         onSuccess: () => {
-            queryClient.invalidateQueries(['campaign-templates', campaignId]);
+            queryClient.invalidateQueries({ queryKey: ['campaign-templates', campaignId] });
             setRegeneratingId(null);
         },
         onError: (error) => {
@@ -47,7 +49,7 @@ export default function SubsequenceTab({ campaignId }) {
     const approveMutation = useMutation({
         mutationFn: (templateId) => campaignApi.approveTemplate(campaignId, templateId),
         onSuccess: () => {
-            queryClient.invalidateQueries(['campaign-templates', campaignId]);
+            queryClient.invalidateQueries({ queryKey: ['campaign-templates', campaignId] });
             setApprovingId(null);
         },
         onError: (error) => {
@@ -60,7 +62,7 @@ export default function SubsequenceTab({ campaignId }) {
     const approveAllMutation = useMutation({
         mutationFn: () => campaignApi.approveAllTemplates(campaignId),
         onSuccess: () => {
-            queryClient.invalidateQueries(['campaign-templates', campaignId]);
+            queryClient.invalidateQueries({ queryKey: ['campaign-templates', campaignId] });
         },
     });
 
@@ -72,7 +74,7 @@ export default function SubsequenceTab({ campaignId }) {
         // T-3: the step's row_version as listed; a step changed meanwhile gets 409 STALE_VERSION
         mutationFn: ({ sequenceId, waitDays, version }) => sequenceApi.update(sequenceId, withVersion({ wait_days: waitDays }, version)),
         onSuccess: () => {
-            queryClient.invalidateQueries(['campaign-sequences', campaignId]);
+            queryClient.invalidateQueries({ queryKey: ['campaign-sequences', campaignId] });
         },
     });
 
@@ -85,11 +87,11 @@ export default function SubsequenceTab({ campaignId }) {
     const updateTemplateMutation = useMutation({
         mutationFn: ({ templateId, subject, body }) => templateApi.update(templateId, { subject, body }),
         onSuccess: () => {
-            queryClient.invalidateQueries(['campaign-templates', campaignId]);
+            queryClient.invalidateQueries({ queryKey: ['campaign-templates', campaignId] });
             setEditingTemplateId(null);
         },
         onError: (error) => {
-            alert(`❌ Error saving template: ${error.response?.data?.detail || error.message}`);
+            toast.error(error, { title: 'Error saving template' });
         }
     });
 

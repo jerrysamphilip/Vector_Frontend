@@ -1,10 +1,11 @@
+import { localISODate } from '../../lib/dates';
 
 // Dashboard: date-range parameters per tab and the chart series built from the analytics timeseries.
 
 // ─── Tab configuration for date ranges ────────────────────────────────────────
 export function getTabParams(tab) {
     const today = new Date();
-    const fmt = (d) => d.toISOString().split('T')[0];
+    const fmt = localISODate;
     switch (tab) {
         case 'DAILY': {
             const start = new Date(today);

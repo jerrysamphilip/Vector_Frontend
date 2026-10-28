@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
 import { contactsApi, errorMessage } from '../../api/contacts';
 import { getStoredUser } from '../../lib/authStorage';
+import { CONTACT_FIELDS } from '../../lib/fieldValidation';
+import { customFieldErrors } from '../../lib/customProperties';
+import { useFieldErrors } from '../../lib/useFieldErrors';
 import {
-    CustomFieldInput, ErrorNote, Field, inputClass, Modal, OwnerSelect,
+    CountryOptions, CustomFieldInput, ErrorNote, Field, inputClass, Modal, OwnerSelect,
     PrimaryButton, SecondaryButton, TagInput, useCrmMeta,
 } from './shared';
 
@@ -29,13 +32,24 @@ export default function ContactFormModal({
     const [existingDeleted, setExistingDeleted] = useState(false);
 
     const set = (key) => (e) => setForm(f => ({ ...f, [key]: e?.target ? e.target.value : e }));
+    // F-07 / F-08: inline rules per field; the server checks again and its 422 field errors land on the fields too
+    const checks = useFieldErrors(CONTACT_FIELDS, form, setForm);
+
+    // C-17: custom property limits (max_length) are checked here too; the server's 400 message shows below
+    const [customErrors, setCustomErrors] = useState({});
+    const setCustom = (key, v) => {
+        setForm(s => ({ ...s, custom_fields: { ...s.custom_fields, [key]: v } }));
+        setCustomErrors(errs => (errs[key] ? { ...errs, [key]: '' } : errs));
+    };
 
     const submit = async (e) => {
         e?.preventDefault();
-        if (!form.email.trim()) { setError('Email is required'); return; }
+        const customErrs = customFieldErrors(fields, form.custom_fields);
+        setCustomErrors(customErrs);
+        if (!checks.validate() || Object.keys(customErrs).length) { setError(null); return; }
         setSaving(true); setError(null); setExistingId(null); setExistingDeleted(false);
         const payload = Object.fromEntries(
-            Object.entries(form).filter(([k, v]) => !(typeof v === 'string' && !v.trim()) || k === 'owner_id')
+            Object.entries(checks.normalized()).filter(([k, v]) => !(typeof v === 'string' && !v.trim()) || k === 'owner_id')
         );
         if (!canAssign) delete payload.owner_id;
         const custom = Object.fromEntries(Object.entries(form.custom_fields).filter(([, v]) => v !== '' && v != null && !(Array.isArray(v) && !v.length)));
@@ -44,6 +58,7 @@ export default function ContactFormModal({
             const contact = await contactsApi.create(payload);
             onCreated?.(contact);
         } catch (err) {
+            checks.fromServer(err);
             setError(errorMessage(err, 'Could not add the contact.'));
             setExistingId(err?.response?.data?.detail_data?.prospect_id || null);
             setExistingDeleted(!!err?.response?.data?.detail_data?.deleted);
@@ -65,24 +80,24 @@ export default function ContactFormModal({
                 </PrimaryButton>
             </>}
         >
-            <form onSubmit={submit} className="space-y-4">
+            <form ref={checks.formRef} onSubmit={submit} noValidate className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Field label="First name"><input className={inputClass} value={form.first_name} onChange={set('first_name')} autoFocus /></Field>
-                    <Field label="Last name"><input className={inputClass} value={form.last_name} onChange={set('last_name')} /></Field>
-                    <Field label="Email *" className="sm:col-span-2">
-                        <input type="email" required className={inputClass} value={form.email} onChange={set('email')} placeholder="name@company.com" />
+                    <Field label="First name" error={checks.errors.first_name}><input className={inputClass} {...checks.bind('first_name')} autoComplete="given-name" autoFocus /></Field>
+                    <Field label="Last name" error={checks.errors.last_name}><input className={inputClass} {...checks.bind('last_name')} autoComplete="family-name" /></Field>
+                    <Field label="Email *" className="sm:col-span-2" error={checks.errors.email}>
+                        <input type="email" required className={inputClass} {...checks.bind('email')} placeholder="name@company.com" />
                     </Field>
-                    <Field label="Phone"><input type="tel" className={inputClass} value={form.phone} onChange={set('phone')} placeholder="+1 415 555 0101" /></Field>
-                    <Field label="Mobile"><input type="tel" className={inputClass} value={form.mobile_phone} onChange={set('mobile_phone')} /></Field>
-                    <Field label="Job title"><input className={inputClass} value={form.designation} onChange={set('designation')} /></Field>
-                    <Field label="Company" hint="Links to the account with this name, creating it if needed">
-                        <input className={inputClass} value={form.company_name} onChange={set('company_name')} list="account-names" />
+                    <Field label="Phone" error={checks.errors.phone}><input type="tel" className={inputClass} {...checks.bind('phone')} placeholder="+44 20 7946 0958" /></Field>
+                    <Field label="Mobile" error={checks.errors.mobile_phone}><input type="tel" className={inputClass} {...checks.bind('mobile_phone')} /></Field>
+                    <Field label="Job title" error={checks.errors.designation}><input className={inputClass} {...checks.bind('designation')} /></Field>
+                    <Field label="Company" hint="Links to the account with this name, creating it if needed" error={checks.errors.company_name}>
+                        <input className={inputClass} {...checks.bind('company_name')} list="account-names" />
                         <datalist id="account-names">{accountNames.map(n => <option key={n} value={n} />)}</datalist>
                     </Field>
-                    <Field label="City"><input className={inputClass} value={form.poc_city} onChange={set('poc_city')} /></Field>
-                    <Field label="State"><input className={inputClass} value={form.poc_state} onChange={set('poc_state')} /></Field>
-                    <Field label="Country"><input className={inputClass} value={form.poc_country} onChange={set('poc_country')} /></Field>
-                    <Field label="LinkedIn"><input type="url" className={inputClass} value={form.linkedin_url} onChange={set('linkedin_url')} placeholder="https://linkedin.com/in/…" /></Field>
+                    <Field label="City" error={checks.errors.poc_city}><input className={inputClass} {...checks.bind('poc_city')} /></Field>
+                    <Field label="State" error={checks.errors.poc_state}><input className={inputClass} {...checks.bind('poc_state')} /></Field>
+                    <Field label="Country" error={checks.errors.poc_country}><input className={inputClass} {...checks.bind('poc_country')} list="country-names" /></Field><CountryOptions />
+                    <Field label="LinkedIn" error={checks.errors.linkedin_url}><input type="url" className={inputClass} {...checks.bind('linkedin_url')} placeholder="https://linkedin.com/in/…" /></Field>
                     {canAssign && (
                         <Field label="Owner"><OwnerSelect owners={owners} value={form.owner_id} onChange={set('owner_id')} /></Field>
                     )}
@@ -96,7 +111,7 @@ export default function ContactFormModal({
                             {(meta?.lead_statuses || []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
                     </Field>
-                    <Field label="Lead source"><input className={inputClass} value={form.lead_source} onChange={set('lead_source')} placeholder="e.g. Trade show" /></Field>
+                    <Field label="Lead source" error={checks.errors.lead_source}><input className={inputClass} {...checks.bind('lead_source')} placeholder="e.g. Trade show" /></Field>
                     <Field label="Legal basis">
                         <select className={inputClass} value={form.legal_basis} onChange={set('legal_basis')}>
                             <option value="">Not recorded</option>
@@ -121,9 +136,9 @@ export default function ContactFormModal({
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">{group}</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {groupFields.map(f => (
-                                <Field key={f.field_id} label={`${f.label}${f.required ? ' *' : ''}`}>
-                                    <CustomFieldInput field={f} value={form.custom_fields[f.field_key]}
-                                        onChange={v => setForm(s => ({ ...s, custom_fields: { ...s.custom_fields, [f.field_key]: v } }))} />
+                                <Field key={f.field_id} label={`${f.label}${f.required ? ' *' : ''}`} error={customErrors[f.field_key]}>
+                                    <CustomFieldInput field={f} value={form.custom_fields[f.field_key]} invalid={!!customErrors[f.field_key]}
+                                        onChange={v => setCustom(f.field_key, v)} />
                                 </Field>
                             ))}
                         </div>

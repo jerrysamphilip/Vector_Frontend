@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, ListChecks, Zap, Pencil, Trash2, Loader2, Users } from 'lucide-react';
-import { listsApi, errorMessage } from '../api/contacts';
-import { hasPermission } from '../lib/authStorage';
+import { Plus, Search, ListChecks, Zap, Pencil, Trash2, Loader2, Users, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { errorMessage } from '../api/contacts';
+import { LIST_PAGE_SIZE, listsApi } from '../api/lists';
+import { useAuth } from '../auth/AuthProvider';
+import { useApiQuery } from '../lib/useApiQuery';
+import LoadError from '../components/ui/LoadError';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import FilterBuilder, { filterCount } from '../components/contacts/FilterBuilder';
 import {
     BRAND_GRADIENT, ErrorNote, Field, inputClass, Modal, PrimaryButton, SecondaryButton, relativeDate,
@@ -84,24 +88,48 @@ function ListFormModal({ list, onClose, onSaved }) {
     );
 }
 
+/** Search text sent to the server once typing pauses. */
+function useDebounced(value, delay = 300) {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+        const t = setTimeout(() => setDebounced(value), delay);
+        return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
+}
+
 export default function Lists() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const { hasPermission } = useAuth();
     const canManage = hasPermission('manage_prospects');
+    const canExport = hasPermission('export_data');
     const [type, setType] = useState('');
     const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
     const [editing, setEditing] = useState(null); // null | 'new' | list
     const [error, setError] = useState(null);
+    const term = useDebounced(search.trim());
 
-    const { data, isLoading } = useQuery({ queryKey: ['lists', type], queryFn: () => listsApi.list(type ? { list_type: type } : {}) });
+    const { data, isLoading, error: loadError, refetch } = useApiQuery(
+        ['lists', type, term, page],
+        () => listsApi.page({ page, listType: type || undefined, q: term || undefined }),
+        { placeholderData: (previous) => previous }, // keep the table while the next page / search loads
+    );
     const refresh = () => {
         queryClient.invalidateQueries({ queryKey: ['lists'] });
         queryClient.invalidateQueries({ queryKey: ['contact-facets'] });
     };
+    const confirm = useConfirm();
     const remove = useMutation({ mutationFn: listsApi.remove, onSuccess: refresh, onError: err => setError(errorMessage(err)) });
+    const exportList = useMutation({
+        mutationFn: (l) => listsApi.exportFile(l.list_id, 'csv', l.list_name),
+        onError: err => setError(errorMessage(err, 'Export failed.')),
+    });
 
-    const term = search.trim().toLowerCase();
-    const items = (data?.items || []).filter(l => !term || l.list_name.toLowerCase().includes(term));
+    const items = data?.items || [];
+    const total = data?.total ?? items.length;
+    const pages = Math.max(1, Math.ceil(total / LIST_PAGE_SIZE));
 
     return (
         <div className="w-full space-y-6">
@@ -123,20 +151,22 @@ export default function Lists() {
                 <div className="px-5 py-4 flex items-center gap-3 flex-wrap" style={{ background: 'linear-gradient(90deg, rgba(45,107,191,0.06), rgba(115,200,210,0.06))' }}>
                     <div className="flex bg-white rounded-xl border border-slate-200 p-0.5">
                         {[['', 'All'], ['STATIC', 'Static'], ['ACTIVE', 'Active']].map(([value, label]) => (
-                            <button key={label} onClick={() => setType(value)}
+                            <button key={label} onClick={() => { setType(value); setPage(1); }}
                                 className={`px-3 h-8 text-sm font-medium rounded-lg ${type === value ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>{label}</button>
                         ))}
                     </div>
                     <div className="relative flex-1 min-w-[200px] max-w-sm">
                         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search lists…"
+                        <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search lists…"
                             className="w-full h-9 pl-9 pr-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400" />
                     </div>
-                    <span className="ml-auto text-sm text-slate-500">{items.length} list{items.length !== 1 ? 's' : ''}</span>
+                    <span className="ml-auto text-sm text-slate-500">{total} list{total !== 1 ? 's' : ''}</span>
                 </div>
 
                 {isLoading ? (
                     <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+                ) : loadError && !data ? (
+                    <LoadError error={loadError} onRetry={refetch} title="Couldn't load lists" />
                 ) : items.length === 0 ? (
                     <div className="py-20 text-center px-6">
                         <ListChecks className="w-10 h-10 text-slate-300 mx-auto mb-3" />
@@ -172,9 +202,12 @@ export default function Lists() {
                                         <td className="px-3 py-3 text-sm text-slate-600">{l.created_by_name || '—'}</td>
                                         <td className="px-3 py-3 text-sm text-slate-500 whitespace-nowrap">{relativeDate(l.created_at)}</td>
                                         <td className="px-3 pr-5 py-3 text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                                            {canExport && (
+                                                <button onClick={() => exportList.mutate(l)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" aria-label={`Export ${l.list_name}`}><Download className="w-4 h-4" /></button>
+                                            )}
                                             {canManage && <>
                                                 <button onClick={() => setEditing(l)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" aria-label={`Edit ${l.list_name}`}><Pencil className="w-4 h-4" /></button>
-                                                <button onClick={() => window.confirm(`Delete the list "${l.list_name}"? Contacts are kept.`) && remove.mutate(l.list_id)}
+                                                <button onClick={async () => { if (await confirm({ title: `Delete the list "${l.list_name}"?`, message: 'Contacts are kept.', confirmLabel: 'Delete list', danger: true })) remove.mutate(l.list_id); }}
                                                     className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg" aria-label={`Delete ${l.list_name}`}><Trash2 className="w-4 h-4" /></button>
                                             </>}
                                         </td>
@@ -182,6 +215,15 @@ export default function Lists() {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                )}
+                {pages > 1 && (
+                    <div className="px-5 py-3 flex items-center justify-end gap-2 border-t border-slate-50 text-sm text-slate-500">
+                        <button type="button" aria-label="Previous page" disabled={page <= 1} onClick={() => setPage(p => p - 1)}
+                            className="p-1.5 rounded-lg hover:bg-slate-50 disabled:opacity-40"><ChevronLeft className="w-4 h-4" /></button>
+                        <span>Page {page} of {pages}</span>
+                        <button type="button" aria-label="Next page" disabled={page >= pages} onClick={() => setPage(p => p + 1)}
+                            className="p-1.5 rounded-lg hover:bg-slate-50 disabled:opacity-40"><ChevronRight className="w-4 h-4" /></button>
                     </div>
                 )}
             </div>

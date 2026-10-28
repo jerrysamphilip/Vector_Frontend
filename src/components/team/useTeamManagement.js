@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import usersApi from '../../api/users';
 import { hierarchyApi } from '../../api/sales';
 import { getStoredUser } from '../../lib/authStorage';
+import { errorText } from '../../lib/apiErrors';
 
 // State, queries and actions of the Team page: members (search / status filter), invitations (with an
 // optional sales-hierarchy placement), role / status / permission changes and the hierarchy dialog.
@@ -50,7 +51,7 @@ export function useTeamManagement() {
     const refreshHierarchy = () => ['hierarchy', 'contact-owners', 'contacts'].forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
 
     const onMutationError = (error) => {
-        const msg = error?.response?.data?.detail || error?.message || 'Action failed. Please try again.';
+        const msg = errorText(error, 'Action failed. Please try again.');
         setActionError(msg);
         setTimeout(() => setActionError(null), 5000);
     };
@@ -63,7 +64,7 @@ export function useTeamManagement() {
                 try {
                     await hierarchyApi.set(data.user_id, place);
                 } catch (err) {
-                    data.hierarchyError = err?.response?.data?.detail || 'Could not set the sales level';
+                    data.hierarchyError = errorText(err, 'Could not set the sales level');
                 }
             }
             return data;
@@ -90,7 +91,7 @@ export function useTeamManagement() {
     const hierarchyMutation = useMutation({
         mutationFn: ({ userId, payload }) => hierarchyApi.set(userId, payload),
         onSuccess: () => { setHierarchyUser(null); setHierarchyErr(null); refreshHierarchy(); },
-        onError: (error) => setHierarchyErr(error?.response?.data?.detail || error?.message || 'Could not save'),
+        onError: (error) => setHierarchyErr(errorText(error, 'Could not save')),
     });
 
     const changeRoleMutation    = useMutation({ mutationFn: ({ userId, role }) => usersApi.changeRole(userId, role),        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['team-users'] }), onError: onMutationError });

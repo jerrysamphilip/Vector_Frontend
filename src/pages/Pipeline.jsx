@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import LoadError from '../components/ui/LoadError';
+import { useApiQuery } from '../lib/useApiQuery';
 import { dealsApi, money, moneyShort, proposalsApi } from '../api/sales';
 import { relativeDate } from '../components/contacts/shared';
 import { ApprovalBadge, ApprovalsList } from '../components/sales/QuoteApproval';
@@ -11,8 +12,9 @@ const PROPOSAL_TONE = { DRAFT: 'border-slate-300', SENT: 'border-sky-400', UNDER
 /** Revenue pipeline by stage, weighted and unweighted (BR-SP-03/04). */
 function Revenue({ owner, clientType }) {
     const navigate = useNavigate();
-    const { data, isLoading } = useQuery({ queryKey: ['deals', 'revenue', owner, clientType], queryFn: () => dealsApi.revenue({ owner, client_type: clientType }) });
+    const { data, error, isLoading, refetch } = useApiQuery(['deals', 'revenue', owner, clientType], () => dealsApi.revenue({ owner, client_type: clientType }));
     if (isLoading) return <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>;
+    if (error || !data) return <LoadError error={error} onRetry={refetch} title="Couldn't load the revenue pipeline" />;
     const t = data.totals;
     const open = data.stages.filter(s => s.status === 'OPEN');
     const max = Math.max(...open.map(s => s.amount), 0);
@@ -64,8 +66,9 @@ function Revenue({ owner, clientType }) {
 
 /** Proposal pipeline: draft, sent, under review, accepted, rejected (BR-SP-02). */
 function Proposals({ owner, clientType }) {
-    const { data, isLoading } = useQuery({ queryKey: ['proposals', owner, clientType], queryFn: () => proposalsApi.list({ owner, client_type: clientType }) });
+    const { data, error, isLoading, refetch } = useApiQuery(['proposals', owner, clientType], () => proposalsApi.list({ owner, client_type: clientType }));
     if (isLoading) return <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>;
+    if (error || !data) return <LoadError error={error} onRetry={refetch} title="Couldn't load the proposal pipeline" />;
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
             {data.columns.map(col => (

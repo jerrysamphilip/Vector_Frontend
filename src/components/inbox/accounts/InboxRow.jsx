@@ -1,13 +1,34 @@
 import { motion } from 'framer-motion';
 import { KeyRound, Pencil, Trash2 } from 'lucide-react';
 import { IssueBadge, PoolBadge, ReputationRing, Toggle, providerStyle } from './shared';
+import { PausedBadge, ResumeButton } from './PausedMailbox';
+import { isPaused } from './useEmailAccounts';
+
+// Sent today against today's capacity (limit capped by pacing, F-20); older API: the counter and limit
+export function sendingCapacity(inbox) {
+    const sent = inbox.sent_today ?? inbox.emails_sent_today ?? 0;
+    const capacity = inbox.daily_capacity ?? inbox.current_daily_limit ?? inbox.daily_limit ?? 0;
+    const pct = capacity ? Math.min(Math.round((sent / capacity) * 100), 100) : 0;
+    return { sent, capacity, pct, remaining: inbox.remaining_today ?? Math.max(capacity - sent, 0) };
+}
+
+// Reply reading (S-26): derived from the SMTP settings, or not set up; nothing when IMAP is saved (or the API is older)
+export function ImapBadge({ inbox }) {
+    if (inbox.imap_derived_from_smtp) {
+        return <span className="text-[10px] font-semibold text-sky-800 bg-sky-50 px-1.5 rounded" title="The IMAP server and sign-in are taken from the SMTP settings">IMAP: derived from SMTP</span>;
+    }
+    if (inbox.imap_configured === false) {
+        return <span className="text-[10px] font-semibold text-amber-800 bg-amber-50 px-1.5 rounded" title="Replies can't be read until IMAP is set up">IMAP: not set up</span>;
+    }
+    return null;
+}
 
 // ─── Inbox Row (table-style, matching dashboard card patterns) ────────────────
-export default function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete, onToggleWarmup, isUpdating, onConnectMs365 }) {
+export default function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete, onToggleWarmup, isUpdating, onConnectMs365,
+    onResume, isResuming = false }) {
     const ps = providerStyle(inbox.provider);
-    const sentPct = inbox.current_daily_limit
-        ? Math.min(Math.round(((inbox.emails_sent_today || 0) / inbox.current_daily_limit) * 100), 100)
-        : 0;
+    const { sent, capacity, pct: sentPct, remaining } = sendingCapacity(inbox);
+    const paused = isPaused(inbox);
 
     return (
         <motion.div
@@ -34,7 +55,12 @@ export default function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete
                         <PoolBadge pool={inbox.warmup_pool || 'FOUNDATION'}/>
                         <span className="text-[10px] text-gray-400">Day {inbox.warmup_day || 0}</span>
                         {inbox.auth_type === 'OAUTH_MS365' && <span className="text-[10px] font-semibold text-sky-700 bg-sky-50 px-1.5 rounded">Microsoft 365</span>}
+                        {paused && <PausedBadge inbox={inbox} />}
+                        <ImapBadge inbox={inbox} />
                     </div>
+                    {paused && inbox.paused_reason && (
+                        <p className="text-[10px] text-amber-700 truncate max-w-[260px]" title={inbox.paused_reason}>{inbox.paused_reason}</p>
+                    )}
                     {(inbox.oauth_error || inbox.imap_last_error) && (
                         <p className="text-[10px] text-red-600 truncate max-w-[260px]" title={inbox.oauth_error || inbox.imap_last_error}>
                             {inbox.oauth_error ? 'Sign-in problem: ' : 'Reply sync failing: '}{inbox.oauth_error || inbox.imap_last_error}
@@ -53,8 +79,9 @@ export default function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete
             <div>
                 <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
                     <span>Sent</span>
-                    <span className="font-medium text-gray-600">
-                        {inbox.emails_sent_today || 0} / {inbox.current_daily_limit || inbox.daily_limit || 0}
+                    <span className="font-medium text-gray-600"
+                        title={`Up to ${capacity} emails a day (daily limit and pacing); ${remaining} left today`}>
+                        {sent} / {capacity}
                     </span>
                 </div>
                 <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
@@ -73,6 +100,7 @@ export default function InboxRow({ inbox, isSelected, onSelect, onEdit, onDelete
 
             {/* Actions */}
             <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                {paused && onResume && <ResumeButton onResume={() => onResume(inbox)} busy={isResuming} compact />}
                 <Toggle
                     checked={Boolean(inbox.warmup_enabled)}
                     onChange={() => onToggleWarmup(inbox)}

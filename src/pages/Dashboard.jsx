@@ -1,6 +1,7 @@
 import Header from '../components/layout/Header';
 import Loading from '../components/common/Loading';
 import { useDashboard } from '../components/dashboard/useDashboard';
+import LoadError from '../components/ui/LoadError';
 import AlertCenter from '../components/dashboard/AlertCenter';
 import EngagementChartCard from '../components/dashboard/EngagementChartCard';
 import CampaignStatusDonut from '../components/dashboard/CampaignStatusDonut';
@@ -15,6 +16,7 @@ export default function Dashboard() {
     const dashboard = useDashboard();
 
     if (dashboard.isLoading) return <Loading text="Loading dashboard..." size="lg" fullScreen />;
+    if (dashboard.loadError) return <LoadError error={dashboard.loadError} onRetry={dashboard.retryLoad} title="Couldn't load your campaigns" />;
 
     return (
         <div className="space-y-6">

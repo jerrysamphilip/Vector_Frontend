@@ -1,22 +1,29 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import LoadError from '../components/ui/LoadError';
+import { isNotFound } from '../lib/apiErrors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     ArrowLeft, Mail, Phone, Smartphone, Building2, Linkedin, MapPin, Pencil, Trash2, Loader2, StickyNote, PhoneCall, CalendarDays, Send, Inbox, Eye, MousePointerClick, AlertOctagon, MailX, Megaphone, ListPlus, Check, Globe2, History, CheckSquare, Square, AlertTriangle, ListTodo,
 } from 'lucide-react';
 import { contactsApi, tasksApi, errorMessage } from '../api/contacts';
 import { withVersion } from '../lib/staleVersion';
+import { CONTACT_FIELDS } from '../lib/fieldValidation';
+import { customFieldErrors } from '../lib/customProperties';
+import { useFieldErrors } from '../lib/useFieldErrors';
 import { useRecordVersion, versionedSave } from '../lib/useRecordVersion';
 import { dealsApi, leadsApi, moneyShort } from '../api/sales';
 import { NewLeadModal } from './Leads';
 import { DealFormModal } from './Deals';
 import { DealStatusBadge, LeadStageBadge } from '../components/sales/shared';
 import {
-    Avatar, TagInput, OwnerSelect, CustomFieldInput, Field, inputClass, ErrorNote, PrimaryButton, SecondaryButton, formatDateTime, relativeDate, parseDate, useCrmMeta, StageBadge, StatusBadge, formatCustomValue,
+    Avatar, TagInput, OwnerSelect, CountryOptions, CustomFieldInput, Field, inputClass, ErrorNote, PrimaryButton, SecondaryButton, formatDateTime, relativeDate, parseDate, useCrmMeta, StageBadge, StatusBadge, formatCustomValue,
 } from '../components/contacts/shared';
 import MentionTextarea, { MentionText, activeMentions } from '../components/contacts/MentionTextarea';
 import ContactCompaniesCard from '../components/contacts/ContactCompaniesCard';
 import ContactScoreCard from '../components/contacts/ContactScoreCard';
+import ContactIdentityCard from '../components/contacts/merge/ContactIdentityCard';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const CALL_OUTCOMES = ['Connected', 'Left voicemail', 'No answer', 'Wrong number', 'Busy'];
 
@@ -132,6 +139,7 @@ function Composer({ contactId, owners, onLogged }) {
 
 // ── Timeline ────────────────────────────────────────────────────
 function ActivityBody({ item, onChanged }) {
+    const confirm = useConfirm();
     const a = item.activity;
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState({ subject: a.subject || '', body: a.body || '', outcome: a.outcome || '' });
@@ -172,7 +180,7 @@ function ActivityBody({ item, onChanged }) {
                 <span>{a.created_by_name ? `by ${a.created_by_name}` : ''}</span>
                 {item.can_edit && <>
                     <button onClick={() => setEditing(true)} className="hover:text-indigo-600 flex items-center gap-1"><Pencil className="w-3 h-3" /> Edit</button>
-                    <button onClick={() => window.confirm('Delete this activity?') && remove.mutate()} className="hover:text-red-600 flex items-center gap-1"><Trash2 className="w-3 h-3" /> Delete</button>
+                    <button onClick={async () => { if (await confirm({ title: 'Delete this activity?', confirmLabel: 'Delete', danger: true })) remove.mutate(); }} className="hover:text-red-600 flex items-center gap-1"><Trash2 className="w-3 h-3" /> Delete</button>
                 </>}
             </div>
         </div>
@@ -249,6 +257,7 @@ function TimelineItem({ item, onChanged }) {
 
 // ── Left column: CRM properties + details ───────────────────────
 function CrmCard({ contact, meta, onUpdate, error }) {
+    const confirm = useConfirm();
     const unsub = contact.consent_status === 'UNSUBSCRIBED';
     return (
         <div className={card} style={cardShadow}>
@@ -271,9 +280,12 @@ function CrmCard({ contact, meta, onUpdate, error }) {
                     <span id="email-subscription-label" className="block text-xs font-medium text-slate-600 mb-1.5">Email subscription</span>
                     <div className="flex items-center justify-between gap-2">
                         <span className={`text-sm font-semibold ${unsub ? 'text-red-600' : 'text-emerald-700'}`}>{unsub ? 'Unsubscribed' : 'Subscribed'}</span>
-                        <button onClick={() => window.confirm(unsub
-                            ? 'Resubscribe this contact? They are removed from the global unsubscribe list and can be emailed again. Only do this with their consent.'
-                            : 'Unsubscribe this contact? They are added to the global unsubscribe list and queued emails are cancelled.') && onUpdate({ consent_status: unsub ? 'OPT_IN' : 'UNSUBSCRIBED' })}
+                        <button onClick={async () => {
+                            const ok = await confirm(unsub
+                                ? { title: 'Resubscribe this contact?', message: 'They are removed from the global unsubscribe list and can be emailed again. Only do this with their consent.', confirmLabel: 'Resubscribe' }
+                                : { title: 'Unsubscribe this contact?', message: 'They are added to the global unsubscribe list and queued emails are cancelled.', confirmLabel: 'Unsubscribe', danger: true });
+                            if (ok) onUpdate({ consent_status: unsub ? 'OPT_IN' : 'UNSUBSCRIBED' });
+                        }}
                             className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">{unsub ? 'Resubscribe' : 'Unsubscribe'}</button>
                     </div>
                 </div>
@@ -294,6 +306,8 @@ function DetailsCard({ contact, fields, onSaved }) {
     const [form, setForm] = useState({});
     const [version, setVersion] = useState(null); // row_version when editing started (T-3)
     const [error, setError] = useState(null);
+    // F-07 / F-08: inline field rules; the server's 422 field errors are shown on the fields as well
+    const checks = useFieldErrors(CONTACT_FIELDS, form, setForm);
     const start = () => {
         setVersion(contact.row_version);
         setForm({
@@ -305,19 +319,31 @@ function DetailsCard({ contact, fields, onSaved }) {
             custom_fields: Object.fromEntries(fields.map(f => [f.field_key, contact.custom_fields?.[f.field_key] ?? (f.field_type === 'MULTI_CHECKBOX' ? [] : '')])),
         });
         setError(null);
+        checks.setErrors({});
+        setCustomErrors({});
         setEditing(true);
     };
     const save = useMutation({
         mutationFn: () => {
-            const payload = { ...form };
+            const payload = checks.normalized();
             if (payload.company_name === (contact.company_name || '')) delete payload.company_name;
             if (!payload.email) delete payload.email;
             return contactsApi.update(contact.prospect_id, withVersion(payload, version));
         },
         onSuccess: (data) => { setEditing(false); onSaved(data); },
-        onError: err => setError(errorMessage(err)),
+        onError: err => { checks.fromServer(err); setError(errorMessage(err)); },
     });
-    const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }));
+    // C-17: custom property limits (max_length) are checked here too; the server's 400 message shows below
+    const [customErrors, setCustomErrors] = useState({});
+    const setCustom = (key, v) => {
+        setForm(s => ({ ...s, custom_fields: { ...s.custom_fields, [key]: v } }));
+        setCustomErrors(errs => (errs[key] ? { ...errs, [key]: '' } : errs));
+    };
+    const submit = () => {
+        const customErrs = customFieldErrors(fields, form.custom_fields);
+        setCustomErrors(customErrs);
+        if (checks.validate() && !Object.keys(customErrs).length) save.mutate();
+    };
     const groups = fields.reduce((acc, f) => { (acc[f.group_name || 'Other properties'] ||= []).push(f); return acc; }, {});
 
     const rows = [
@@ -341,40 +367,40 @@ function DetailsCard({ contact, fields, onSaved }) {
                 {!editing && <button onClick={start} className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"><Pencil className="w-3 h-3" /> Edit</button>}
             </div>
             {editing ? (
-                <div className="space-y-3">
+                <div ref={checks.formRef} className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
-                        <Field label="First name"><input className={inputClass} value={form.first_name} onChange={set('first_name')} /></Field>
-                        <Field label="Last name"><input className={inputClass} value={form.last_name} onChange={set('last_name')} /></Field>
+                        <Field label="First name" error={checks.errors.first_name}><input className={inputClass} {...checks.bind('first_name')} /></Field>
+                        <Field label="Last name" error={checks.errors.last_name}><input className={inputClass} {...checks.bind('last_name')} /></Field>
                     </div>
-                    <Field label="Email"><input type="email" className={inputClass} value={form.email} onChange={set('email')} /></Field>
+                    <Field label="Email" error={checks.errors.email}><input type="email" className={inputClass} {...checks.bind('email')} /></Field>
                     <div className="grid grid-cols-2 gap-2">
-                        <Field label="Phone"><input type="tel" className={inputClass} value={form.phone} onChange={set('phone')} /></Field>
-                        <Field label="Mobile"><input type="tel" className={inputClass} value={form.mobile_phone} onChange={set('mobile_phone')} /></Field>
+                        <Field label="Phone" error={checks.errors.phone}><input type="tel" className={inputClass} {...checks.bind('phone')} /></Field>
+                        <Field label="Mobile" error={checks.errors.mobile_phone}><input type="tel" className={inputClass} {...checks.bind('mobile_phone')} /></Field>
                     </div>
-                    <Field label="Job title"><input className={inputClass} value={form.designation} onChange={set('designation')} /></Field>
-                    <Field label="Company" hint="Changing it links the contact to that company"><input className={inputClass} value={form.company_name} onChange={set('company_name')} /></Field>
-                    <Field label="Industry"><input className={inputClass} value={form.industry} onChange={set('industry')} /></Field>
-                    <Field label="Lead source"><input className={inputClass} value={form.lead_source} onChange={set('lead_source')} /></Field>
+                    <Field label="Job title" error={checks.errors.designation}><input className={inputClass} {...checks.bind('designation')} /></Field>
+                    <Field label="Company" hint="Changing it links the contact to that company" error={checks.errors.company_name}><input className={inputClass} {...checks.bind('company_name')} /></Field>
+                    <Field label="Industry" error={checks.errors.industry}><input className={inputClass} {...checks.bind('industry')} /></Field>
+                    <Field label="Lead source" error={checks.errors.lead_source}><input className={inputClass} {...checks.bind('lead_source')} /></Field>
                     <div className="grid grid-cols-3 gap-2">
-                        <Field label="City"><input className={inputClass} value={form.poc_city} onChange={set('poc_city')} /></Field>
-                        <Field label="State"><input className={inputClass} value={form.poc_state} onChange={set('poc_state')} /></Field>
-                        <Field label="Country"><input className={inputClass} value={form.poc_country} onChange={set('poc_country')} /></Field>
+                        <Field label="City" error={checks.errors.poc_city}><input className={inputClass} {...checks.bind('poc_city')} /></Field>
+                        <Field label="State" error={checks.errors.poc_state}><input className={inputClass} {...checks.bind('poc_state')} /></Field>
+                        <Field label="Country" error={checks.errors.poc_country}><input className={inputClass} {...checks.bind('poc_country')} list="country-names" /></Field><CountryOptions />
                     </div>
-                    <Field label="LinkedIn"><input type="url" className={inputClass} value={form.linkedin_url} onChange={set('linkedin_url')} /></Field>
+                    <Field label="LinkedIn" error={checks.errors.linkedin_url}><input type="url" className={inputClass} {...checks.bind('linkedin_url')} /></Field>
                     {Object.entries(groups).map(([group, gf]) => (
                         <div key={group} className="space-y-3 pt-1">
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{group}</p>
                             {gf.map(f => (
-                                <Field key={f.field_id} label={`${f.label}${f.required ? ' *' : ''}`}>
-                                    <CustomFieldInput field={f} value={form.custom_fields[f.field_key]}
-                                        onChange={v => setForm(s => ({ ...s, custom_fields: { ...s.custom_fields, [f.field_key]: v } }))} />
+                                <Field key={f.field_id} label={`${f.label}${f.required ? ' *' : ''}`} error={customErrors[f.field_key]}>
+                                    <CustomFieldInput field={f} value={form.custom_fields[f.field_key]} invalid={!!customErrors[f.field_key]}
+                                        onChange={v => setCustom(f.field_key, v)} />
                                 </Field>
                             ))}
                         </div>
                     ))}
                     <ErrorNote message={error} />
                     <div className="flex gap-2">
-                        <PrimaryButton onClick={() => save.mutate()} loading={save.isPending} className="flex-1">Save</PrimaryButton>
+                        <PrimaryButton onClick={submit} loading={save.isPending} className="flex-1">Save</PrimaryButton>
                         <SecondaryButton onClick={() => setEditing(false)} className="flex-1">Cancel</SecondaryButton>
                     </div>
                 </div>
@@ -491,6 +517,7 @@ function SalesCard({ contact }) {
 
 // ── Page ────────────────────────────────────────────────────────
 export default function ContactDetail() {
+    const confirm = useConfirm();
     const { id } = useParams();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -499,7 +526,7 @@ export default function ContactDetail() {
     const [timelineUser, setTimelineUser] = useState('');
     const [quickError, setQuickError] = useState(null);
 
-    const { data: contact, isLoading, error } = useQuery({ queryKey: ['contact', id], queryFn: () => contactsApi.get(id), retry: false });
+    const { data: contact, isLoading, error, refetch } = useQuery({ queryKey: ['contact', id], queryFn: () => contactsApi.get(id), retry: false });
     const version = useRecordVersion(contact);
     const { data: timeline, isFetching: timelineLoading } = useQuery({
         queryKey: ['contact-timeline', id, timelineFilter, timelineUser],
@@ -538,6 +565,7 @@ export default function ContactDetail() {
     });
 
     if (isLoading) return <div className="py-32 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-indigo-500" /></div>;
+    if (error && !isNotFound(error)) return <LoadError error={error} onRetry={refetch} title="Couldn't load this contact" />;
     if (error || !contact) {
         return (
             <div className="py-24 text-center">
@@ -599,7 +627,7 @@ export default function ContactDetail() {
                                 : <p className="text-sm font-medium text-slate-800">{contact.owner_name || 'Unassigned'}</p>}
                         </div>
                         {contact.can_delete && (
-                            <button onClick={() => window.confirm(`Delete ${contact.full_name}? You can restore them from Recently deleted for 90 days.`) && remove.mutate()}
+                            <button onClick={async () => { if (await confirm({ title: `Delete ${contact.full_name}?`, message: 'You can restore them from Recently deleted for 90 days.', confirmLabel: 'Delete', danger: true })) remove.mutate(); }}
                                 className="h-9 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center gap-1.5 border border-red-100">
                                 {remove.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Delete contact
                             </button>
@@ -655,6 +683,7 @@ export default function ContactDetail() {
                     <ContactScoreCard contactId={id} card={card} cardShadow={cardShadow} />
                     <SalesCard contact={contact} />
                     <ContactCompaniesCard contact={contact} onChanged={refresh} card={card} cardShadow={cardShadow} />
+                    <ContactIdentityCard prospectId={id} />
                     <TasksCard contactId={id} onChanged={refresh} />
                     <SideCard title="Lists" empty="Not on any list.">
                         {contact.lists.length > 0 && (

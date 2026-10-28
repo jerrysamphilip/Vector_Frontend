@@ -1,3 +1,4 @@
+import { localISODate } from '../lib/dates';
 import { apiClient as api } from './http';
 
 export const reportsApi = {
@@ -46,7 +47,7 @@ export const reportsApi = {
         const response = await api.get(`/reports/export/prospects/${campaignId}`, {
             responseType: 'blob',
         });
-        downloadBlob(response.data, `prospects_${campaignId.slice(0, 8)}.csv`);
+        downloadBlob(response.data, `prospects_${campaignId.slice(-8)}.csv`);
     },
 
     exportDeliverabilityCsv: async () => {
@@ -61,7 +62,7 @@ export const reportsApi = {
             params,
             responseType: 'blob',
         });
-        const today = new Date().toISOString().split('T')[0];
+        const today = localISODate();
         downloadBlob(response.data, `analytics_report_${today}.docx`);
     },
 };

@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Check, Pencil, Plus, Star, Trash2, X } from 'lucide-react';
 import { accountsApi, contactsApi, errorMessage } from '../../api/contacts';
 import { ErrorNote, PrimaryButton, SecondaryButton, inputClass } from './shared';
+import { useConfirm } from '../ui/ConfirmDialog';
 
 const LABEL_SUGGESTIONS = ['Decision maker', 'Billing', 'Influencer', 'Champion', 'Technical contact', 'Former employee'];
 
@@ -56,6 +57,7 @@ function LabelInput({ value, onChange, id }) {
 
 /** Every company the contact is associated with, with its label and the primary one first (CM-014). */
 export default function ContactCompaniesCard({ contact, onChanged, card, cardShadow }) {
+    const confirm = useConfirm();
     const id = contact.prospect_id;
     const companies = contact.companies || [];
     const [adding, setAdding] = useState(false);
@@ -93,7 +95,7 @@ export default function ContactCompaniesCard({ contact, onChanged, card, cardSha
             setSuccessor(companies.find(x => !x.is_primary)?.account_id || '');
             return;
         }
-        if (window.confirm(`Remove the association with ${c.name}?`)) remove.mutate({ accountId: c.account_id });
+        confirm({ title: `Remove the association with ${c.name}?`, confirmLabel: 'Remove' }).then(ok => ok && remove.mutate({ accountId: c.account_id }));
     };
 
     return (

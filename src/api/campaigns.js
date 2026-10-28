@@ -1,12 +1,32 @@
 import { apiClient as api } from './http';
 import { withVersion } from '../lib/staleVersion';
 
+export const LIST_ALL_PAGE_SIZE = 100; // the API's maximum page_size
+export const LIST_ALL_MAX_PAGES = 50;
+
 // Campaign API
 export const campaignApi = {
     // List campaigns with filters
     list: async (params = {}) => {
         const response = await api.get('/campaigns', { params });
         return response.data;
+    },
+
+    // Every campaign matching the filters: GET /campaigns caps page_size at 100, so walk the pages
+    // (hard cap LIST_ALL_MAX_PAGES pages). Returns the list response shape with all items and the API's total.
+    listAll: async (params = {}) => {
+        const items = [];
+        let total = 0;
+        for (let page = 1; page <= LIST_ALL_MAX_PAGES; page += 1) {
+            const response = await api.get('/campaigns', { params: { ...params, page, page_size: LIST_ALL_PAGE_SIZE } });
+            const data = response.data || {};
+            const pageItems = data.items || [];
+            items.push(...pageItems);
+            total = data.total ?? items.length;
+            const totalPages = data.total_pages ?? Math.ceil(total / LIST_ALL_PAGE_SIZE);
+            if (pageItems.length < LIST_ALL_PAGE_SIZE || page >= totalPages || items.length >= total) break;
+        }
+        return { items, total, page: 1, page_size: items.length, total_pages: 1 };
     },
 
     // Get single campaign
@@ -30,6 +50,34 @@ export const campaignApi = {
     // Delete campaign
     delete: async (id) => {
         await api.delete(`/campaigns/${id}`);
+    },
+
+    // Edit after launch (F-04): settings, mailboxes and the whole step list in one call, under the campaign's
+    // row_version (409 STALE_VERSION when stale). Unsent emails follow; checkEdit is the dry run with the same counts.
+    edit: async (id, body, expectedVersion) => {
+        const response = await api.post(`/campaigns/${id}/edits`, withVersion(body, expectedVersion));
+        return response.data;
+    },
+    checkEdit: async (id, body, expectedVersion) => {
+        const response = await api.post(`/campaigns/${id}/edits/checks`, withVersion(body, expectedVersion));
+        return response.data;
+    },
+
+    // One step email as it will be sent to one enrolled contact (optional unsaved subject / body / persona version)
+    previewEmail: async (id, { prospectId, stepNumber, templateId, subject, body }) => {
+        const response = await api.post(`/campaigns/${id}/email-previews`, {
+            prospect_id: prospectId, step_number: stepNumber,
+            ...(templateId ? { template_id: templateId } : {}),
+            ...(subject !== undefined ? { subject } : {}),
+            ...(body !== undefined ? { body } : {}),
+        });
+        return response.data;
+    },
+
+    // Which persona template each contact gets per step (F-05)
+    getTemplateAssignments: async (id, { limit = 200, offset = 0 } = {}) => {
+        const response = await api.get(`/campaigns/${id}/template-assignments`, { params: { limit, offset } });
+        return response.data;
     },
 
     // State changes send the campaign's row_version the screen shows (T-3, lib/staleVersion.js);
@@ -74,17 +122,37 @@ export const campaignApi = {
         return response.data;
     },
 
-    // Get Enrolled Prospects
-    getProspects: async (id) => {
-        // TODO: Implement backend endpoint GET /campaigns/{id}/prospects
-        // For now this will likely 404, but we add it for the UI structure.
-        try {
-            const response = await api.get(`/campaigns/${id}/prospects`);
-            return response.data;
-        } catch (e) {
-            console.warn("getProspects failed (backend missing?)", e);
-            return [];
-        }
+    // Enrolled prospects with the lead-list timing columns (last_sent_at, delivered_at, bounce_reason,
+    // ooo, steps_sent, steps_total, next_email_at, stopped_reason). Contacts removed from the campaign
+    // are left out unless includeRemoved. Errors propagate so the tab can show a load error.
+    getProspects: async (id, { includeRemoved = false } = {}) => {
+        const response = await api.get(`/campaigns/${id}/prospects`, {
+            params: includeRemoved ? { include_removed: true } : {},
+        });
+        return response.data;
+    },
+
+    // Duplicate a campaign as a new DRAFT (POST /campaigns/{id}/duplicates). data: optional overrides
+    // { campaign_name, start_date, end_date, send_window_start, send_window_end, campaign_timezone,
+    //   inbox_ids, list_ids, prospect_ids, skip_source_prospects }. Returns
+    // { campaign, source_campaign_id, copied, skipped_inboxes, enrollment, persona_gaps }.
+    duplicate: async (id, data = {}) => {
+        const response = await api.post(`/campaigns/${id}/duplicates`, data);
+        return response.data;
+    },
+
+    // Rename (PUT with the row_version on screen; a stale one gets 409 STALE_VERSION)
+    rename: async (id, name, expectedVersion) => {
+        const response = await api.put(`/campaigns/${id}`, withVersion({ campaign_name: name }, expectedVersion));
+        return response.data;
+    },
+
+    // Enrolment dry run: who would be enrolled and why the others would not. Nothing is written.
+    // body: { list_ids, prospect_ids } (campaign page rules) or
+    //       { path: 'wizard', list_id, persona_types, exclude_personal_emails, cool_off_days, excluded_prospect_ids }
+    checkEnrollment: async (campaignId, body) => {
+        const response = await api.post(`/campaigns/${campaignId}/enrollments/checks`, body);
+        return response.data;
     },
 
     // --- New Methods for 6-Stage Workflow ---

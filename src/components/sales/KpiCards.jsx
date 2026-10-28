@@ -5,6 +5,7 @@ import { errorMessage } from '../../api/contacts';
 import { money, moneyShort, pct, salesReportsApi } from '../../api/sales';
 import { ErrorNote, formatDateTime } from '../contacts/shared';
 import { Seg, StatTile, card, cardShadow } from './shared';
+import { useConfirm } from '../ui/ConfirmDialog';
 
 const th = 'px-3 py-2.5 text-right';
 const td = 'px-3 py-2.5 text-right tabular-nums';
@@ -54,6 +55,7 @@ function accuracyTone(v) {
 
 /** Forecast accuracy (BRD v2.0 section 8): revenue won in each period against the committed forecast stored at its start. */
 export function ForecastAccuracyCard({ member }) {
+    const confirm = useConfirm();
     const qc = useQueryClient();
     const [periodType, setPeriodType] = useState('QUARTER');
     const [error, setError] = useState(null);
@@ -63,8 +65,8 @@ export function ForecastAccuracyCard({ member }) {
         onSuccess: () => { setError(null); qc.invalidateQueries({ queryKey: ['rep-forecast-accuracy'] }); },
         onError: e => setError(errorMessage(e)),
     });
-    const takeSnapshot = () => {
-        if (data?.current_period?.has_snapshot && !window.confirm(`Replace the forecast stored for ${data.current_period.label}? The accuracy for this period will then be measured from now.`)) return;
+    const takeSnapshot = async () => {
+        if (data?.current_period?.has_snapshot && !(await confirm({ title: `Replace the forecast stored for ${data.current_period.label}?`, message: 'The accuracy for this period will then be measured from now.', confirmLabel: 'Replace' }))) return;
         snapshot.mutate();
     };
     return (

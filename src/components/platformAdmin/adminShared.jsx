@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import KpiTile from '../ui/KpiTile';
+import { errorText } from '../../lib/apiErrors';
 
 // Platform admin console (pages/PlatformAdmin.jsx): cards, badges, error banner and formatting helpers.
 
@@ -97,7 +98,5 @@ export function ErrorBanner({ message }) {
     );
 }
 
-export const errDetail = (e, fallback) => {
-    const d = e?.response?.data?.detail;
-    return typeof d === 'string' ? d : fallback;
-};
+// The text for a failed request: friendly message + request reference (lib/apiErrors.js errorText)
+export const errDetail = (e, fallback) => errorText(e, fallback);

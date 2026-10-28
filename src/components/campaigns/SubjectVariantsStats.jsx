@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FlaskConical, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
 import { subjectVariantsApi } from '../../api/subjectVariants';
+import { useConfirm } from '../ui/ConfirmDialog';
 
 // Per-variant results of a step's subject A/B test (BR-SF-18): sent, unique opened /
 // clicked, replied, rates, the winner by open rate (after the minimum sample size) and
@@ -16,6 +17,7 @@ const STATUS_STYLE = {
 
 export default function SubjectVariantsStats({ campaignId, step }) {
     const queryClient = useQueryClient();
+    const confirm = useConfirm();
     const [showHistory, setShowHistory] = useState(false);
     const [error, setError] = useState(null);
 
@@ -46,10 +48,12 @@ export default function SubjectVariantsStats({ campaignId, step }) {
     if (!variants.length) return null;
     const winner = data.winner || {};
 
-    const promote = (v) => {
-        const ok = window.confirm(
-            `Promote variant ${v.label} ("${v.subject}")?\n\nAll remaining unsent emails of step ${step} will use this subject. Emails already sent are not changed, and the test is closed.`
-        );
+    const promote = async (v) => {
+        const ok = await confirm({
+            title: `Promote variant ${v.label}?`,
+            message: `"${v.subject}" — all remaining unsent emails of step ${step} will use this subject. Emails already sent are not changed, and the test is closed.`,
+            confirmLabel: 'Promote',
+        });
         if (ok) promoteMutation.mutate(v.label);
     };
 

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, X, Layers } from 'lucide-react';
 import { contactsApi } from '../../api/contacts';
+import { activeFields, filterSpecOf } from '../../lib/customProperties';
 
 /**
  * AND / OR filter builder (BR-CM-18). Value shape matches the API:
@@ -49,9 +50,10 @@ export function useFilterFields() {
             ['company.domain', 'Company domain', 'text'], ['company.annual_revenue', 'Company revenue', 'number'],
             ['company.lifecycle_stage', 'Company lifecycle stage', 'enum', opt(meta?.lifecycle_stages)],
         ];
-        const custom = fields.map(f => {
-            const type = { NUMBER: 'number', DATE: 'date', SELECT: 'enum', RADIO: 'enum', MULTI_CHECKBOX: 'enum' }[f.field_type] || 'text';
-            return [`custom.${f.field_key}`, f.label, type, f.options?.map(o => [o, o])];
+        // Choice properties filter by stored value, shown by label (C-17); BOOLEAN as Yes / No
+        const custom = activeFields(fields).map(f => {
+            const { type, options } = filterSpecOf(f);
+            return [`custom.${f.field_key}`, f.label, type, options];
         });
         return [...base, ...custom].map(([key, label, type, options]) => ({ key, label, type, options }));
     }, [meta, fields, owners, facets]);

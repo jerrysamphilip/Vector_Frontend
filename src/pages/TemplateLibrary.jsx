@@ -4,11 +4,10 @@ import { Plus, Pencil, Trash2, Eye, FileText, Search, AlertTriangle, RefreshCw }
 import { templatesApi } from '../api/sales';
 import { PageHeader, card, cardShadow, selectSm, Empty } from '../components/sales/shared';
 import { Modal, Field, inputClass, PrimaryButton, SecondaryButton, ErrorNote, relativeDate } from '../components/contacts/shared';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { errorText } from '../lib/apiErrors';
 
-const errText = (e) => {
-    const d = e?.response?.data?.detail;
-    return typeof d === 'string' ? d : 'Something went wrong';
-};
+const errText = (e) => errorText(e);
 
 function TemplateModal({ template, categories, mergeFields, onClose }) {
     const qc = useQueryClient();
@@ -85,6 +84,7 @@ function PreviewModal({ template, onClose }) {
 }
 
 export default function TemplateLibrary() {
+    const confirm = useConfirm();
     const qc = useQueryClient();
     const [q, setQ] = useState('');
     const [category, setCategory] = useState('');
@@ -149,7 +149,7 @@ export default function TemplateLibrary() {
                                         <button onClick={() => setPreview(t)} className="p-1.5 text-slate-400 hover:text-slate-700" aria-label="Preview"><Eye className="w-4 h-4" /></button>
                                         {t.can_edit && <>
                                             <button onClick={() => setEditing(t)} className="p-1.5 text-slate-400 hover:text-slate-700" aria-label="Edit"><Pencil className="w-4 h-4" /></button>
-                                            <button onClick={() => window.confirm(`Delete "${t.name}"?`) && remove.mutate(t)} className="p-1.5 text-slate-400 hover:text-red-600" aria-label="Delete"><Trash2 className="w-4 h-4" /></button>
+                                            <button onClick={async () => { if (await confirm({ title: `Delete "${t.name}"?`, confirmLabel: 'Delete', danger: true })) remove.mutate(t); }} className="p-1.5 text-slate-400 hover:text-red-600" aria-label="Delete"><Trash2 className="w-4 h-4" /></button>
                                         </>}
                                     </td>
                                 </tr>

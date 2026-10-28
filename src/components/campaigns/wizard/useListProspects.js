@@ -44,7 +44,7 @@ export function useListProspects({ selectedListId, enabled, queryClient }) {
         mutationFn: (prospectId) => prospectsApi.deleteProspect(prospectId),
         onSuccess: () => {
             refetchProspects();
-            queryClient.invalidateQueries(['prospect-lists']);
+            queryClient.invalidateQueries({ queryKey: ['prospect-lists'] });
             setDeleteConfirmProspectId(null);
         },
     });

@@ -5,6 +5,7 @@ import { authApi } from "../api/auth";
 
 import bg from "../assets/bg.png";
 import logo from "../assets/logo.png";
+import { errorText } from '../lib/apiErrors';
 
 export default function ResetPassword() {
     const navigate = useNavigate();
@@ -42,7 +43,7 @@ export default function ResetPassword() {
             setSuccess("Password reset successful. Redirecting to login...");
             setTimeout(() => navigate("/login", { replace: true }), 1500);
         } catch (err) {
-            setError(err?.response?.data?.detail || "Failed to reset password");
+            setError(errorText(err, "Failed to reset password"));
         } finally {
             setSubmitting(false);
         }

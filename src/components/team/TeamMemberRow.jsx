@@ -1,8 +1,10 @@
 import { ChevronDown, Mail, Network, Send, Settings2, Trash2, UserCheck, UserX } from 'lucide-react';
 import { RoleBadge, Avatar, StatusBadge, formatDate } from './teamShared';
+import { useConfirm } from '../ui/ConfirmDialog';
 
 // One team member: avatar, role (editable by super admins), reports-to, status, last active and actions.
 export default function TeamMemberRow({ u, i, team }) {
+    const confirm = useConfirm();
     const {
         canChangeRole, canSetPerms, canToggleStatus, changeRoleMutation, currentRole, currentUser,
         deactivateMutation, handleRoleSave, hierarchyById, permanentDeleteMutation, reactivateMutation,
@@ -125,7 +127,7 @@ export default function TeamMemberRow({ u, i, team }) {
                     )}
                     {canDelete && (
                         <button
-                            onClick={() => { if (window.confirm(`Permanently delete ${u.email}? This cannot be undone.`)) permanentDeleteMutation.mutate(u.user_id); }}
+                            onClick={async () => { if (await confirm({ title: `Permanently delete ${u.email}?`, message: 'This cannot be undone.', confirmLabel: 'Delete permanently', danger: true })) permanentDeleteMutation.mutate(u.user_id); }}
                             disabled={permanentDeleteMutation.isPending}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors disabled:opacity-50">
                             <Trash2 className="w-3.5 h-3.5" />Delete

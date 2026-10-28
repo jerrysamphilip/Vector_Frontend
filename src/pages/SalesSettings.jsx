@@ -5,11 +5,13 @@ import { settingsApi, workflowApi, productsApi, moneyExact } from '../api/sales'
 import { PageHeader, card, cardShadow, useTeamOwners, Seg } from '../components/sales/shared';
 import { Modal, Field, inputClass, PrimaryButton, SecondaryButton, ErrorNote } from '../components/contacts/shared';
 import { DiscountApprovalSettings } from '../components/sales/QuoteApproval';
+import LoadError from '../components/ui/LoadError';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useToast } from '../components/ui/Toast';
+import { useApiQuery } from '../lib/useApiQuery';
+import { errorText } from '../lib/apiErrors';
 
-const errText = (e) => {
-    const d = e?.response?.data?.detail;
-    return typeof d === 'string' ? d : d?.message || 'Something went wrong';
-};
+const errText = (e) => errorText(e);
 
 function Section({ title, subtitle, children, action }) {
     return (
@@ -299,15 +301,21 @@ function RuleModal({ rule, meta, owners, onClose }) {
 function WorkflowRules({ owners }) {
     const qc = useQueryClient();
     const { data: meta } = useQuery({ queryKey: ['workflow-meta'], queryFn: workflowApi.meta, staleTime: 300000 });
-    const { data: rules = [] } = useQuery({ queryKey: ['workflow-rules'], queryFn: workflowApi.list });
+    const { data: rulesData, error: rulesError, refetch: refetchRules } = useApiQuery(['workflow-rules'], () => workflowApi.list());
+    const rules = rulesData || [];
     const [editing, setEditing] = useState(null);
+    const confirm = useConfirm();
+    const toast = useToast();
     const refresh = () => qc.invalidateQueries({ queryKey: ['workflow-rules'] });
-    const toggle = useMutation({ mutationFn: (r) => workflowApi.update(r.rule_id, { active: !r.active }), onSuccess: refresh });
-    const remove = useMutation({ mutationFn: (r) => workflowApi.remove(r.rule_id), onSuccess: refresh });
+    const toggle = useMutation({ mutationFn: (r) => workflowApi.update(r.rule_id, { active: !r.active }), onSuccess: refresh,
+        onError: (e) => toast.error(e, { title: 'Could not change the rule' }) });
+    const remove = useMutation({ mutationFn: (r) => workflowApi.remove(r.rule_id), onSuccess: () => { refresh(); toast.success('Rule deleted'); },
+        onError: (e) => toast.error(e, { title: 'Could not delete the rule' }) });
     return (
         <Section title="Workflow rules" subtitle="When a field changes, create a task, send an alert or set another field."
             action={<SecondaryButton onClick={() => setEditing({})}><Plus className="w-4 h-4" /> New rule</SecondaryButton>}>
-            {!rules.length && <p className="text-sm text-slate-400 py-4 text-center">No rules yet.</p>}
+            {rulesError && <LoadError error={rulesError} onRetry={refetchRules} title="Couldn't load the workflow rules" compact />}
+            {!rulesError && rulesData && !rules.length && <p className="text-sm text-slate-400 py-4 text-center">No rules yet.</p>}
             <div className="divide-y divide-slate-100">
                 {rules.map(r => (
                     <div key={r.rule_id} className="py-3 flex items-center gap-3">
@@ -321,7 +329,7 @@ function WorkflowRules({ owners }) {
                             <input type="checkbox" className="accent-indigo-600" checked={r.active} onChange={() => toggle.mutate(r)} /> Active
                         </label>
                         <button onClick={() => setEditing(r)} className="p-1.5 text-slate-400 hover:text-slate-700" aria-label="Edit"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => window.confirm(`Delete rule "${r.name}"?`) && remove.mutate(r)} className="p-1.5 text-slate-400 hover:text-red-600" aria-label="Delete"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={async () => { if (await confirm({ title: `Delete rule "${r.name}"?`, confirmLabel: 'Delete', danger: true })) remove.mutate(r); }} className="p-1.5 text-slate-400 hover:text-red-600" aria-label="Delete"><Trash2 className="w-4 h-4" /></button>
                     </div>
                 ))}
             </div>
@@ -393,8 +401,9 @@ function Products() {
 }
 
 export default function SalesSettings() {
-    const { data: settings, isLoading } = useQuery({ queryKey: ['sales-settings'], queryFn: settingsApi.get });
+    const { data: settings, error: loadError, isLoading, refetch } = useApiQuery(['sales-settings'], () => settingsApi.get());
     const owners = useTeamOwners();
+    if (loadError) return <div className="space-y-6"><PageHeader title="Sales settings" /><LoadError error={loadError} onRetry={refetch} title="Couldn't load the sales settings" /></div>;
     if (isLoading || !settings) return <p className="text-sm text-slate-400">Loading…</p>;
     if (!settings.can_edit) {
         return <div className="space-y-6"><PageHeader title="Sales settings" /><p className="text-sm text-slate-500">Only admins can change sales settings.</p></div>;

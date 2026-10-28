@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { managerCandidates, hierarchyError } from '../../lib/hierarchy';
-import { useDialog } from '../common/useDialog';
+import DialogPanel from '../ui/DialogPanel';
 
 // Sales hierarchy (BRD 5.4): level + "Reports to" fields and the dialog that sets them for one member.
 
@@ -48,11 +48,11 @@ export default function HierarchyModal({ user, hierarchy, onClose, onSave, isSav
     const [level, setLevel] = useState(current?.sales_level || null);
     const [managerId, setManagerId] = useState(current?.manager_id || null);
     const problem = hierarchyError(hierarchy?.users || [], user.user_id, level, managerId);
-    const { titleId, dialogProps } = useDialog({ onClose });
+    const titleId = useId();
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-            <div {...dialogProps} className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden outline-none">
+            <DialogPanel onClose={onClose} labelledBy={titleId} className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden outline-none">
                 <div className="px-6 py-5 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #2d6bbf, #73C8D2)' }}>
                     <div>
                         <h3 id={titleId} className="font-semibold !text-white">Sales hierarchy</h3>
@@ -81,7 +81,7 @@ export default function HierarchyModal({ user, hierarchy, onClose, onSave, isSav
                         </button>
                     </div>
                 </div>
-            </div>
+            </DialogPanel>
         </div>
     );
 }

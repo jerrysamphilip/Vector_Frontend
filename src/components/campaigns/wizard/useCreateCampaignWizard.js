@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { campaignApi } from '../../../api/campaigns';
 import { campaignWizardApi } from '../../../api/campaignWizard';
@@ -11,38 +11,30 @@ import { useProspectUpload } from './useProspectUpload';
 import { useTemplateEditor } from './useTemplateEditor';
 import { trackVersion, useWizardMutations } from './useWizardMutations';
 import { withVersion } from '../../../lib/staleVersion';
+import { useApiQuery } from '../../../lib/useApiQuery';
+import { errorMessage } from '../../../lib/apiErrors';
+import { normalizeForm, SENDER_FIELDS, serverFieldErrors, validateForm } from '../../../lib/fieldValidation';
 
 // All state and actions of the create/edit campaign wizard (pages/CreateCampaign.jsx), returned as one
 // object the step components read from. Concerns live in their own hooks:
 //   useCampaignDraft (draft restore + auto-save), useProspectUpload / useListProspects (step 3),
 //   useTemplateEditor (step 4), useWizardMutations (server actions of every step).
 
-/** Backend schedule preview (timezone-aware send dates) of the sequence steps. */
-function useSchedulePreview(sequenceSteps) {
-    const [schedulePreview, setSchedulePreview] = useState([]);
-    const [scheduleLoading, setScheduleLoading] = useState(false);
+/** The part of the steps the schedule preview depends on (also its query key). */
+export function scheduleSteps(sequenceSteps) {
+    return sequenceSteps.map(s => ({ step_number: s.step_number, wait_days: s.wait_days || 0 }));
+}
 
-    // Fetch schedule preview from backend when sequence steps change
-    useEffect(() => {
-        const fetchSchedulePreview = async () => {
-            if (sequenceSteps.length === 0) return;
-
-            setScheduleLoading(true);
-            try {
-                const result = await campaignWizardApi.schedulePreview(sequenceSteps);
-                setSchedulePreview(result.schedule || []);
-            } catch (error) {
-                console.error('Failed to fetch schedule preview:', error);
-                // Fallback: keep existing preview or set empty
-            } finally {
-                setScheduleLoading(false);
-            }
-        };
-
-        fetchSchedulePreview();
-    }, [sequenceSteps]);
-
-    return { schedulePreview, scheduleLoading };
+/**
+ * Backend schedule preview (timezone-aware send dates) of the sequence steps. Refetched when the steps' timing
+ * changes; the superseded request is aborted and the previous preview stays on screen until the new one arrives.
+ */
+export function useSchedulePreview(sequenceSteps) {
+    const steps = scheduleSteps(sequenceSteps);
+    const { data, isFetching } = useApiQuery(['schedule-preview', steps], () => campaignWizardApi.schedulePreview(steps), {
+        enabled: steps.length > 0, placeholderData: keepPreviousData, retry: false, staleTime: 5 * 60 * 1000,
+    });
+    return { schedulePreview: data?.schedule || [], scheduleLoading: isFetching };
 }
 
 export function useCreateCampaignWizard() {
@@ -203,25 +195,34 @@ export function useCreateCampaignWizard() {
             setErrors({ inboxes: 'Select at least one inbox for rotation' });
             return;
         }
+        // F-07 / F-08: sender name / title and the CTA link (a full https:// URL); the server checks again
+        const senderErrors = validateForm(SENDER_FIELDS, formData);
+        if (Object.keys(senderErrors).length) {
+            setErrors(senderErrors);
+            setTimeout(() => document.querySelector('[data-sender-details] [aria-invalid="true"]')?.focus(), 0);
+            return;
+        }
+        const data = normalizeForm(SENDER_FIELDS, formData);
+        setFormData(data);
 
         // If editing an existing campaign, update it and go to step 2
         if (campaignId) {
             campaignApi.update(campaignId, withVersion(
-                { ...formData, send_window_end: formData.send_window_end || null }, campaignVersionRef.current))
+                { ...data, send_window_end: data.send_window_end || null }, campaignVersionRef.current))
                 .then((updated) => {
                     trackVersion(campaignVersionRef, updated);
                     setCurrentStep(2);
                     queryClient.invalidateQueries({ queryKey: ['campaigns'] });
                 })
                 .catch((err) => {
-                    setErrors({ submit: err.response?.data?.detail || 'Failed to update campaign' });
+                    setErrors({ ...serverFieldErrors(err), submit: errorMessage(err, 'Failed to update campaign') });
                 });
             return;
         }
 
         mutations.createMutation.mutate({
-            ...formData,
-            send_window_end: formData.send_window_end || null,
+            ...data,
+            send_window_end: data.send_window_end || null,
         });
     };
 

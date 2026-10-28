@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FlaskConical, Plus, Trash2, Save, X, Edit2, Trophy, AlertTriangle } from 'lucide-react';
 import { subjectVariantsApi } from '../../api/subjectVariants';
+import { useConfirm } from '../ui/ConfirmDialog';
 
 // A/B subject-line variants of one sequence step (BR-SF-18). Each enrolled prospect's
 // email for the step is assigned one variant when it is scheduled; sent emails never change.
@@ -14,6 +15,7 @@ const errorText = (error) => {
 };
 
 export default function SubjectVariantsEditor({ campaignId, step }) {
+    const confirm = useConfirm();
     const queryClient = useQueryClient();
     const key = ['subject-variants', campaignId, step];
     const [newSubject, setNewSubject] = useState('');
@@ -157,7 +159,7 @@ export default function SubjectVariantsEditor({ campaignId, step }) {
                                             <Edit2 className="w-3.5 h-3.5" />
                                         </button>
                                         <button
-                                            onClick={() => { if (window.confirm(`Delete subject variant ${v.label}?`)) deleteMutation.mutate(v.label); }}
+                                            onClick={async () => { if (await confirm({ title: `Delete subject variant ${v.label}?`, confirmLabel: 'Delete', danger: true })) deleteMutation.mutate(v.label); }}
                                             className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete variant"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />

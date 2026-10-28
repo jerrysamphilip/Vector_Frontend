@@ -99,7 +99,7 @@ export function useProspectUpload({ setErrors, setSelectedLists, queryClient }) 
             setUploadConfirmed(true);
 
             // Refresh prospect lists
-            queryClient.invalidateQueries(['prospect-lists']);
+            queryClient.invalidateQueries({ queryKey: ['prospect-lists'] });
         } catch (error) {
             console.error('Upload confirm error:', error);
             setErrors({ upload: error.response?.data?.detail || error.message });

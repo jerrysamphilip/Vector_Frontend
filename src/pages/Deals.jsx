@@ -4,15 +4,17 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Loader2, Briefcase, LayoutGrid, List, Settings2, X, AlertTriangle, Trophy, XCircle } from 'lucide-react';
 import { accountsApi, errorMessage } from '../api/contacts';
 import { dealsApi, money, moneyShort, stagesApi } from '../api/sales';
-import { getStoredUser } from '../lib/authStorage';
+import { useAuth } from '../auth/AuthProvider';
 import { withVersion } from '../lib/staleVersion';
 import { ErrorNote, Field, Modal, OwnerSelect, PrimaryButton, SecondaryButton, inputClass, BRAND_GRADIENT } from '../components/contacts/shared';
 import { ClientTypeBadge, ClientTypeFilter, DealStatusBadge, Empty, OwnerFilter, PageHeader, Seg, card, cardShadow, selectSm, useLeadsMeta, useTeamOwners } from '../components/sales/shared';
 import CloseReasonModal from '../components/sales/CloseReasonModal';
+import LoadError from '../components/ui/LoadError';
+import { useApiQuery } from '../lib/useApiQuery';
 
 export function DealFormModal({ onClose, onSaved, defaults = {}, defaultAccountName, contactName }) {
     const owners = useTeamOwners();
-    const me = getStoredUser();
+    const { user: me } = useAuth();
     const meta = useLeadsMeta();
     const { data: stages = [] } = useQuery({ queryKey: ['sales-stages'], queryFn: () => stagesApi.list() });
     const { data: companies } = useQuery({ queryKey: ['accounts', 'picker'], queryFn: () => accountsApi.list({ page_size: 200, sort_by: 'name', sort_order: 'asc' }) });
@@ -125,8 +127,7 @@ function DealCard({ deal, onDragStart }) {
 export default function Deals() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
-    const me = getStoredUser();
-    const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(me?.role);
+    const { isAdmin } = useAuth();
     const [params, setParams] = useSearchParams();
     const mode = params.get('mode') || (params.get('close_from') ? 'list' : 'board');
     const owner = params.get('owner') || '';
@@ -144,9 +145,10 @@ export default function Deals() {
     const update = (patch) => setParams(p => { const n = new URLSearchParams(p); Object.entries(patch).forEach(([k, v]) => (v ? n.set(k, v) : n.delete(k))); return n; });
 
     const filters = { owner, client_type: clientType };
-    const board = useQuery({ queryKey: ['deals', 'board', filters], enabled: mode === 'board', queryFn: () => dealsApi.board(filters) });
-    const list = useQuery({ queryKey: ['deals', 'list', filters, status, closeFrom, closeTo, staleOnly], enabled: mode === 'list', placeholderData: keepPreviousData,
-        queryFn: () => dealsApi.list({ ...filters, status, close_from: closeFrom, close_to: closeTo, stale: staleOnly || undefined, page_size: 500 }) });
+    const board = useApiQuery(['deals', 'board', filters], () => dealsApi.board(filters), { enabled: mode === 'board' });
+    const list = useApiQuery(['deals', 'list', filters, status, closeFrom, closeTo, staleOnly],
+        () => dealsApi.list({ ...filters, status, close_from: closeFrom, close_to: closeTo, stale: staleOnly || undefined, page_size: 500 }),
+        { enabled: mode === 'list', placeholderData: keepPreviousData });
     const move = useMutation({
         mutationFn: ({ deal, stage_id, closed_reason }) => dealsApi.update(deal.opportunity_id, withVersion(closed_reason ? { stage_id, closed_reason } : { stage_id }, deal)),
         onSuccess: () => { setClosing(null); setError(null); queryClient.invalidateQueries({ queryKey: ['deals'] }); }, onError: e => { setClosing(null); setError(errorMessage(e)); },
@@ -193,7 +195,8 @@ export default function Deals() {
             <ErrorNote message={error} />
 
             {mode === 'board' ? (
-                board.isLoading ? <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div> : (
+                board.isLoading ? <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+                : board.error ? <LoadError error={board.error} onRetry={board.refetch} title="Couldn't load the opportunity board" /> : (
                     <div>
                         <div className="flex gap-4 overflow-x-auto pb-2">
                         {(board.data?.columns || []).map(col => (
@@ -225,6 +228,7 @@ export default function Deals() {
             ) : (
                 <div className={`${card} overflow-hidden`} style={cardShadow}>
                     {list.isLoading ? <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+                        : list.error ? <LoadError error={list.error} onRetry={list.refetch} title="Couldn't load opportunities" compact />
                         : !(list.data?.items || []).length ? <Empty icon={Briefcase} title="No opportunities" text="Convert an SQL or create an opportunity." /> : (
                             <div className="overflow-x-auto"><table className="w-full">
                                 <thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase tracking-wide">

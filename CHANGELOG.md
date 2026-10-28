@@ -10,6 +10,40 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions follow [SemVer
 Release candidate for BRD v2.0 Phase 1 (R1.0) and Phase 2 (R2.1), released together with backend 1.1.0.
 
 ### Added
+- Custom property safety (C-17): contact and company property settings list deactivated properties
+  (`?include_inactive=true`) marked "Inactive" with Reactivate; Delete is now "Deactivate" (saved values are kept and
+  still exported) and is not offered for system properties; properties can be edited (label, group, required,
+  choices, maximum length) with the data type locked; renamed choices keep their stored values (options sent as
+  `{value, label}`); new types Yes / No (BOOLEAN) and Long text (LONG_TEXT); `max_length` for text properties (up to
+  1000 / 10000) enforced on record forms, with the server's 400 message shown. Pickers, filters and record pages show
+  choice labels and store values (`src/lib/customProperties.js`).
+- Mailboxes show when reply reading (IMAP) is derived from the SMTP settings or not set up (`imap_configured`,
+  `imap_derived_from_smtp`), on the list, the detail and the IMAP test result (S-26).
+- Sending-domain DNS records compared with live DNS (S-25): per record OK / Add / Update / Unknown (icon and word),
+  what DNS has now, the value to publish with a copy button (SPF merged into the existing record), the summary and
+  when DNS was checked.
+- Field validation and normalisation on contact, company and campaign sender forms (`src/lib/fieldValidation.js`):
+  names, e-mail, international phone, LinkedIn/website/CTA links (https, no script schemes), country/state/postal
+  code, revenue, column lengths, no HTML; server 422 errors shown on their fields.
+- Every dialog runs on the Radix-based DialogPanel; the hand-rolled focus trap (useDialog / activateModal) is gone and
+  the mobile nav drawer uses Radix FocusScope / DismissableLayer.
+- Campaign editor after launch (`/app/campaigns/:id/edit`): steps, persona versions, preview as a real contact,
+  sender/window/inboxes, "N unsent emails will be updated" before saving; Settings tab editable for active campaigns.
+- Companies: saved views, column chooser, archived filter, custom properties, backfill preview/run/undo, export.
+- Duplicate review page, merge preview, contact e-mail history and merge history, export log (admins).
+- Import wizard with live progress and cancel; import history.
+- Toasts and confirm dialogs replace window.alert/confirm; friendly error text with request reference; 22 pages that
+  showed an empty state or spun forever on a failed load now show the error with Retry.
+- One auth context (`src/auth`): session from /api/auth/me, single-flight refresh, idle warning before the 30-minute
+  limit, sign-out across tabs; one shared read hook (`src/lib/useApiQuery.js`) with request cancellation.
+- Dialogs, menus and tabs on Radix UI primitives (@radix-ui/react-dropdown-menu, -tabs, -focus-scope,
+  -dismissable-layer; MIT); render tests for all 49 pages.
+- Campaigns list paging (page size 10/20/50/100); dashboard totals and automation pickers read every
+  campaign (`campaignApi.listAll`), no longer only the first 20.
+- Load-error panel with request reference and Retry on list and detail pages (a 500 no longer looks like
+  "No contacts yet" or "not found"); bulk edit/delete in the list modal reports "X of Y" and keeps failed rows selected.
+- CSV cells guarded against spreadsheet formula injection (`src/lib/csv.js`); report date ranges use the local
+  calendar date instead of UTC (`src/lib/dates.js`).
 - CI gates (backend `docs/CI_GATES.md`): help anchors test (W-13, `src/help/helpAnchors.test.js`: every
   in-app route has a help article and every help link resolves), release identity check, blocking
   `npm audit` (high and critical) with a dated ignore list in `ci/npm_audit_ignore.txt`.

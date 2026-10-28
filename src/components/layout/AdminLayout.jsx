@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRef, useState, useId } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { NavLink, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -8,9 +8,11 @@ import {
 } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import { authApi } from '../../api/auth';
-import { clearAuthSession, getStoredUser } from '../../lib/authStorage';
-import { useDialog } from '../common/useDialog';
+import { useAuth } from '../../auth/AuthProvider';
+import DialogPanel from '../ui/DialogPanel';
+import { NavDrawerBackdrop, NavDrawerScope } from './NavDrawerLayer';
 import { useNavDrawer } from './useNavDrawer';
+import { errorText } from '../../lib/apiErrors';
 
 const adminNav = [
     { name: 'Dashboard',  href: '/admin',         icon: LayoutDashboard },
@@ -51,7 +53,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
     const [forgotMsg, setForgotMsg] = useState('');
 
     // role=dialog, focus trap, Escape closes, focus returns to the profile button
-    const { titleId, dialogProps } = useDialog({ onClose, returnFocusRef });
+    const titleId = useId();
 
     const forgotPwMutation = useMutation({
         mutationFn: () => authApi.forgotPassword(currentUser?.email),
@@ -60,7 +62,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
             setTimeout(() => setForgotMsg(''), 5000);
         },
         onError: (err) => {
-            setForgotMsg(err?.response?.data?.detail || 'Failed to send reset link');
+            setForgotMsg(errorText(err, 'Failed to send reset link'));
             setTimeout(() => setForgotMsg(''), 5000);
         },
     });
@@ -76,7 +78,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
             setSuccess(true);
             setTimeout(onClose, 2000);
         } catch (err) {
-            setError(err?.response?.data?.detail || 'Failed to change password');
+            setError(errorText(err, 'Failed to change password'));
         } finally {
             setLoading(false);
         }
@@ -85,8 +87,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-            <motion.div
-                {...dialogProps}
+            <DialogPanel as={motion.div} onClose={onClose} returnFocusRef={returnFocusRef} labelledBy={titleId}
                 className="relative w-full max-w-md max-h-[90vh] max-h-[90dvh] overflow-x-hidden overflow-y-auto bg-white rounded-2xl shadow-2xl outline-none"
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -163,7 +164,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
                         {loading ? 'Updating...' : 'Update Password'}
                     </button>
                 </form>
-            </motion.div>
+            </DialogPanel>
         </div>
     );
 }
@@ -172,7 +173,7 @@ function ChangePasswordModal({ currentUser, onClose, returnFocusRef }) {
 export default function AdminLayout() {
     const location = useLocation();
     const navigate = useNavigate();
-    const currentUser = getStoredUser();
+    const { user: currentUser, logout } = useAuth();
 
     const [profileOpen, setProfileOpen] = useState(false);
     const [changePwOpen, setChangePwOpen] = useState(false);
@@ -182,19 +183,15 @@ export default function AdminLayout() {
     const isDrawer = !drawer.isDesktop;
     const drawerOpen = isDrawer && drawer.open;
 
-    const queryClient = useQueryClient();
     const handleLogout = async () => {
-        try { await authApi.logout(); } catch { /* sign out locally anyway */ }
-        clearAuthSession();
-        queryClient.clear();
+        await logout(); // revokes the session server side; drops this user's cached data
         navigate('/login', { replace: true });
     };
 
     return (
         <>
-            {drawerOpen && (
-                <div className="fixed top-0 right-0 bottom-0 left-0 z-40 bg-slate-900/50 lg:hidden" onClick={drawer.closeDrawer} aria-hidden="true" />
-            )}
+            {drawerOpen && <NavDrawerBackdrop onClose={drawer.closeDrawer} />}
+            <NavDrawerScope open={drawerOpen}>
             <motion.aside
                 id="admin-sidebar"
                 ref={drawer.drawerRef}
@@ -290,6 +287,7 @@ export default function AdminLayout() {
                     </button>
                 </div>
             </motion.aside>
+            </NavDrawerScope>
 
             {/* Profile popup */}
             <AnimatePresence>

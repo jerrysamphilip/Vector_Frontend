@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import LoadError from '../components/ui/LoadError';
+import { isNotFound } from '../lib/apiErrors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, Loader2, Rocket, Ban, History, Trash2 } from 'lucide-react';
 import { errorMessage } from '../api/contacts';
@@ -7,6 +9,7 @@ import { leadsApi } from '../api/sales';
 import { useRecordVersion, versionedSave } from '../lib/useRecordVersion';
 import { Avatar, ErrorNote, Field, Modal, OwnerSelect, PrimaryButton, SecondaryButton, formatDateTime, inputClass, relativeDate } from '../components/contacts/shared';
 import { LeadStageBadge, card, cardShadow, useLeadsMeta, useTeamOwners } from '../components/sales/shared';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const toLocal = (v) => {
     if (!v) return '';
@@ -60,11 +63,12 @@ export default function LeadDetail() {
 
 /** The lead record; also shown beside the list in the Leads split view (embedded). */
 export function LeadPanel({ id, embedded = false, onRemoved }) {
+    const confirm = useConfirm();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const meta = useLeadsMeta();
     const owners = useTeamOwners();
-    const { data: lead, isLoading, error: loadError } = useQuery({ queryKey: ['lead', id], queryFn: () => leadsApi.get(id), retry: false });
+    const { data: lead, isLoading, error: loadError, refetch } = useQuery({ queryKey: ['lead', id], queryFn: () => leadsApi.get(id), retry: false });
     const version = useRecordVersion(lead);
     const [error, setError] = useState(null);
     const [next, setNext] = useState({ next_step: '', next_step_at: '' });
@@ -89,6 +93,7 @@ export function LeadPanel({ id, embedded = false, onRemoved }) {
     const remove = useMutation({ mutationFn: () => leadsApi.remove(id), onSuccess: () => { refresh(); if (onRemoved) onRemoved(); else navigate('/app/leads'); }, onError: err => setError(errorMessage(err)) });
 
     if (isLoading) return <div className="py-32 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-indigo-500" /></div>;
+    if (loadError && !isNotFound(loadError)) return <LoadError error={loadError} onRetry={refetch} title="Couldn't load this lead" />;
     if (loadError || !lead) return <div className="py-24 text-center"><p className="text-lg font-bold text-slate-800">Lead not found</p><Link to="/app/leads" className="inline-block mt-4 text-sm font-semibold text-indigo-600">← Back to leads</Link></div>;
 
     const open = ['NEW', 'CONTACTED', 'ENGAGED', 'SQL'].includes(lead.stage);
@@ -131,7 +136,7 @@ export function LeadPanel({ id, embedded = false, onRemoved }) {
                             <SecondaryButton onClick={() => save.mutate({ stage: 'NEW' })} className="w-full">Recycle as new lead</SecondaryButton>
                         )}
                         {lead.stage !== 'CONVERTED' && (
-                            <button onClick={() => window.confirm('Delete this lead? The contact is kept.') && remove.mutate()}
+                            <button onClick={async () => { if (await confirm({ title: 'Delete this lead?', message: 'The contact is kept.', confirmLabel: 'Delete', danger: true })) remove.mutate(); }}
                                 className="w-full h-9 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center gap-1.5"><Trash2 className="w-4 h-4" /> Delete lead</button>
                         )}
                     </div>

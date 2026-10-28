@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, PauseCircle, PlayCircle, Send } from 'lucide-react';
 import { platformAdminApi } from '../../api/platformAdmin';
 import { Skeleton, SectionCard, errDetail } from './adminShared';
+import { useConfirm } from '../ui/ConfirmDialog';
 
 /** Platform-wide email scheduler pause switch (/scheduler/status|stop|start). */
 export default function SchedulerCard() {
@@ -16,12 +17,13 @@ export default function SchedulerCard() {
         mutationFn: (pause) => (pause ? platformAdminApi.pauseScheduler() : platformAdminApi.resumeScheduler()),
         onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin-scheduler'] }),
     });
-    const onToggle = () => {
+    const confirm = useConfirm();
+    const onToggle = async () => {
         const pause = Boolean(running);
-        const question = pause
-            ? 'Pause the email scheduler? No scheduled campaign email is sent for any tenant until it is resumed.'
-            : 'Resume the email scheduler? Scheduled campaign emails start sending again for every tenant.';
-        if (window.confirm(question)) toggle.mutate(pause);
+        const ok = await confirm(pause
+            ? { title: 'Pause the email scheduler?', message: 'No scheduled campaign email is sent for any tenant until it is resumed.', confirmLabel: 'Pause', danger: true }
+            : { title: 'Resume the email scheduler?', message: 'Scheduled campaign emails start sending again for every tenant.', confirmLabel: 'Resume' });
+        if (ok) toggle.mutate(pause);
     };
 
     return (

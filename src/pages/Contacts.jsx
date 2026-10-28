@@ -7,7 +7,10 @@ import {
 import { contactsApi, accountsApi, viewsApi, errorMessage } from '../api/contacts';
 import { BUILT_IN_VIEWS } from '../lib/contactViews';
 import { withVersion } from '../lib/staleVersion';
-import { getStoredUser } from '../lib/authStorage';
+import { useAuth } from '../auth/AuthProvider';
+import LoadError from '../components/ui/LoadError';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useToast } from '../components/ui/Toast';
 import ContactFormModal from '../components/contacts/ContactFormModal';
 import MergeDuplicatesModal from '../components/contacts/MergeDuplicatesModal';
 import CustomFieldsModal from '../components/contacts/CustomFieldsModal';
@@ -114,6 +117,7 @@ function ColumnChooser({ columns, setColumns, available, onClose }) {
 
 // ── Bulk actions ────────────────────────────────────────────────
 function BulkBar({ count, owners, canDelete, facets, fields, meta, listId, onAction, busy, onClear }) {
+    const confirm = useConfirm();
     const [mode, setMode] = useState(null);
     const [owner, setOwner] = useState(null);
     const [tag, setTag] = useState('');
@@ -150,7 +154,7 @@ function BulkBar({ count, owners, canDelete, facets, fields, meta, listId, onAct
                 {listId && <button onClick={() => run({ action: 'remove_from_list', list_id: listId })} className={btn}><X className="w-3.5 h-3.5" /> Remove from this list</button>}
                 <button onClick={() => setMode('enroll')} className={btn}><Megaphone className="w-3.5 h-3.5" /> Enroll in campaign</button>
                 {canDelete && (
-                    <button onClick={() => window.confirm(`Delete ${count} contact${count > 1 ? 's' : ''}? You can restore them from Recently deleted for 90 days.`) && run({ action: 'delete' })}
+                    <button onClick={async () => { if (await confirm({ title: `Delete ${count} contact${count > 1 ? 's' : ''}?`, message: 'You can restore them from Recently deleted for 90 days.', confirmLabel: 'Delete', danger: true })) run({ action: 'delete' }); }}
                         className="h-8 px-3 text-xs font-semibold rounded-lg bg-white border border-red-200 text-red-600 hover:bg-red-50 flex items-center gap-1.5">
                         <Trash2 className="w-3.5 h-3.5" /> Delete
                     </button>
@@ -296,12 +300,14 @@ function SaveViewModal({ view, state, canShare, onClose, onSaved }) {
 
 // ══════════════════════════════════════════════════════════════
 export default function Contacts() {
+    const confirm = useConfirm();
+    const toast = useToast();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
-    const me = getStoredUser();
+    const { hasRole } = useAuth();
     const { meta, stageLabel, statusLabel } = useCrmMeta();
     const canManage = meta?.can_manage ?? false;
-    const canDelete = canManage && me?.role !== 'AGENT';
+    const canDelete = canManage && !hasRole('AGENT');
 
     const [params, setParams] = useSearchParams();
     const [search, setSearch] = useState(params.get('q') || '');
@@ -379,7 +385,7 @@ export default function Contacts() {
     }, [urlQ]);
 
     const query = { q: debouncedSearch, owner, list_id: listId, account_id: accountId, filters, grade, score_min: scoreMin, sort_by: sortBy, sort_order: sortOrder, page, page_size: PAGE_SIZE };
-    const { data, isLoading, isFetching } = useQuery({
+    const { data, isLoading, isFetching, error: loadError, refetch } = useQuery({
         queryKey: ['contacts', query], queryFn: () => contactsApi.list(query), placeholderData: keepPreviousData, enabled: mode === 'table',
     });
     const { data: facets } = useQuery({ queryKey: ['contact-facets'], queryFn: contactsApi.facets });
@@ -442,7 +448,7 @@ export default function Contacts() {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                     {canManage && <>
-                        <Link to="/app/import" className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><Upload className="w-4 h-4" /> Import</Link>
+                        <Link to="/app/import?new=1" className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><Upload className="w-4 h-4" /> Import</Link>
                         {meta?.can_export && (
                             <div className="relative">
                                 <button onClick={() => setShowExport(s => !s)} className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><Download className="w-4 h-4" /> Export</button>
@@ -459,7 +465,8 @@ export default function Contacts() {
                             </div>
                         )}
                         <button onClick={() => setShowFields(true)} className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><SlidersHorizontal className="w-4 h-4" /> Properties</button>
-                        <button onClick={() => setShowMerge(true)} className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><GitMerge className="w-4 h-4" /> Duplicates</button>
+                        <button onClick={() => setShowMerge(true)} className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><GitMerge className="w-4 h-4" /> Find duplicates</button>
+                        <Link to="/app/contacts/duplicates" className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap">Duplicate review</Link>
                         <Link to="/app/recently-deleted" className="flex items-center gap-2 h-9 px-2.5 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap" title="Recently deleted"><Archive className="w-4 h-4" /></Link>
                     </>}
                     <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 text-white h-9 px-4 rounded-lg text-sm font-semibold hover:opacity-90 whitespace-nowrap" style={{ background: BRAND_GRADIENT }}>
@@ -510,7 +517,12 @@ export default function Contacts() {
                                 <button onClick={() => setSaveView({ view: null })} className="h-9 px-3 text-sm font-medium text-slate-500 hover:text-indigo-700 flex items-center gap-1.5" title="Save the current filters, sort and columns as a view in the sidebar"><Plus className="w-4 h-4" /> Save as view</button>
                             )}
                             {savedView?.can_edit && (
-                                <button onClick={() => window.confirm(`Delete view “${savedView.name}”?`) && viewsApi.remove(savedView.view_id).then(() => { queryClient.invalidateQueries({ queryKey: ['views'] }); applyView(BUILT_IN_VIEWS[0]); })}
+                                <button onClick={async () => {
+                                    if (!(await confirm({ title: `Delete view “${savedView.name}”?`, confirmLabel: 'Delete', danger: true }))) return;
+                                    viewsApi.remove(savedView.view_id)
+                                        .then(() => { queryClient.invalidateQueries({ queryKey: ['views'] }); applyView(BUILT_IN_VIEWS[0]); })
+                                        .catch(e => toast.error(e, { title: 'Could not delete the view' }));
+                                }}
                                     className="h-9 px-2 text-sm text-slate-400 hover:text-red-600" title="Delete this view">Delete view</button>
                             )}
                             <span className="ml-auto text-sm text-slate-500 flex items-center gap-2">
@@ -546,6 +558,8 @@ export default function Contacts() {
                         <Board params={{ q: debouncedSearch, owner, filters }} groupBy={groupBy} setGroupBy={setGroupBy} onOpen={id => navigate(`/app/contacts/${id}`)} />
                     ) : isLoading ? (
                         <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+                    ) : loadError && !data ? (
+                        <LoadError error={loadError} onRetry={refetch} title="Couldn't load contacts" />
                     ) : items.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
                             <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-50 to-violet-100 flex items-center justify-center mb-5"><Users className="w-9 h-9 text-indigo-400" /></div>

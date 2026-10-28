@@ -1,3 +1,4 @@
+import { localISODate } from '../../../lib/dates';
 import TimezonePicker from './TimezonePicker';
 import { Calendar, Clock, Globe } from 'lucide-react';
 
@@ -209,7 +210,7 @@ export default function DeliverySettingsSection({ wizard }) {
                         ref={dateInputRef}
                         type="date"
                         value={formData.start_date || ''}
-                        min={new Date().toISOString().split('T')[0]}
+                        min={localISODate()}
                         onChange={(e) => setFormData({ ...formData, start_date: e.target.value || null })}
                         className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-400 transition-all"
                     />

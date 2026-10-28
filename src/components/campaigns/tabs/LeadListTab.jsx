@@ -8,7 +8,11 @@ import { prospectsApi } from '../../../api/prospects';
 import { reportsApi } from '../../../api/reports';
 import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import Loading from '../../common/Loading';
+import LoadError from '../../ui/LoadError';
 import DialogPanel from '../../common/DialogPanel';
+import LeadTimingCells, { LeadTimingHeaders } from './LeadTimingCells';
+import { useToast } from '../../ui/Toast';
+import { useConfirm } from '../../ui/ConfirmDialog';
 
 // Status badge colors matching theme.
 // Real backend CampaignProspect statuses: ACTIVE, OPENED, COMPLETED, PAUSED,
@@ -46,6 +50,8 @@ function ProspectStatusBadge({ status }) {
 
 export default function LeadListTab({ campaignId }) {
     const queryClient = useQueryClient();
+    const toast = useToast();
+    const confirm = useConfirm();
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
 
@@ -59,9 +65,11 @@ export default function LeadListTab({ campaignId }) {
     const [selectedListId, setSelectedListId] = useState('');
 
     // Fetch prospects
-    const { data: prospects, isLoading } = useQuery({
-        queryKey: ['campaign-prospects', campaignId],
-        queryFn: () => campaignApi.getProspects(campaignId),
+    // Contacts removed from the campaign are hidden unless asked for (S-21)
+    const [showRemoved, setShowRemoved] = useState(false);
+    const { data: prospects, isLoading, error: loadError, refetch } = useQuery({
+        queryKey: ['campaign-prospects', campaignId, { showRemoved }],
+        queryFn: () => campaignApi.getProspects(campaignId, { includeRemoved: showRemoved }),
     });
 
     // Prospect lists for the "Add prospects" picker (only fetched once the modal opens)
@@ -75,7 +83,8 @@ export default function LeadListTab({ campaignId }) {
     const updateMutation = useMutation({
         mutationFn: ({ prospectId, updates }) => prospectsApi.updateProspect(prospectId, updates),
         onSuccess: () => {
-            queryClient.invalidateQueries(['campaign-prospects', campaignId]);
+            queryClient.invalidateQueries({ queryKey: ['campaign-prospects', campaignId] });
+            queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
             setEditingId(null);
             setEditValues({});
         },
@@ -86,7 +95,8 @@ export default function LeadListTab({ campaignId }) {
     const enrollMutation = useMutation({
         mutationFn: (listId) => campaignApi.enrollProspects(campaignId, [listId]),
         onSuccess: (result) => {
-            queryClient.invalidateQueries(['campaign-prospects', campaignId]);
+            queryClient.invalidateQueries({ queryKey: ['campaign-prospects', campaignId] });
+            queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
             setShowAddModal(false);
             setSelectedListId('');
             setEnrollReport({ enrolled: result?.enrolled_count || 0, rejected: result?.rejected || [], rejectedCount: result?.rejected_count, limitNotice: result?.daily_limit_notice });
@@ -97,15 +107,22 @@ export default function LeadListTab({ campaignId }) {
     const removeMutation = useMutation({
         mutationFn: (prospectId) => campaignApi.removeProspect(campaignId, prospectId),
         onSuccess: () => {
-            queryClient.invalidateQueries(['campaign-prospects', campaignId]);
+            queryClient.invalidateQueries({ queryKey: ['campaign-prospects', campaignId] });
+            queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+            toast.success('Contact removed from the campaign');
         },
+        onError: (e) => toast.error(e),
     });
 
-    const handleRemove = (prospect) => {
+    const handleRemove = async (prospect) => {
         const name = prospect.name || prospect.email;
-        if (window.confirm(`Remove ${name} from this campaign?\n\nAny emails not yet sent to them will be cancelled. Emails already sent are unaffected.`)) {
-            removeMutation.mutate(prospect.prospect_id);
-        }
+        const ok = await confirm({
+            title: `Remove ${name} from this campaign?`,
+            message: 'Any emails not yet sent to them will be cancelled. Emails already sent are unaffected.',
+            confirmLabel: 'Remove',
+            danger: true,
+        });
+        if (ok) removeMutation.mutate(prospect.prospect_id);
     };
 
     const displayProspects = prospects || [];
@@ -262,6 +279,12 @@ export default function LeadListTab({ campaignId }) {
                             ))}
                         </div>
 
+                        <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 cursor-pointer select-none">
+                            <input type="checkbox" checked={showRemoved} onChange={e => setShowRemoved(e.target.checked)}
+                                className="rounded border-gray-300" />
+                            Show removed
+                        </label>
+
                         {/* Add Prospects Button */}
                         <button
                             onClick={() => setShowAddModal(true)}
@@ -272,7 +295,7 @@ export default function LeadListTab({ campaignId }) {
                         </button>
 
                         {/* Export Button */}
-                        <button onClick={() => reportsApi.exportProspectsCsv(campaignId).catch(e => window.alert(e?.response?.status === 403 ? 'You do not have permission to export data.' : 'Export failed'))}
+                        <button onClick={() => reportsApi.exportProspectsCsv(campaignId).catch(e => toast.error(e?.response?.status === 403 ? 'You do not have permission to export data.' : e, { fallback: 'Export failed' }))}
                             className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-all">
                             <Download className="w-3.5 h-3.5" />
                             Export
@@ -291,6 +314,8 @@ export default function LeadListTab({ campaignId }) {
                     <div className="flex items-center justify-center py-20">
                         <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#2d6bbf', borderTopColor: 'transparent' }} />
                     </div>
+                ) : loadError && !prospects ? (
+                    <LoadError error={loadError} onRetry={refetch} title="Couldn't load prospects" compact />
                 ) : filteredProspects.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center px-6">
                         <div
@@ -322,6 +347,7 @@ export default function LeadListTab({ campaignId }) {
                                         <th className="text-left px-5 py-3.5 text-[11px] font-bold text-white/90 uppercase tracking-wider">Country</th>
                                         <th className="text-left px-5 py-3.5 text-[11px] font-bold text-white/90 uppercase tracking-wider">Sender</th>
                                         <th className="text-left px-5 py-3.5 text-[11px] font-bold text-white/90 uppercase tracking-wider">Status</th>
+                                        <LeadTimingHeaders className="text-left px-5 py-3.5 text-[11px] font-bold text-white/90 uppercase tracking-wider whitespace-nowrap" />
                                         <th className="text-left px-5 py-3.5 text-[11px] font-bold text-white/90 uppercase tracking-wider">Note</th>
                                         <th className="text-center px-5 py-3.5 text-[11px] font-bold text-white/90 uppercase tracking-wider w-24 sticky right-0" style={{ background: 'linear-gradient(90deg, #4ba0d8, #73C8D2)' }}>Actions</th>
                                     </tr>
@@ -427,6 +453,7 @@ export default function LeadListTab({ campaignId }) {
                                                     <td className="px-6 py-3">
                                                         <ProspectStatusBadge status={p.status} />
                                                     </td>
+                                                    <LeadTimingCells prospect={p} cellClassName="px-6 py-3" />
                                                     {/* Note — editable */}
                                                     <td className="px-6 py-3">
                                                         <div className="relative">
@@ -533,7 +560,9 @@ export default function LeadListTab({ campaignId }) {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <ProspectStatusBadge status={p.status} />
+                                                        {p.removed && <span className="ml-1.5 text-[11px] font-medium text-slate-400">Removed</span>}
                                                     </td>
+                                                    <LeadTimingCells prospect={p} />
                                                     <td className="px-6 py-4 max-w-[200px]">
                                                         {(p.notes || p.validation_note || p.note) ? (
                                                             <span
@@ -555,14 +584,14 @@ export default function LeadListTab({ campaignId }) {
                                                             >
                                                                 <Edit2 className="w-4 h-4" />
                                                             </button>
-                                                            <button
+                                                            {!p.removed && <button
                                                                 onClick={() => handleRemove(p)}
                                                                 disabled={removeMutation.isPending}
                                                                 className="p-1.5 hover:bg-red-100 text-red-600 rounded-lg transition-colors disabled:opacity-40"
                                                                 title="Remove from campaign"
                                                             >
                                                                 <UserMinus className="w-4 h-4" />
-                                                            </button>
+                                                            </button>}
                                                         </div>
                                                     </td>
                                                 </>

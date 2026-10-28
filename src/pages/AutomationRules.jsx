@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Zap, Plus, Trash2, Clock, Mail, PauseCircle, PlayCircle, ChevronRight, Search, Filter, LayoutList, Activity, CheckCircle2, X,
@@ -7,11 +8,23 @@ import {
 import automationApi from '../api/automation';
 import { campaignApi } from '../api/campaigns';
 import Loading from '../components/common/Loading';
-import DialogPanel from '../components/common/DialogPanel';
+import DialogPanel from '../components/ui/DialogPanel';
+import LoadError from '../components/ui/LoadError';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useToast } from '../components/ui/Toast';
+import { useApiQuery } from '../lib/useApiQuery';
+
+const RULES_KEY = ['automation-rules'];
 
 export default function AutomationRules() {
-    const [rules, setRules] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
+    const confirm = useConfirm();
+    const toast = useToast();
+    const { data: rulesData, error: loadError, isLoading: loading, refetch } = useApiQuery(
+        RULES_KEY, () => automationApi.getRules(), { errorFallback: "Couldn't load the automation rules" },
+    );
+    const rules = Array.isArray(rulesData) ? rulesData : [];
+    const setRules = (next) => queryClient.setQueryData(RULES_KEY, next);
     const [searchQuery, setSearchQuery] = useState('');
 
     // Modal & Form State
@@ -28,20 +41,8 @@ export default function AutomationRules() {
     });
 
     useEffect(() => {
-        fetchRules();
         fetchCampaigns();
     }, []);
-
-    const fetchRules = async () => {
-        try {
-            const data = await automationApi.getRules();
-            setRules(data);
-        } catch (error) {
-            console.error('Error fetching automation rules:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
     // ... existing fetches ...
 
     // Stats Calculation
@@ -55,6 +56,7 @@ export default function AutomationRules() {
         switch (type) {
             case 'EMAIL_OPENED': return { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-500' };
             case 'EMAIL_CLICKED': return { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-500' };
+            case 'EMAIL_BOUNCED': return { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-500' };
             case 'NO_REPLY': return { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-500' };
             default: return { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-500' };
         }
@@ -62,7 +64,7 @@ export default function AutomationRules() {
 
     const fetchCampaigns = async () => {
         try {
-            const data = await campaignApi.list();
+            const data = await campaignApi.listAll();
             setCampaigns(data.items || []);
         } catch (error) {
             console.error('Error fetching campaigns:', error);
@@ -114,12 +116,12 @@ export default function AutomationRules() {
             });
         } catch (error) {
             console.error('Error creating rule:', error);
-            alert('Failed to create rule. Please check the fields.');
+            toast.error(error, { fallback: 'Failed to create rule. Please check the fields.' });
         }
     };
 
     const deleteRule = async (ruleId) => {
-        if (!window.confirm('Are you sure you want to delete this rule?')) return;
+        if (!(await confirm({ title: 'Delete this rule?', message: 'Are you sure you want to delete this rule?', confirmLabel: 'Delete', danger: true }))) return;
         try {
             await automationApi.deleteRule(ruleId);
             setRules(rules.filter(r => r.rule_id !== ruleId));
@@ -210,6 +212,10 @@ export default function AutomationRules() {
                     {loading ? (
                         <div className="col-span-full">
                             <Loading text="Loading your automations..." />
+                        </div>
+                    ) : loadError ? (
+                        <div key="load-error" className="bg-white border border-slate-200 rounded-2xl">
+                            <LoadError error={loadError} onRetry={refetch} title="Couldn't load your automation rules" />
                         </div>
                     ) : filteredRules.length === 0 ? (
                         <motion.div
@@ -394,6 +400,7 @@ export default function AutomationRules() {
                                             >
                                                 <option value="EMAIL_OPENED">If Email Opened</option>
                                                 <option value="EMAIL_CLICKED">If Email Clicked</option>
+                                                <option value="EMAIL_BOUNCED">If Email Hard-Bounces</option>
                                                 <option value="NO_REPLY">If No Reply</option>
                                             </select>
                                         </div>

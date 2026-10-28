@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ShieldCheck, KeyRound, ArrowLeft } from "lucide-react";
-import { authApi } from "../../api/auth";
+import { useAuth } from "../../auth/AuthProvider";
 
 const inputStyle = {
     background: "rgba(255, 255, 255, 0.08)",
@@ -9,9 +9,11 @@ const inputStyle = {
 
 /**
  * Second sign-in step (two-factor): a 6-digit code from the authenticator app, or a recovery code.
- * Styled for the dark sign-in screens (Login, MagicLogin).
+ * Styled for the dark sign-in screens (Login, MagicLogin). The pending sign-in (its mfa_token) is held by
+ * the AuthProvider (status 'mfa-required'); a valid code completes it and onSuccess gets the sign-in result.
  */
-export default function MfaChallenge({ mfaToken, onSuccess, onCancel }) {
+export default function MfaChallenge({ onSuccess, onCancel }) {
+    const auth = useAuth();
     const [useRecovery, setUseRecovery] = useState(false);
     const [value, setValue] = useState("");
     const [error, setError] = useState("");
@@ -34,7 +36,7 @@ export default function MfaChallenge({ mfaToken, onSuccess, onCancel }) {
         }
         try {
             setSubmitting(true);
-            const data = await authApi.verifyMfa(mfaToken, useRecovery
+            const data = await auth.verifyMfa(useRecovery
                 ? { recoveryCode: entered }
                 : { code: entered.replace(/\s/g, "") });
             onSuccess(data);

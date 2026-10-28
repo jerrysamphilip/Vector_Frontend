@@ -9,9 +9,14 @@ import Loading from '../components/common/Loading';
 import PageTransition, { containerVariants, itemVariants } from '../components/layout/PageTransition';
 import CampaignsTable from '../components/campaigns/CampaignsTable';
 import { Button } from '../components/ui/Button';
+import Pagination from '../components/ui/Pagination';
+import LoadError from '../components/ui/LoadError';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { errorText } from '../lib/apiErrors';
 import { ColumnPicker } from '../components/campaigns/CampaignsTable';
 import { loadVisibleCols, LS_KEY } from '../components/campaigns/campaignColumns';
 import BulkActionBar from '../components/campaigns/BulkActionBar';
+import { useCampaignDialogs } from '../components/campaigns/actions/useCampaignDialogs';
 import { AnimatePresence } from 'framer-motion';
 import { Settings2 } from 'lucide-react';
 
@@ -26,13 +31,20 @@ const Campaigns = () => {
     const [visibleCols, setVisibleCols] = useState(loadVisibleCols);
     const [pickerOpen, setPickerOpen] = useState(false);
     const [actionError, setActionError] = useState('');
-    const showErr = (err) => { setPerformingActionId(null); setActionError(err?.response?.data?.detail || err?.message || 'Action failed'); };
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
+    const { openDialog, dialogs } = useCampaignDialogs({
+        onOpenCopy: (copy) => navigate(`/app/campaigns/${copy.campaign_id}`),
+    });
+    const showErr = (err) => { setPerformingActionId(null); setActionError(errorText(err, 'Action failed')); };
+    const confirm = useConfirm();
 
     // Debounce: update debouncedSearch 300ms after user stops typing
     useEffect(() => {
         clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             setDebouncedSearch(searchTerm);
+            setPage(1); // a new search starts on page 1
         }, 300);
         return () => clearTimeout(debounceRef.current);
     }, [searchTerm]);
@@ -42,10 +54,13 @@ const Campaigns = () => {
         try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch (_) { /* storage unavailable */ }
     }
 
-    const { data, isLoading, error } = useQuery({
-        queryKey: ['campaigns', debouncedSearch],
+    const listKey = ['campaigns', debouncedSearch, page, pageSize];
+    const { data, isLoading, error, refetch } = useQuery({
+        queryKey: listKey,
         queryFn: () => campaignApi.list({
             campaign_name: debouncedSearch || undefined,
+            page,
+            page_size: pageSize,
         }),
         staleTime: 0,
         refetchOnMount: 'always',
@@ -53,7 +68,7 @@ const Campaigns = () => {
     });
 
     const onMutationSettled = () => {
-        // queryClient.invalidateQueries(['campaigns']);
+        // queryClient.invalidateQueries({ queryKey: ['campaigns'] });
         queryClient.invalidateQueries({ queryKey: ['campaigns'], exact: false });
         setPerformingActionId(null);
     };
@@ -95,9 +110,9 @@ const Campaigns = () => {
         onMutate: async (id) => {
             await queryClient.cancelQueries({ queryKey: ['campaigns'] });
 
-            const previousData = queryClient.getQueryData(['campaigns', searchTerm]);
+            const previousData = queryClient.getQueryData(listKey);
 
-            queryClient.setQueryData(['campaigns', debouncedSearch], old => {
+            queryClient.setQueryData(listKey, old => {
                 if (!old) return old;
                 return {
                     ...old,
@@ -110,7 +125,7 @@ const Campaigns = () => {
 
         onError: (err, id, context) => {
             showErr(err);
-            queryClient.setQueryData(['campaigns', debouncedSearch], context.previousData);
+            if (context) queryClient.setQueryData(listKey, context.previousData);
         },
 
         onSettled: () => {
@@ -120,6 +135,13 @@ const Campaigns = () => {
     });
 
     const campaigns = data?.items || [];
+    const total = data?.total ?? 0;
+
+    // Deleting the last row of the last page: step back to the page that still exists
+    useEffect(() => {
+        const lastPage = Math.max(1, data?.total_pages || Math.ceil(total / pageSize) || 1);
+        if (data && page > lastPage) setPage(lastPage);
+    }, [data, total, page, pageSize]);
 
 
     const handleAction = (action, campaign, e) => {
@@ -140,10 +162,16 @@ const Campaigns = () => {
                 resumeMutation.mutate(campaign);
                 break;
             case 'delete':
-                if (confirm(`Delete "${campaign.campaign_name}"?`)) {
-                    setPerformingActionId(campaign.campaign_id);
-                    deleteMutation.mutate(campaign.campaign_id);
-                }
+                confirm({ title: `Delete "${campaign.campaign_name}"?`, message: 'This removes the campaign and its data.', confirmLabel: 'Delete', danger: true })
+                    .then((ok) => {
+                        if (!ok) return;
+                        setPerformingActionId(campaign.campaign_id);
+                        deleteMutation.mutate(campaign.campaign_id);
+                    });
+                break;
+            case 'rename':
+            case 'duplicate':
+                openDialog(action, campaign);
                 break;
             case 'view': navigate(`/app/campaigns/${campaign.campaign_id}`); break;
         }
@@ -158,7 +186,13 @@ const Campaigns = () => {
     };
 
     const handleBulkAction = async (action) => {
-        if (!confirm(`Are you sure you want to ${action} ${selectedIds.length} campaigns?`)) return;
+        const ok = await confirm({
+            title: `${action[0].toUpperCase()}${action.slice(1)} ${selectedIds.length} campaign${selectedIds.length !== 1 ? 's' : ''}?`,
+            message: action === 'delete' ? 'This removes the selected campaigns and their data.' : undefined,
+            confirmLabel: `${action[0].toUpperCase()}${action.slice(1)}`,
+            danger: action === 'delete',
+        });
+        if (!ok) return;
 
         // Optimistic UI updates or parallel requests could be done here.
         // For now, we'll just loop and execute sequentially to be safe.
@@ -184,7 +218,7 @@ const Campaigns = () => {
 
     // Only show full-screen loader on the very first load (no data yet)
     if (isLoading && !data) return <Loading text="Loading campaigns..." size="lg" fullScreen/>;
-    if (error) return <div className="p-10 text-center text-red-500">Failed to load: {error.message}</div>;
+    if (error && !data) return <LoadError error={error} onRetry={refetch} title="Couldn't load campaigns" />;
 
     return (
         <PageTransition>
@@ -270,8 +304,18 @@ const Campaigns = () => {
                             else setSelectedIds(campaigns.map(c => c.campaign_id));
                         }}
                     />
-
+                    {total > 0 && (
+                        <Pagination
+                            page={page}
+                            pageSize={pageSize}
+                            total={total}
+                            onPageChange={(p) => { setPage(p); setSelectedIds([]); }}
+                            onPageSizeChange={(size) => { setPageSize(size); setPage(1); setSelectedIds([]); }}
+                        />
+                    )}
                 </motion.div>
+
+                {dialogs}
 
                 <BulkActionBar
                     selectedCount={selectedIds.length}
