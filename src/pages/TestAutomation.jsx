@@ -34,7 +34,7 @@ export default function TestAutomation() {
                     <option value="">Select a campaign...</option>
                     {campaigns.map((c, index) => (
                         <option key={c.campaign_id || index} value={c.campaign_id}>
-                            {c.campaign_name || 'Unnamed Campaign'} (ID: {c.campaign_id?.slice(0, 8)})
+                            {c.campaign_name || 'Unnamed Campaign'} (ID: {c.campaign_id?.slice(-8)})
                         </option>
                     ))}
                 </select>

@@ -52,7 +52,7 @@ export default function TenantRosterCard({ admin }) {
                                 <tr key={tenant.tenant_id} className={`transition-colors hover:bg-blue-50/40 ${index % 2 ? 'bg-slate-50/45' : 'bg-white'}`}>
                                     <td className="px-5 py-4">
                                         <p className="text-sm font-semibold text-slate-800">{tenant.tenant_name}</p>
-                                        <p className="mt-1 text-[11px] font-mono text-slate-400">{tenant.tenant_id.slice(0, 8)}…</p>
+                                        <p className="mt-1 text-[11px] font-mono text-slate-400">…{tenant.tenant_id.slice(-8)}</p>
                                     </td>
                                     <td className="px-5 py-4"><StatusBadge status={tenant.status} /></td>
                                     <td className="px-5 py-4 text-sm font-semibold text-[#2d6bbf]">{tenant.user_count}</td>

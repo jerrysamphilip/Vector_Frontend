@@ -47,7 +47,7 @@ export const reportsApi = {
         const response = await api.get(`/reports/export/prospects/${campaignId}`, {
             responseType: 'blob',
         });
-        downloadBlob(response.data, `prospects_${campaignId.slice(0, 8)}.csv`);
+        downloadBlob(response.data, `prospects_${campaignId.slice(-8)}.csv`);
     },
 
     exportDeliverabilityCsv: async () => {
