@@ -76,6 +76,25 @@ Release candidate for BRD v2.0 Phase 1 (R1.0) and Phase 2 (R2.1), released toget
   suspended-account handling, template library errors.
 - Broken API calls found by the frontend/backend contract check; structured error details kept so duplicate
   contact/lead 409s link to the existing record; company revenue and number custom fields save correctly.
+- Rich-text editor: StarterKit 3 already bundles Link and Underline, so both were registered twice (TipTap
+  "Duplicate extension names" warning) and the bundled Link still opened links on click inside the editor;
+  the bundled copies are now turned off and the editor's own Link (no open-on-click, rel=noopener) is the only one.
+
+### Security
+- Dependency upgrades clear every npm advisory (before: 44 vulnerable packages, 107 advisories, 40 of them
+  high and accepted in `ci/npm_audit_ignore.txt` until 2026-11-15; after: `npm audit` reports 0 at any
+  severity). All within the same major version, no `--force`:
+  axios 1.13.2 -> 1.21.0, react-router-dom / react-router 7.11.0 -> 7.18.5, @tiptap/* 3.29.2 -> 3.32.1
+  (prosemirror-view 1.42.2 -> 1.42.8), dompurify 3.2.6 -> 3.4.17, vite 7.3.0 -> 7.3.7 (rollup 4.66.0);
+  `npm audit fix` for the transitive build/test packages (browserslist, postcss, nanoid, source-map-js,
+  form-data, follow-redirects, undici, @babel/*). axios, react-router-dom, dompurify and @tiptap/* are now
+  pinned to exact versions (TipTap packages require matching versions of each other).
+- `ci/npm_audit_ignore.txt` holds no accepted advisories any more.
+- New regression tests for the upgraded libraries: sanitiser keeps editor formatting and strips script,
+  handlers, `javascript:` URLs and mXSS payloads (`src/lib/sanitizeHtml.test.js`); editor getHTML round-trip,
+  toolbar, links and external value sync (`src/components/common/RichTextEditor.test.jsx`, and a body edit saved
+  from the campaign editor in `src/pages/CampaignEdit.test.jsx`); the API client over axios' real XHR adapter
+  (`src/api/http.xhr.test.js`); lazy routes, redirects, NavLink, search params and `?next=` (`src/routing.test.jsx`).
 
 ## [0.0.0]
 

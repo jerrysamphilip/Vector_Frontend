@@ -21,6 +21,12 @@ describe('normalizeError', () => {
         });
         normalizeError(error);
         expect(error.response.data.detail).toBe('email: value is not a valid email address; query.page: must be >= 1; free text');
+        // the per-field list stays available to forms (serverFieldErrors)
+        expect(error.response.data.detail_list).toEqual([
+            { loc: ['body', 'email'], msg: 'value is not a valid email address' },
+            { loc: ['query', 'page'], msg: 'must be >= 1' },
+            { msg: 'free text' },
+        ]);
     });
 
     it('keeps a structured detail in detail_data and exposes its code and message', () => {
