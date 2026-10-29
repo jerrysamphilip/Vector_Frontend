@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CampaignEdit from './CampaignEdit';
 import { fail, pending, renderPage, reply } from '../test/renderPage';
@@ -76,6 +76,23 @@ describe('CampaignEdit page', () => {
             { sequence_id: 's-2', templates: [{ template_id: 't-2', designation: null, subject: 'New follow up', body: '<p>Again</p>' }] },
         ]);
         expect(await screen.findByText(/Saved\./)).toBeInTheDocument();
+    });
+
+    it('saves a body edited in the rich-text editor as the editor HTML', async () => {
+        const { http: h } = renderPage(<CampaignEdit />, opts());
+        await screen.findByLabelText('Step 2 email 1 subject');
+        const editors = [...document.querySelectorAll('.ProseMirror')];
+        const step2 = editors.find(el => el.textContent === 'Again');
+        act(() => { step2.editor.commands.selectAll(); });
+        await userEvent.click(within(step2.closest('.border-2')).getByTitle('Bold'));
+        await userEvent.click(screen.getByRole('button', { name: /Review and save/ }));
+        await userEvent.click(await screen.findByRole('button', { name: /Save changes/ }));
+        await waitFor(() => expect(h.requests.some(r => r.method === 'POST' && r.path === '/campaigns/c-1/edits')).toBe(true));
+        const body = h.requests.find(r => r.path === '/campaigns/c-1/edits').body;
+        expect(body.steps).toEqual([
+            { sequence_id: 's-1', templates: [] },
+            { sequence_id: 's-2', templates: [{ template_id: 't-2', designation: null, subject: 'Follow up', body: '<p><strong>Again</strong></p>' }] },
+        ]);
     });
 
     it('offers a reload when someone else changed the campaign (409)', async () => {
