@@ -447,23 +447,23 @@ export default function Contacts() {
                     <p className="text-sm text-gray-400 mt-1">Every contact in one place{canManage ? '' : ' · showing contacts you own'}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
+                    {meta?.can_export && (
+                        <div className="relative">
+                            <button onClick={() => setShowExport(s => !s)} className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><Download className="w-4 h-4" /> Export</button>
+                            {showExport && (
+                                <div className="absolute right-0 top-12 z-30 w-56 bg-white border border-slate-200 rounded-xl shadow-xl p-1">
+                                    {['csv', 'xlsx'].map(fmt => (
+                                        <button key={fmt} className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-slate-50"
+                                            onClick={() => { setShowExport(false); contactsApi.exportFile({ format: fmt, columns: shownColumns.filter(c => !c.startsWith('custom.')).join(','), q: debouncedSearch, owner, list_id: listId, filters }).catch(err => setNotice(errorMessage(err))); }}>
+                                            This view as {fmt.toUpperCase()}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                     {canManage && <>
                         <Link to="/app/import?new=1" className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><Upload className="w-4 h-4" /> Import</Link>
-                        {meta?.can_export && (
-                            <div className="relative">
-                                <button onClick={() => setShowExport(s => !s)} className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><Download className="w-4 h-4" /> Export</button>
-                                {showExport && (
-                                    <div className="absolute right-0 top-12 z-30 w-56 bg-white border border-slate-200 rounded-xl shadow-xl p-1">
-                                        {['csv', 'xlsx'].map(fmt => (
-                                            <button key={fmt} className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-slate-50"
-                                                onClick={() => { setShowExport(false); contactsApi.exportFile({ format: fmt, columns: shownColumns.filter(c => !c.startsWith('custom.')).join(','), q: debouncedSearch, owner, list_id: listId, filters }).catch(err => setNotice(errorMessage(err))); }}>
-                                                This view as {fmt.toUpperCase()}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
                         <button onClick={() => setShowFields(true)} className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><SlidersHorizontal className="w-4 h-4" /> Properties</button>
                         <button onClick={() => setShowMerge(true)} className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap"><GitMerge className="w-4 h-4" /> Find duplicates</button>
                         <Link to="/app/contacts/duplicates" className="flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap">Duplicate review</Link>

@@ -49,6 +49,13 @@ describe('Contacts page', () => {
         expect(screen.queryByRole('button', { name: /export/i })).toBeNull();
     });
 
+    it('a MANAGER who may export but not manage sees Export (BR-CM-31)', async () => {
+        renderPage(<Contacts />, opts({}, 'MANAGER', contactMeta({ can_manage: false, can_export: true })));
+        await screen.findByText('Carol Contact');
+        expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /import/i })).toBeNull();
+    });
+
     it('searches on the server', async () => {
         renderPage(<Contacts />, opts());
         await screen.findByText('Carol Contact');
