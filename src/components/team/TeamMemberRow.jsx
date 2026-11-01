@@ -1,5 +1,5 @@
 import { ChevronDown, Mail, Network, Send, Settings2, Trash2, UserCheck, UserX } from 'lucide-react';
-import { RoleBadge, Avatar, StatusBadge, formatDate } from './teamShared';
+import { RoleBadge, Avatar, StatusBadge, formatDate, roleOptions } from './teamShared';
 import { useConfirm } from '../ui/ConfirmDialog';
 
 // One team member: avatar, role (editable by super admins), reports-to, status, last active and actions.
@@ -47,15 +47,12 @@ export default function TeamMemberRow({ u, i, team }) {
                     <div className="flex items-center gap-2">
                         <div className="relative">
                             <select
+                                aria-label={`Role of ${u.email}`}
                                 value={roleDraft}
                                 onChange={e => setRoleDrafts(p => ({ ...p, [u.user_id]: e.target.value }))}
                                 className="appearance-none pl-3 pr-7 py-1.5 text-xs font-medium border border-gray-200 rounded-lg bg-white focus:outline-none cursor-pointer"
                             >
-                                {[
-                                    ...(currentRole === 'SUPER_ADMIN' ? [{ value: 'SUPER_ADMIN', label: 'Super Admin' }] : []),
-                                    { value: 'ADMIN',   label: 'Admin'   },
-                                    { value: 'MANAGER', label: 'Manager' },
-                                ].map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                                {roleOptions(currentRole, u.role).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                             </select>
                             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
                         </div>

@@ -20,6 +20,21 @@ export const INVITE_ROLES = [
     { value: 'AGENT',       label: 'Agent',        desc: 'Sales rep — can use assigned campaigns and inboxes' },
 ];
 
+/**
+ * Options of a member's role dropdown (backend: PUT /users/{id}/role, SUPER_ADMIN only, any tenant role -
+ * app/domain/identity.py TENANT_ROLES). Super Admin is offered to Super Admins only. The member's current role is
+ * always an option, so the dropdown shows the real role and never falls back to the first entry.
+ */
+export function roleOptions(currentRole, memberRole) {
+    const options = INVITE_ROLES
+        .filter(r => !r.superAdminOnly || currentRole === 'SUPER_ADMIN')
+        .map(({ value, label }) => ({ value, label }));
+    if (memberRole && !options.some(o => o.value === memberRole)) {
+        options.unshift({ value: memberRole, label: ROLE_META[memberRole]?.label || memberRole });
+    }
+    return options;
+}
+
 export const PERMISSION_LIST = [
     { key: 'manage_campaigns',  label: 'Manage Campaigns',  desc: 'Create, edit and delete campaigns',      icon: '📧' },
     { key: 'manage_templates',  label: 'Manage Templates',  desc: 'Create and edit email templates',        icon: '📝' },
