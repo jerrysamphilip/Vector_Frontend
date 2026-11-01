@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, AUTH_QUERY_KEY, useAuth } from './AuthProvider';
 import { reportSession } from './sessionEvents';
-import { userHasPermission, userHasRole } from './permissions';
+import { ROLE_DEFAULT_PERMISSIONS, userCanExportContacts, userHasPermission, userHasRole } from './permissions';
 import { IDLE_LIMIT_MS, WARNING_MS } from './useIdleTimeout';
 import { ToastProvider } from '../components/ui/Toast';
 import { PermissionRoute, PlatformAdminRoute, ProtectedRoute, PublicRoute } from '../components/auth/ProtectedRoute';
@@ -44,6 +44,18 @@ describe('permission helpers (backend ROLE_DEFAULT_PERMISSIONS)', () => {
         expect(userHasPermission({ role: 'SUPER_ADMIN', permissions: [] }, 'manage_team')).toBe(true);
         expect(userHasPermission({ role: 'PLATFORM_ADMIN' }, 'manage_campaigns')).toBe(false);
         expect(userHasPermission(null, 'manage_campaigns')).toBe(false);
+    });
+
+    it('contact export: admins and managers with export_contacts (UAT2 F-06c), never agents', () => {
+        expect(ROLE_DEFAULT_PERMISSIONS.MANAGER).toContain('export_contacts');
+        expect(ROLE_DEFAULT_PERMISSIONS.MANAGER).not.toContain('export_data');   // report exports stay admin-only
+        expect(userCanExportContacts({ role: 'MANAGER' })).toBe(true);
+        expect(userCanExportContacts({ role: 'ADMIN' })).toBe(true);
+        expect(userCanExportContacts({ role: 'SUPER_ADMIN', permissions: [] })).toBe(true);
+        expect(userCanExportContacts({ role: 'MANAGER', permissions: ['export_data'] })).toBe(true); // older custom list
+        expect(userCanExportContacts({ role: 'MANAGER', permissions: ['view_analytics'] })).toBe(false);
+        expect(userCanExportContacts({ role: 'AGENT', permissions: ['export_contacts'] })).toBe(false);
+        expect(userCanExportContacts(null)).toBe(false);
     });
 
     it('hasRole takes several roles or a list', () => {

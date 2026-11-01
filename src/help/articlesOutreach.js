@@ -228,7 +228,7 @@ export const OUTREACH_ARTICLES = [
                 'Click **Invite Member**, enter their email and choose a **Role** (Admin, Manager or Agent; Super Admins can also invite Super Admins).',
                 'They get an email with a one-time link: it signs them in and they choose their own password. Nobody is ever sent a password. If the email does not arrive, use **Resend invite**.',
             ] },
-            { p: '**Permissions** fine-tunes what each person can do beyond their role: **Manage Campaigns**, **Manage Templates**, **Manage Inboxes**, **Manage Prospects**, **View Analytics**, **Export Data**, **Manage Team**.' },
+            { p: '**Permissions** fine-tunes what each person can do beyond their role: **Manage Campaigns**, **Manage Templates**, **Manage Inboxes**, **Manage Prospects**, **View Analytics**, **Export Reports** (campaign reports and analytics), **Export Contacts** (contact, company and list views; admins and managers only), **Manage Team**.' },
             { p: '**Deactivate** stops someone signing in (their records stay); **Reactivate** brings them back; **Revoke** cancels a pending invite. **Resend invite** emails a pending invite again with a new set-password link (the old link stops working; once a minute at most). Super Admin roles cannot be changed here.' },
             { h: 'Sales hierarchy' },
             { p: 'The **Reports to** column shows each person\'s sales level and manager. Click **Hierarchy** to change them, or pick a **Sales level** and **Reports to** when inviting. Only people at a higher level, outside the person\'s own team, can be chosen as manager. **Team tree** opens the whole hierarchy on **Sales team**.' },

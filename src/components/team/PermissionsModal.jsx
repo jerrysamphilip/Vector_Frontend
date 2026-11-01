@@ -2,7 +2,7 @@ import { useState, useId } from 'react';
 import { X, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/Button';
 import DialogPanel from '../ui/DialogPanel';
-import { PERMISSION_LIST, RoleBadge, Avatar } from './teamShared';
+import { permissionsForRole, RoleBadge, Avatar } from './teamShared';
 
 // Per-member permission overrides (super admins): toggle, save or reset to the role defaults.
 
@@ -51,7 +51,7 @@ export default function PermissionsModal({ user, onClose, onSave, onReset, isSav
 
                 {/* Permission toggles */}
                 <div className="px-6 py-4 space-y-2 max-h-[360px] overflow-y-auto">
-                    {PERMISSION_LIST.map(p => {
+                    {permissionsForRole(user.role).map(p => {
                         const enabled = draft.has(p.key);
                         return (
                             <button key={p.key} onClick={() => toggle(p.key)}

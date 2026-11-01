@@ -41,9 +41,16 @@ export const PERMISSION_LIST = [
     { key: 'manage_inboxes',    label: 'Manage Inboxes',    desc: 'Connect and configure email inboxes',    icon: '📬' },
     { key: 'manage_prospects',  label: 'Manage Prospects',  desc: 'Import and manage prospect lists',       icon: '👥' },
     { key: 'view_analytics',    label: 'View Analytics',    desc: 'Access reports and analytics dashboard', icon: '📊' },
-    { key: 'export_data',       label: 'Export Data',       desc: 'Export campaigns, contacts and reports', icon: '📤' },
+    { key: 'export_data',       label: 'Export Reports',    desc: 'Export campaign reports and analytics',  icon: '📤' },
+    // BR-CM-31: only admins and managers may export contacts (the API refuses it for other roles)
+    { key: 'export_contacts',   label: 'Export Contacts',   desc: 'Export contact, company and list views', icon: '📇', roles: ['SUPER_ADMIN', 'ADMIN', 'MANAGER'] },
     { key: 'manage_team',       label: 'Manage Team',       desc: 'Invite and manage team members',         icon: '🛡️' },
 ];
+
+/** The permissions that can be granted to a member with this role. */
+export function permissionsForRole(role) {
+    return PERMISSION_LIST.filter(p => !p.roles || p.roles.includes(role));
+}
 
 export const AVATAR_COLORS = [
     'bg-violet-500', 'bg-blue-500', 'bg-emerald-500',

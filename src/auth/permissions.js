@@ -10,13 +10,13 @@ export const ROLES = Object.freeze({
     AGENT: 'AGENT',
 });
 
-const TENANT_ALL = ['manage_campaigns', 'manage_templates', 'manage_inboxes', 'manage_prospects', 'view_analytics', 'export_data', 'manage_team'];
+const TENANT_ALL = ['manage_campaigns', 'manage_templates', 'manage_inboxes', 'manage_prospects', 'view_analytics', 'export_data', 'export_contacts', 'manage_team'];
 
 export const ROLE_DEFAULT_PERMISSIONS = Object.freeze({
     PLATFORM_ADMIN: Object.freeze(['manage_platform']),
     SUPER_ADMIN: Object.freeze([...TENANT_ALL]),
     ADMIN: Object.freeze([...TENANT_ALL]),
-    MANAGER: Object.freeze(['manage_campaigns', 'manage_templates', 'view_analytics']),
+    MANAGER: Object.freeze(['manage_campaigns', 'manage_templates', 'view_analytics', 'export_contacts']),
     AGENT: Object.freeze(['manage_campaigns']),
 });
 
@@ -45,3 +45,16 @@ export function userHasRole(user, ...roles) {
 }
 
 export const ADMIN_ROLES = Object.freeze([ROLES.SUPER_ADMIN, ROLES.ADMIN]);
+
+// Roles that may export contact / company / list views (BR-CM-31: admins and managers; backend
+// app/domain/identity.py CONTACT_EXPORT_ROLES). Report exports are export_data, a separate permission.
+export const CONTACT_EXPORT_ROLES = Object.freeze([ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER]);
+
+/**
+ * Contact export right (backend may_export_contacts): an admin or manager with export_contacts. A custom
+ * permission list saved before export_contacts existed still exports with export_data. Agents never do.
+ */
+export function userCanExportContacts(user) {
+    if (!userHasRole(user, CONTACT_EXPORT_ROLES)) return false;
+    return userHasPermission(user, 'export_contacts') || userHasPermission(user, 'export_data');
+}
