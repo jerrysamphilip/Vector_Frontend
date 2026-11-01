@@ -234,6 +234,7 @@ export default function CampaignEdit() {
                         editorRev={editorRev}
                         regenerating={regenerating}
                         canAddStep={steps.length < MAX_STEPS}
+                        ctaLink={form.cta_link}
                         onChange={next => updateSteps(steps.map((s, i) => (i === index ? next : s)))}
                         onDelete={i => updateSteps(steps.filter((_, j) => j !== i))}
                         onMove={(i, delta) => updateSteps(moveNewStep(steps, i, delta))}

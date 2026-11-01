@@ -109,4 +109,37 @@ describe('CampaignEdit page', () => {
         await userEvent.click(await screen.findByRole('button', { name: /Review and save/ }));
         expect(await screen.findByText('The new step 3 needs an email')).toBeInTheDocument();
     });
+
+    describe('links in a body without a CTA link (A1-07b)', () => {
+        const linked = {
+            ...assignments,
+            steps: assignments.steps.map(st => st.step_number !== 2 ? st : {
+                ...st, templates: [{ ...st.templates[0], body: '<p>See <a href="https://example.com/case-1">our case study</a></p>' }],
+            }),
+        };
+
+        it('warns under the body that the links are removed when sending', async () => {
+            renderPage(<CampaignEdit />, opts({ 'GET /campaigns/:id/template-assignments': linked }));
+            await screen.findByLabelText('Step 2 email 1 subject');
+            const notices = screen.getAllByTestId('body-links-notice');
+            expect(notices).toHaveLength(1);
+            expect(notices[0]).toHaveTextContent('Links in the body are removed when sending unless a CTA link is set.');
+            // setting a CTA link on the same page clears the warning
+            await userEvent.type(screen.getByLabelText(/Booking \/ CTA link/), 'https://calendly.com/ann');
+            expect(screen.queryByTestId('body-links-notice')).toBeNull();
+        });
+
+        it('shows no warning when the campaign has a CTA link', async () => {
+            renderPage(<CampaignEdit />, opts({
+                'GET /campaigns/:id/template-assignments': linked,
+                'GET /campaigns/:id': campaign('c-1', {
+                    campaign_name: 'Autumn push', row_version: 4, sender_name: 'Ann', cta_link: 'https://calendly.com/ann',
+                    send_window_start: '09:00:00', send_window_end: '17:00:00', campaign_timezone: 'UTC',
+                    sending_inboxes: [{ inbox_id: 'i-1' }],
+                }),
+            }));
+            await screen.findByLabelText('Step 2 email 1 subject');
+            expect(screen.queryByTestId('body-links-notice')).toBeNull();
+        });
+    });
 });
