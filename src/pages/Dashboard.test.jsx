@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import Dashboard from './Dashboard';
 import { fail, pending, renderPage } from '../test/renderPage';
 import { expectLoadError, expectLoading } from '../test/pageAssertions';
@@ -34,5 +34,23 @@ describe('Dashboard page', () => {
     it('reports a failed campaign load instead of "No campaigns yet"', async () => {
         renderPage(<Dashboard />, { route: '/app/analytics', http: http({ 'GET /campaigns': fail(500) }) });
         await expectLoadError({ emptyText: /no campaigns yet/i });
+    });
+
+    it('rates the Campaign Status table over delivered (sent - bounced), like the other screens (A5-U4)', async () => {
+        const b = campaign('c-b', { campaign_name: 'Campaign B', sent_count: 42, bounced_count: 2, opened_count: 8, replied_count: 1 });
+        renderPage(<Dashboard />, { route: '/app/analytics', http: http({ 'GET /campaigns': campaignPage([b]) }) });
+        const name = (await screen.findAllByText('Campaign B')).find(el => el.closest('tr'));
+        const row = within(name.closest('tr'));
+        expect(row.getByText('42')).toBeInTheDocument();
+        expect(row.getByText('20.0%')).toBeInTheDocument();
+        expect(row.getByText('2.5%')).toBeInTheDocument();
+    });
+
+    it('labels opens as unique contacts (A5-U3)', async () => {
+        renderPage(<Dashboard />, { route: '/app/analytics', http: http() });
+        await screen.findAllByText('Autumn push');
+        expect(screen.getAllByText('Opened (unique)')).toHaveLength(2);
+        expect(screen.queryByText('Total Opens')).toBeNull();
+        expect(screen.queryByText('Opens')).toBeNull();
     });
 });

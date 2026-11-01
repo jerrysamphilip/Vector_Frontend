@@ -1,7 +1,9 @@
 import { hasPermission } from '../../lib/authStorage';
 import { Plus } from 'lucide-react';
+import { rateOverDelivered } from '../../lib/rates';
 
-// Dashboard: the top campaigns by emails sent, with open / reply rate and status.
+// Dashboard: the top campaigns by emails sent, with open / reply rate (over delivered = sent - bounced, like every
+// other screen) and status.
 export default function CampaignStatusTable({ dashboard }) {
     const {
         navigate, statusColors, topCampaigns
@@ -28,8 +30,8 @@ export default function CampaignStatusTable({ dashboard }) {
                     <tr className="bg-slate-50 border-b border-slate-200">
                         <th className="py-3 px-5 text-xs font-semibold text-slate-500/90 uppercase tracking-wider">Campaign</th>
                         <th className="py-3 px-5 text-xs font-semibold text-slate-500/90 uppercase tracking-wider text-center">Sent</th>
-                        <th className="py-3 px-5 text-xs font-semibold text-slate-500/90 uppercase tracking-wider text-center">Open %</th>
-                        <th className="py-3 px-5 text-xs font-semibold text-slate-500/90 uppercase tracking-wider text-center">Reply %</th>
+                        <th className="py-3 px-5 text-xs font-semibold text-slate-500/90 uppercase tracking-wider text-center" title="Unique contacts who opened, % of delivered (sent minus bounced)">Open %</th>
+                        <th className="py-3 px-5 text-xs font-semibold text-slate-500/90 uppercase tracking-wider text-center" title="Replies, % of delivered (sent minus bounced)">Reply %</th>
                         <th className="py-3 px-5 text-xs font-semibold text-slate-500/90 uppercase tracking-wider text-right">Status</th>
                     </tr>
                 </thead>
@@ -39,8 +41,8 @@ export default function CampaignStatusTable({ dashboard }) {
                             <td colSpan="5" className="py-10 text-center text-gray-300 text-sm">No campaigns yet</td>
                         </tr>
                     ) : topCampaigns.map((c) => {
-                        const oRate = c.sent_count > 0 ? ((c.opened_count / c.sent_count) * 100).toFixed(1) : '0.0';
-                        const rRate = c.sent_count > 0 ? ((c.replied_count / c.sent_count) * 100).toFixed(1) : '0.0';
+                        const oRate = rateOverDelivered(c.opened_count, c.sent_count, c.bounced_count);
+                        const rRate = rateOverDelivered(c.replied_count, c.sent_count, c.bounced_count);
                         return (
                             <tr key={c.campaign_id}
                                 className="hover:bg-gray-50/60 cursor-pointer transition-colors group"

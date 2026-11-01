@@ -38,7 +38,7 @@ export default function Reports() {
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                 <GradientCard
                     label="Open Rate" value={loading ? '—' : `${openRate}%`}
-                    sub={`${kpis.total_opened ?? 0} emails opened`}
+                    sub={`${kpis.total_opened ?? 0} unique contacts opened`}
                     from="#2d6bbf" to="#1f56aa" dark={false} chart="bar"
                     trend={openRate >= 20} animDelay="0ms"
                 />
@@ -75,7 +75,7 @@ export default function Reports() {
                 <StatCard icon={Mail}          label="Total Sent"    value={kpis.total_emails_sent}
                     sub={`${kpis.total_leads_contacted ?? 0} leads`}
                     iconBg="bg-blue-50"    iconColor="text-blue-600"   loading={loading} animDelay="300ms" />
-                <StatCard icon={Eye}           label="Opened"        value={kpis.total_opened}
+                <StatCard icon={Eye}           label="Opened (unique)" value={kpis.total_opened}
                     sub={`${openRate}% open rate`}
                     iconBg="bg-cyan-50"    iconColor="text-cyan-600"   loading={loading} animDelay="340ms" />
                 <StatCard icon={MessageSquare} label="Replied"       value={kpis.total_replied}

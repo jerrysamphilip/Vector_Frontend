@@ -1,6 +1,7 @@
 import { AlertCircle, MailOpen, MessageSquare, Send, UserX } from 'lucide-react';
 
-// Dashboard: totals of sent, opens, replies, bounces and unsubscribes.
+// Dashboard: totals of sent, unique openers, replies, bounces and unsubscribes. Opens count unique contacts
+// (repeat opens are not counted), as on the campaign page's 'Opened (unique)'.
 export default function StatTilesRow({ dashboard }) {
     const {
         totals
@@ -9,7 +10,7 @@ export default function StatTilesRow({ dashboard }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
                 { label: 'Total Sent',   value: totals.sent,         icon: Send,          iconBg: '#d6e0ff', iconColor: '#0046FF', textColor: '#0035cc' },
-                { label: 'Opens',        value: totals.opened,       icon: MailOpen,      iconBg: '#d8f1f4', iconColor: '#73C8D2', textColor: '#4aabb5' },
+                { label: 'Opened (unique)', value: totals.opened,       icon: MailOpen,      iconBg: '#d8f1f4', iconColor: '#73C8D2', textColor: '#4aabb5' },
                 { label: 'Replies',      value: totals.replied,      icon: MessageSquare, iconBg: '#fff4dc', iconColor: '#e6a830', textColor: '#b07d10' },
                 { label: 'Bounces',      value: totals.bounced,      icon: AlertCircle,   iconBg: '#fff0d9', iconColor: '#FF9013', textColor: '#cc6f00' },
                 { label: 'Unsubscribes', value: totals.unsubscribed, icon: UserX,         iconBg: '#f4e1e6', iconColor: '#c2436b', textColor: '#a02f54' },

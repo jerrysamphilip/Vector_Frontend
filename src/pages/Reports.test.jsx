@@ -28,4 +28,11 @@ describe('Reports page', () => {
         await expectLoadError();
         expect(screen.getByText(/could not load reports/i)).toBeInTheDocument();
     });
+
+    it('labels the opened count as unique contacts (A5-U5)', async () => {
+        renderPage(<Reports />, { route: '/app/reports', http: http() });
+        expect(await screen.findByText('400 unique contacts opened')).toBeInTheDocument();
+        expect(screen.getByText('Opened (unique)')).toBeInTheDocument();
+        expect(screen.queryByText(/emails opened/)).toBeNull();
+    });
 });
