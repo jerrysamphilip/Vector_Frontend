@@ -19,6 +19,7 @@ import ScoreBadge from '../components/contacts/ScoreBadge';
 import { GRADES } from '../api/contactScoring';
 import EnrollmentResultModal from '../components/campaigns/EnrollmentResultModal';
 import ListRenameModal from '../components/contacts/ListRenameModal';
+import { storageKey } from '../lib/storageKey';
 import {
     Avatar, TagChips, OwnerSelect, relativeDate, BRAND_GRADIENT, Modal, PrimaryButton, SecondaryButton, ErrorNote, Field, inputClass, CustomFieldInput, useCrmMeta, StageBadge, StatusBadge, formatCustomValue,
 } from '../components/contacts/shared';
@@ -26,7 +27,7 @@ import {
 const PAGE_SIZE = 25;
 const DEFAULT_COLUMNS = ['full_name', 'email', 'company_name', 'owner_name', 'lifecycle_stage', 'lead_status', 'score', 'tags', 'last_activity_at', 'created_at'];
 const SORTABLE = { full_name: 'name', email: 'email', company_name: 'company', lifecycle_stage: 'lifecycle_stage', lead_status: 'lead_status', created_at: 'created_at', updated_at: 'updated_at', score: 'score' };
-const COLUMNS_KEY = 'contacts.columns';
+const COLUMNS_KEY = storageKey('contacts.columns');
 const selectClass = 'h-9 pl-3 pr-8 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-indigo-400';
 
 function useDebounced(value, delay = 300) {

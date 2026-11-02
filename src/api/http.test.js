@@ -2,6 +2,7 @@ import axios from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient, isTenantSuspended, normalizeError } from './http';
 import { ACTIVITY_STORAGE_KEY, SESSION_IDLE_MINUTES, resetActivity } from './activity';
+import { USER_KEY } from '../lib/authStorage';
 
 const httpError = (status, data, config = {}) => {
     const error = new Error(`Request failed with status code ${status}`);
@@ -104,10 +105,10 @@ describe('apiClient interceptors', () => {
     });
 
     it('on 403 "Tenant suspended" ends the session and sends the user to login with reason and return path', async () => {
-        localStorage.setItem('user', JSON.stringify({ first_name: 'Ann' }));
+        localStorage.setItem(USER_KEY, JSON.stringify({ first_name: 'Ann' }));
         respond = (config) => Promise.reject(httpError(403, { detail: 'Tenant suspended' }, config));
         await expect(apiClient.get('/campaigns')).rejects.toMatchObject({ response: { status: 403 } });
-        expect(localStorage.getItem('user')).toBeNull();
+        expect(localStorage.getItem(USER_KEY)).toBeNull();
         expect(assign).toHaveBeenCalledTimes(1);
         const target = new URL(assign.mock.calls[0][0], 'http://localhost');
         expect(target.pathname).toBe('/login');
@@ -141,7 +142,7 @@ describe('apiClient interceptors', () => {
         expect(res.data).toEqual({ ok: 'retried' });
         expect(refresh).toHaveBeenCalledTimes(1);
         expect(refresh.mock.calls[0][0]).toMatch(/\/api\/api\/auth\/refresh$/);
-        expect(JSON.parse(localStorage.getItem('user'))).toEqual({ first_name: 'Bo' });
+        expect(JSON.parse(localStorage.getItem(USER_KEY))).toEqual({ first_name: 'Bo' });
         expect(assign).not.toHaveBeenCalled();
     });
 
@@ -215,7 +216,7 @@ describe('apiClient interceptors', () => {
         });
 
         it('retries without signing out when another tab already exchanged the refresh token', async () => {
-            localStorage.setItem('user', JSON.stringify({ first_name: 'Ann' }));
+            localStorage.setItem(USER_KEY, JSON.stringify({ first_name: 'Ann' }));
             vi.spyOn(axios, 'post').mockRejectedValue(httpError(401, {
                 detail: { code: 'REFRESH_TOKEN_SUPERSEDED', message: 'Refresh token already exchanged' },
             }));
@@ -223,7 +224,7 @@ describe('apiClient interceptors', () => {
             const res = await apiClient.get('/campaigns');
             expect(res.data).toEqual({ ok: 'retried' });
             expect(assign).not.toHaveBeenCalled();
-            expect(localStorage.getItem('user')).not.toBeNull();
+            expect(localStorage.getItem(USER_KEY)).not.toBeNull();
         });
     });
 });

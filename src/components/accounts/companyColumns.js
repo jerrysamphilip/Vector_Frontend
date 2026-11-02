@@ -2,6 +2,7 @@
 // (app/domain/accounts.py) and the export's `columns` parameter; custom properties are `custom.<field_key>`.
 
 import { activeFields, filterSpecOf } from '../../lib/customProperties';
+import { storageKey } from '../../lib/storageKey';
 
 export const BASE_COLUMNS = [
     { key: 'name', label: 'Company', sort: 'name' },
@@ -25,7 +26,7 @@ export const DEFAULT_COLUMNS = ['name', 'industry', 'location', 'lifecycle_stage
 // Table-only columns map to the export columns they are made of
 const EXPORT_KEYS = { location: ['city', 'country'] };
 
-export const COLUMNS_KEY = 'companies.columns';
+export const COLUMNS_KEY = storageKey('companies.columns');
 
 export function readColumns() {
     try {

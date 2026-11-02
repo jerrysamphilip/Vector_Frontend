@@ -1,3 +1,4 @@
+import { storageKey } from '../../lib/storageKey';
 import {
     Send, MailOpen, MessageSquare, AlertTriangle, TrendingUp,
     VolumeX, ThumbsUp, Loader2
@@ -15,7 +16,7 @@ export const ALL_COLUMNS = [
 ];
 
 export const DEFAULT_VISIBLE = ['inProgress', 'sent', 'opened', 'replied', 'bounced', 'senderBounced', 'positive', 'repliedNoOOO'];
-export const LS_KEY = 'campaigns_visible_columns';
+export const LS_KEY = storageKey('campaigns_visible_columns');
 
 export function loadVisibleCols() {
     try {

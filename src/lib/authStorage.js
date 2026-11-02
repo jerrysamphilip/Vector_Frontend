@@ -1,11 +1,17 @@
+import { OWNS_ROOT_STORAGE, storageKey } from './storageKey';
+
 // Signed-in user info (name, role, permissions, two-factor state) for the UI. The session itself
 // lives in httpOnly cookies set by the API; no token is ever readable by or stored from JavaScript.
-export const USER_KEY = 'user';
+export const USER_KEY = storageKey('user');
+const USER_NAME_KEY = storageKey('user_name');
+const FIRST_LOGIN_KEY = storageKey('first_login');
 const CSRF_COOKIE = 'csrf_token';
 const LEGACY_TOKEN_KEYS = ['access_token', 'refresh_token'];
 
-// One-time cleanup: earlier builds kept tokens in web storage.
+// One-time cleanup: earlier builds kept tokens in web storage under these plain names. Only when
+// served at the origin root: under a sub-path the plain names belong to the other app on the origin.
 (function removeLegacyTokens() {
+    if (!OWNS_ROOT_STORAGE) return;
     try {
         LEGACY_TOKEN_KEYS.forEach((k) => {
             localStorage.removeItem(k);
@@ -34,7 +40,7 @@ export function getStoredUser() {
 export function getDisplayName() {
     const user = getStoredUser();
     if (user?.first_name) return user.first_name;
-    return localStorage.getItem('user_name') || 'User';
+    return localStorage.getItem(USER_NAME_KEY) || 'User';
 }
 
 /** Store the user from a sign-in / session response. Token fields, if any, are ignored. */
@@ -42,12 +48,12 @@ export function setAuthSession(payload) {
     if (payload?.user) {
         localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
         if (payload.user.first_name) {
-            localStorage.setItem('user_name', payload.user.first_name);
+            localStorage.setItem(USER_NAME_KEY, payload.user.first_name);
         }
     }
     if (payload && 'first_login' in payload) {
-        if (payload.first_login) localStorage.setItem('first_login', '1');
-        else localStorage.removeItem('first_login');
+        if (payload.first_login) localStorage.setItem(FIRST_LOGIN_KEY, '1');
+        else localStorage.removeItem(FIRST_LOGIN_KEY);
     }
 }
 
@@ -62,16 +68,16 @@ export function updateStoredUser(patch) {
 }
 
 export function consumeFirstLogin() {
-    const val = localStorage.getItem('first_login') === '1';
-    localStorage.removeItem('first_login');
+    const val = localStorage.getItem(FIRST_LOGIN_KEY) === '1';
+    localStorage.removeItem(FIRST_LOGIN_KEY);
     return val;
 }
 
 export function clearAuthSession() {
     localStorage.removeItem(USER_KEY);
-    localStorage.removeItem('user_name');
-    localStorage.removeItem('first_login');
-    LEGACY_TOKEN_KEYS.forEach((k) => localStorage.removeItem(k));
+    localStorage.removeItem(USER_NAME_KEY);
+    localStorage.removeItem(FIRST_LOGIN_KEY);
+    if (OWNS_ROOT_STORAGE) LEGACY_TOKEN_KEYS.forEach((k) => localStorage.removeItem(k));
 }
 
 /** The UI's view of "signed in": user info is present. The API cookie decides for real; a dead

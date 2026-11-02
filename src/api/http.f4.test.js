@@ -3,6 +3,7 @@ import axios from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient, apiV1Client, refreshSessionOnce, waitForRefresh } from './http';
 import { isSessionEnded, subscribeSession } from '../auth/sessionEvents';
+import { USER_KEY } from '../lib/authStorage';
 
 const httpError = (status, data, config = {}) => {
     const error = new Error(`Request failed with status code ${status}`);
@@ -141,11 +142,11 @@ describe('session refresh (F4)', () => {
         unsubscribe = subscribeSession((e) => events.push(e));
         const refresh = vi.spyOn(axios, 'post').mockRejectedValue(httpError(401, { detail: { code: 'SESSION_EXPIRED', message: 'x' } }));
         apiClient.defaults.adapter = (config) => Promise.reject(httpError(401, { detail: 'expired' }, config));
-        localStorage.setItem('user', JSON.stringify({ first_name: 'Ann' }));
+        localStorage.setItem(USER_KEY, JSON.stringify({ first_name: 'Ann' }));
         await expect(apiClient.get('/a')).rejects.toBeTruthy();
         expect(events).toEqual([{ type: 'ended', reason: 'expired' }]);
         expect(assign).not.toHaveBeenCalled();
-        expect(localStorage.getItem('user')).toBeNull();
+        expect(localStorage.getItem(USER_KEY)).toBeNull();
         expect(isSessionEnded()).toBe(true);
         // The session is over: later 401s do not replay the dead refresh token
         await expect(apiClient.get('/b')).rejects.toBeTruthy();

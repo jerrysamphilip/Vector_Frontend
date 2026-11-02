@@ -4,6 +4,7 @@ import { campaignDraftsApi } from '../../../api/campaignDrafts';
 import { INITIAL_FORM_DATA } from './constants';
 import { trackVersion } from './useWizardMutations';
 import { useApiQuery } from '../../../lib/useApiQuery';
+import { storageKey } from '../../../lib/storageKey';
 
 // Draft persistence of the create-campaign wizard:
 //   - edit mode (?edit=<id>): restore the per-campaign localStorage cache instantly, then the campaign
@@ -12,7 +13,7 @@ import { useApiQuery } from '../../../lib/useApiQuery';
 //   - otherwise: restore the single server-side draft (discarded when its campaign was deleted)
 //   - auto-save 2 s after the last change, to the server draft and (with a campaign id) the local cache
 
-const DRAFT_CACHE_KEY = 'campaign_draft_cache';
+const DRAFT_CACHE_KEY = storageKey('campaign_draft_cache');
 
 export function getCachedDraft(cId) {
     try {

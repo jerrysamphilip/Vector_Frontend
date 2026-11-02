@@ -13,6 +13,7 @@ import { PermissionRoute, PlatformAdminRoute, ProtectedRoute, PublicRoute } from
 import { createTestQueryClient, makeUser, renderPage } from '../test/renderPage';
 import { apiClient, apiV1Client } from '../api/http';
 import { resetActivity } from '../api/activity';
+import { USER_KEY } from '../lib/authStorage';
 
 function Probe() {
     const auth = useAuth();
@@ -88,7 +89,7 @@ describe('useAuth in pages (renderPage)', () => {
 
 function renderApp(ui, { path = '/app/home', user = makeUser('AGENT'), queryClient = createTestQueryClient(), idleTimeout = false } = {}) {
     queryClient.setQueryData(AUTH_QUERY_KEY, user);
-    if (user) localStorage.setItem('user', JSON.stringify(user));
+    if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
     return render(
         <QueryClientProvider client={queryClient}>
             <ToastProvider>
@@ -159,7 +160,7 @@ describe('session end (refresh refused, suspended)', () => {
         expect(screen.getByText('login page')).toBeInTheDocument();
         expect(screen.getByTestId('where')).toHaveTextContent('/login?reason=expired');
         expect(screen.getByTestId('toast-info')).toHaveTextContent(/session expired/i);
-        expect(localStorage.getItem('user')).toBeNull();
+        expect(localStorage.getItem(USER_KEY)).toBeNull();
     });
 
     it('a refreshed user replaces the cached one (role change)', async () => {

@@ -1,9 +1,10 @@
 import { PauseCircle, ShieldAlert, ServerCrash } from 'lucide-react';
 import { parseApiDate, toApiIso } from '../../lib/dates';
+import { storageKey } from '../../lib/storageKey';
 
 // Dashboard alert center: which alerts were seen (localStorage), timestamps and the icon / colours per alert.
 
-export const DASHBOARD_SEEN_ALERTS_KEY = 'dashboard_seen_alert_ids_v2';
+export const DASHBOARD_SEEN_ALERTS_KEY = storageKey('dashboard_seen_alert_ids_v2');
 
 export function readSeenAlertIds() {
     if (typeof window === 'undefined') return [];
