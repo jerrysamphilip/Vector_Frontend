@@ -20,15 +20,37 @@ export const INVITE_ROLES = [
     { value: 'AGENT',       label: 'Agent',        desc: 'Sales rep — can use assigned campaigns and inboxes' },
 ];
 
+/**
+ * Options of a member's role dropdown (backend: PUT /users/{id}/role, SUPER_ADMIN only, any tenant role -
+ * app/domain/identity.py TENANT_ROLES). Super Admin is offered to Super Admins only. The member's current role is
+ * always an option, so the dropdown shows the real role and never falls back to the first entry.
+ */
+export function roleOptions(currentRole, memberRole) {
+    const options = INVITE_ROLES
+        .filter(r => !r.superAdminOnly || currentRole === 'SUPER_ADMIN')
+        .map(({ value, label }) => ({ value, label }));
+    if (memberRole && !options.some(o => o.value === memberRole)) {
+        options.unshift({ value: memberRole, label: ROLE_META[memberRole]?.label || memberRole });
+    }
+    return options;
+}
+
 export const PERMISSION_LIST = [
     { key: 'manage_campaigns',  label: 'Manage Campaigns',  desc: 'Create, edit and delete campaigns',      icon: '📧' },
     { key: 'manage_templates',  label: 'Manage Templates',  desc: 'Create and edit email templates',        icon: '📝' },
     { key: 'manage_inboxes',    label: 'Manage Inboxes',    desc: 'Connect and configure email inboxes',    icon: '📬' },
     { key: 'manage_prospects',  label: 'Manage Prospects',  desc: 'Import and manage prospect lists',       icon: '👥' },
     { key: 'view_analytics',    label: 'View Analytics',    desc: 'Access reports and analytics dashboard', icon: '📊' },
-    { key: 'export_data',       label: 'Export Data',       desc: 'Export campaigns, contacts and reports', icon: '📤' },
+    { key: 'export_data',       label: 'Export Reports',    desc: 'Export campaign reports and analytics',  icon: '📤' },
+    // BR-CM-31: only admins and managers may export contacts (the API refuses it for other roles)
+    { key: 'export_contacts',   label: 'Export Contacts',   desc: 'Export contact, company and list views', icon: '📇', roles: ['SUPER_ADMIN', 'ADMIN', 'MANAGER'] },
     { key: 'manage_team',       label: 'Manage Team',       desc: 'Invite and manage team members',         icon: '🛡️' },
 ];
+
+/** The permissions that can be granted to a member with this role. */
+export function permissionsForRole(role) {
+    return PERMISSION_LIST.filter(p => !p.roles || p.roles.includes(role));
+}
 
 export const AVATAR_COLORS = [
     'bg-violet-500', 'bg-blue-500', 'bg-emerald-500',

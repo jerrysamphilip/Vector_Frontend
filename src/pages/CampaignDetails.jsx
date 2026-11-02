@@ -233,7 +233,7 @@ export default function CampaignDetails() {
             case 'Prospects':
                 return <LeadListTab campaignId={id} />;
             case 'Subsequence':
-                return <SubsequenceTab campaignId={id} />;
+                return <SubsequenceTab campaignId={id} ctaLink={campaign.cta_link} />;
             case 'Schedule':
                 return <ScheduleTab campaignId={id} />;
             case 'Trigger logs':

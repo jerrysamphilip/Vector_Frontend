@@ -9,9 +9,11 @@
 // The last interaction time is shared between tabs through localStorage: the tab that happens to
 // refresh (whichever hits the expired access token first) reports the activity of every tab.
 
+import { storageKey } from '../lib/storageKey';
+
 export const SESSION_IDLE_MINUTES = Number(import.meta.env.VITE_SESSION_IDLE_MINUTES) || 30;
 export const ACTIVITY_HEADER = 'X-User-Activity';
-export const ACTIVITY_STORAGE_KEY = 'last_user_activity';
+export const ACTIVITY_STORAGE_KEY = storageKey('last_user_activity');
 // Listeners fire constantly (pointermove, scroll); record at most once per THROTTLE_MS.
 export const THROTTLE_MS = 5000;
 

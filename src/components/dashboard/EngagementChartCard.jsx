@@ -38,7 +38,7 @@ export default function EngagementChartCard({ dashboard }) {
                     </div>
                     <div className="mt-4">
                         <p className="text-2xl font-bold text-gray-800">{totals.opened.toLocaleString()}</p>
-                        <p className="text-xs text-gray-400 mt-1">Total Opens</p>
+                        <p className="text-xs text-gray-400 mt-1" title="Unique contacts who opened at least one email; repeat opens are not counted">Opened (unique)</p>
                     </div>
                     <button
                         onClick={() => navigate('/app/campaigns')}

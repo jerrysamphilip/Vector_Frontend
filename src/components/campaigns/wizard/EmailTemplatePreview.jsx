@@ -1,6 +1,7 @@
 import { Button } from '../../ui/Button';
 import RichTextEditor from '../../common/RichTextEditor';
 import AttachmentManager from '../../common/AttachmentManager';
+import BodyLinksNotice from '../BodyLinksNotice';
 import { sanitizeHtml } from '../../../lib/sanitizeHtml';
 import { Eye, Loader2 } from 'lucide-react';
 
@@ -8,7 +9,7 @@ import { Eye, Loader2 } from 'lucide-react';
 // with sample prospects, attachments.
 export default function EmailTemplatePreview({ wizard }) {
     const {
-        editValue, editing, formatEmailBodyForPreview, getSampleProspects, getSelectedEmailFromSequence,
+        editValue, editing, formData, formatEmailBodyForPreview, getSampleProspects, getSelectedEmailFromSequence,
         getSelectedTemplate, handleEdit, handleRegenerate, handleSaveEdit, previewProspect, regenerating,
         selectedEmailStep, selectedPersona, setEditValue, setEditing, setPreviewProspect, setSelectedEmailStep,
         setShowPreview, showPreview, substituteProspectData
@@ -141,6 +142,13 @@ export default function EmailTemplatePreview({ wizard }) {
                             }}
                         />
                     )}
+
+                    {/* No CTA link: links in the body are removed when sending (A1-07b) */}
+                    <BodyLinksNotice
+                        body={editing === 'body' ? editValue : getSelectedEmailFromSequence()?.body}
+                        ctaLink={formData?.cta_link}
+                        className="mt-3"
+                    />
 
                     {/* Attachments (Gmail-style) */}
                     <div className="mt-4 pt-4 border-t border-slate-100">

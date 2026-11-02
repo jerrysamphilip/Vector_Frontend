@@ -101,9 +101,9 @@ function useDebounced(value, delay = 300) {
 export default function Lists() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
-    const { hasPermission } = useAuth();
+    const { hasPermission, canExportContacts } = useAuth();
     const canManage = hasPermission('manage_prospects');
-    const canExport = hasPermission('export_data');
+    const canExport = canExportContacts; // export_contacts, as GET /lists/{id}/export checks (BR-CM-31)
     const [type, setType] = useState('');
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);

@@ -14,7 +14,7 @@ import { refreshSessionOnce, waitForRefresh } from '../api/http';
 import { recordInteraction, resetActivity, SESSION_IDLE_MINUTES } from '../api/activity';
 import { clearAuthSession, consumeFirstLogin, getCsrfToken, getStoredUser, setAuthSession, USER_KEY } from '../lib/authStorage';
 import { useToast } from '../components/ui/Toast';
-import { ADMIN_ROLES, userHasPermission, userHasRole } from './permissions';
+import { ADMIN_ROLES, userCanExportContacts, userHasPermission, userHasRole } from './permissions';
 import { markSessionActive, markSessionEnded, subscribeSession } from './sessionEvents';
 import { useIdleTimeout } from './useIdleTimeout';
 import IdleWarning from './IdleWarning';
@@ -40,6 +40,7 @@ function buildHelpers(user) {
     return {
         hasPermission: (permission) => userHasPermission(user, permission),
         hasRole: (...roles) => userHasRole(user, ...roles),
+        canExportContacts: userCanExportContacts(user),
         isAdmin: userHasRole(user, ADMIN_ROLES),
         isPlatformAdmin: userHasRole(user, 'PLATFORM_ADMIN'),
     };

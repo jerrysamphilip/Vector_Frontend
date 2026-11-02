@@ -88,6 +88,18 @@ describe('Lists page', () => {
         expect(screen.getByRole('button', { name: 'Export Hot prospects' })).toBeInTheDocument();
     });
 
+    it('offers list export to managers (export_contacts, BR-CM-31) but never to agents', async () => {
+        renderPage(<Lists />, opts({}, 'MANAGER'));
+        await screen.findByText('Hot prospects');
+        expect(screen.getByRole('button', { name: 'Export Hot prospects' })).toBeInTheDocument();
+    });
+
+    it('hides list export from agents, even with export permissions in a custom list', async () => {
+        renderPage(<Lists />, { ...opts({}, 'AGENT'), user: { permissions: ['export_data', 'export_contacts'] } });
+        await screen.findByText('Hot prospects');
+        expect(screen.queryByRole('button', { name: 'Export Hot prospects' })).not.toBeInTheDocument();
+    });
+
     it('opens the new-list dialog', async () => {
         renderPage(<Lists />, opts());
         await screen.findByText('Hot prospects');

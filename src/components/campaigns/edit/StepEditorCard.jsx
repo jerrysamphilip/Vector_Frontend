@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, Eye, Loader2, Plus, Sparkles, Trash2, Users } from 'lucide-react';
 import RichTextEditor from '../../common/RichTextEditor';
+import BodyLinksNotice from '../BodyLinksNotice';
 import { canDelete, newVersion } from './campaignEditModel';
 
 const inputClass = 'w-full h-9 px-3 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-400 disabled:bg-slate-50';
@@ -7,11 +8,12 @@ const inputClass = 'w-full h-9 px-3 border border-slate-200 rounded-lg text-sm b
 /**
  * One step of the campaign editor (F-04 / F-05): wait days, stop flags and every persona version of the step
  * (who receives it, subject, body), with Regenerate (one version) and Preview. A step whose email already went
- * out can't be deleted; existing steps are never reordered, a new step can be moved.
+ * out can't be deleted; existing steps are never reordered, a new step can be moved. ctaLink is the campaign's
+ * CTA link as currently edited: without one, links typed in a body are removed when sending (A1-07b notice).
  */
 export default function StepEditorCard({
     step, index, total, onChange, onDelete, onMove, onInsertAfter, onRegenerate, regenerating, onPreview, editorRev,
-    canAddStep,
+    canAddStep, ctaLink,
 }) {
     const number = index + 1;
     const set = (patch) => onChange({ ...step, ...patch });
@@ -107,6 +109,7 @@ export default function StepEditorCard({
                                     minHeightClass="min-h-[10rem]"
                                 />
                             </div>
+                            <BodyLinksNotice body={v.body} ctaLink={ctaLink} className="mt-2" />
                         </div>
                     </div>
                 ))}

@@ -10,9 +10,11 @@ import AttachmentManager from '../../common/AttachmentManager';
 import { sanitizeHtml, htmlToText } from '../../../lib/sanitizeHtml';
 import { withVersion } from '../../../lib/staleVersion';
 import SubjectVariantsEditor from '../SubjectVariantsEditor';
+import BodyLinksNotice from '../BodyLinksNotice';
 import { useToast } from '../../ui/Toast';
 
-export default function SubsequenceTab({ campaignId }) {
+// ctaLink: the campaign's CTA link; without one, links in an edited body are removed when sending (A1-07b notice).
+export default function SubsequenceTab({ campaignId, ctaLink }) {
     const queryClient = useQueryClient();
     const toast = useToast();
     const [expandedStep, setExpandedStep] = useState(null);
@@ -411,6 +413,7 @@ export default function SubsequenceTab({ campaignId }) {
                                             placeholder="Email body"
                                             minHeightClass="min-h-[10rem]"
                                         />
+                                        <BodyLinksNotice body={editBody} ctaLink={ctaLink} />
                                         <div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Attachments</p>
                                             <AttachmentManager templateId={step.template.template_id} />

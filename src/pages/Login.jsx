@@ -7,6 +7,9 @@ import { safeReturnPath } from "../lib/returnTo";
 import { SESSION_IDLE_MINUTES } from "../api/activity";
 
 import bg from "../assets/bg.png";
+import { storageKey } from "../lib/storageKey";
+
+const REMEMBERED_EMAIL_KEY = storageKey("rememberedEmail");
 import logo from "../assets/logo.png";
 import neutrinoAILogo from "../assets/NeutrinoAI.png";
 import neutrinoLogo from "../assets/Neutrino.png";
@@ -38,7 +41,7 @@ const LoginPage = () => {
 
     /* Load remembered email (a signed-in user never gets here: PublicRoute) */
     useEffect(() => {
-        const saved = localStorage.getItem("rememberedEmail");
+        const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY);
         if (saved) {
             setEmail(saved);
             setRemember(true);
@@ -66,9 +69,9 @@ const LoginPage = () => {
             const result = await auth.login(email, password);
 
             if (remember) {
-                localStorage.setItem("rememberedEmail", email);
+                localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
             } else {
-                localStorage.removeItem("rememberedEmail");
+                localStorage.removeItem(REMEMBERED_EMAIL_KEY);
             }
 
             if (result.mfaRequired) {
