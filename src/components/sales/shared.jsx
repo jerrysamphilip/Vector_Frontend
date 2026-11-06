@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { localISODate } from '../../lib/dates';
 import { useQuery } from '@tanstack/react-query';
 import { contactsApi } from '../../api/contacts';
@@ -31,10 +32,11 @@ export function PageHeader({ title, subtitle, children }) {
     );
 }
 
-export function StatTile({ label, value, sub, tone = 'text-slate-900', onClick }) {
-    const Tag = onClick ? 'button' : 'div';
+/** A headline number; `to` makes it a link to the records behind it, `title` a tooltip explaining it. */
+export function StatTile({ label, value, sub, tone = 'text-slate-900', onClick, to, title }) {
+    const Tag = to ? Link : onClick ? 'button' : 'div';
     return (
-        <Tag onClick={onClick} className={`${card} px-4 py-3 text-left ${onClick ? 'hover:border-indigo-200' : ''}`} style={cardShadow}>
+        <Tag to={to} onClick={onClick} title={title} className={`${card} block px-4 py-3 text-left ${onClick || to ? 'hover:border-indigo-200' : ''}`} style={cardShadow}>
             <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
             <p className={`text-2xl font-bold tracking-tight mt-1 tabular-nums ${tone}`}>{value}</p>
             {sub && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
@@ -132,12 +134,12 @@ export function DealStatusBadge({ status, stageName }) {
  * Horizontal magnitude bar: one hue, 4px rounded data end, recessive track.
  * The value and label are text, not colour; hovering shows the exact figure.
  */
-export function HBar({ label, value, max, display, sub, tone = '#2d6bbf', onClick }) {
+export function HBar({ label, value, max, display, sub, tone = '#2d6bbf', onClick, title }) {
     const width = max > 0 ? Math.max(value > 0 ? 1.5 : 0, (value / max) * 100) : 0;
     const Tag = onClick ? 'button' : 'div';
     return (
         <Tag onClick={onClick} className={`w-full text-left grid grid-cols-[minmax(110px,180px)_1fr_auto] items-center gap-3 py-1.5 group ${onClick ? 'cursor-pointer' : ''}`}
-            title={`${label}: ${display}${sub ? ` · ${sub}` : ''}`}>
+            title={title || `${label}: ${display}${sub ? ` · ${sub}` : ''}`}>
             <span className="text-sm text-slate-700 truncate">{label}</span>
             <span className="h-3 rounded bg-slate-100 overflow-hidden">
                 <span className="block h-full rounded-r group-hover:opacity-80" style={{ width: `${width}%`, background: tone }} />

@@ -66,6 +66,8 @@ export default function CustomReports() {
     const [error, setError] = useState(null);
     const spec = meta?.objects?.[def.object];
     const set = (patch) => setDef(d => ({ ...d, ...patch }));
+    // ISO dates compare as strings; the API answers 400 for the same case
+    const datesReversed = Boolean(def.date_field && def.date_from && def.date_to && def.date_from > def.date_to);
 
     const run = useMutation({ mutationFn: () => customReportsApi.run(clean(def)), onSuccess: r => { setResult(r); setError(null); }, onError: e => setError(errorMessage(e)) });
     const save = useMutation({
@@ -134,7 +136,8 @@ export default function CustomReports() {
                             {def.date_field && <>
                                 <input type="date" className={selectSm} value={def.date_from} onChange={e => set({ date_from: e.target.value })} aria-label="From" />
                                 <span className="text-sm text-slate-400">and</span>
-                                <input type="date" className={selectSm} value={def.date_to} onChange={e => set({ date_to: e.target.value })} aria-label="To" />
+                                <input type="date" className={selectSm} value={def.date_to} onChange={e => set({ date_to: e.target.value })} aria-label="To" aria-invalid={datesReversed || undefined} />
+                                {datesReversed && <span role="alert" className="text-sm text-red-600">The end date is before the start date</span>}
                             </>}
                         </div>
                         {def.filters.map((f, i) => (
@@ -158,13 +161,13 @@ export default function CustomReports() {
                                 className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"><Plus className="w-4 h-4" /> Filter</button>
                             <div className="ml-auto flex items-center gap-2">
                                 {!def.group_by_2 && <Seg value={def.chart} onChange={v => set({ chart: v })} options={[['bar', <BarChart2 key="b" className="w-4 h-4" />], ['table', <Table2 key="t" className="w-4 h-4" />]]} />}
-                                <PrimaryButton onClick={() => run.mutate()} loading={run.isPending}><Play className="w-4 h-4" /> Run</PrimaryButton>
+                                <PrimaryButton onClick={() => run.mutate()} loading={run.isPending} disabled={datesReversed}><Play className="w-4 h-4" /> Run</PrimaryButton>
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
                             <input className={`${selectSm} flex-1 min-w-[200px]`} value={name} onChange={e => setName(e.target.value)} placeholder="Report name" />
                             <label className="flex items-center gap-1.5 text-sm text-slate-600"><input type="checkbox" className="accent-indigo-600" checked={shared} onChange={e => setShared(e.target.checked)} /> Share with workspace</label>
-                            <SecondaryButton onClick={() => save.mutate()} disabled={!name.trim() || save.isPending}><Save className="w-4 h-4" /> {active?.can_edit ? 'Save changes' : 'Save report'}</SecondaryButton>
+                            <SecondaryButton onClick={() => save.mutate()} disabled={!name.trim() || save.isPending || datesReversed}><Save className="w-4 h-4" /> {active?.can_edit ? 'Save changes' : 'Save report'}</SecondaryButton>
                             {active?.can_edit && <button onClick={async () => { if (await confirm({ title: `Delete "${active.name}"?`, confirmLabel: 'Delete', danger: true })) remove.mutate(active.report_id); }} className="p-2 text-slate-400 hover:text-red-600" aria-label="Delete report"><Trash2 className="w-4 h-4" /></button>}
                         </div>
                         <p className="text-xs text-slate-400">Everyone who opens a shared report sees only their own and their team's records.</p>

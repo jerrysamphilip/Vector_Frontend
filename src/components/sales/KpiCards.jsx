@@ -23,7 +23,8 @@ export function SqlToWinCard({ member, range }) {
             {!data ? <Spinner /> : (
                 <>
                     <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 px-5 pb-4">
-                        <StatTile label="SQL → won" value={pct(data.sql_to_win_rate)} sub={`${data.won} of ${data.sqls} SQLs`} tone="text-emerald-600" />
+                        <StatTile label="SQL → won" value={pct(data.sql_to_win_rate)} sub={`${data.won} of ${data.sqls} leads that became SQL in the period`} tone="text-emerald-600"
+                            title="Base: leads that became SQL in the period (one cohort), won when any deal from them is won. The funnel counts each step separately, so its numbers differ." />
                         <StatTile label="SQL → deal" value={pct(data.sql_to_deal_rate)} sub={`${data.with_deal} with a deal`} />
                         <StatTile label="Win rate (closed)" value={pct(data.closed_win_rate)} sub={`${data.won} won · ${data.lost} lost · ${data.open} open`} />
                         <StatTile label="Days SQL → won" value={data.average_days_sql_to_win ?? '—'} sub="Average" />
