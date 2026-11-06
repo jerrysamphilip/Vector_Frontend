@@ -80,4 +80,26 @@ describe('ImportDrawer', () => {
         expect(onClose).toHaveBeenCalled();
         expect(h.requests.some(r => r.method === 'POST' && r.path === '/imports/im-9/cancel')).toBe(true);
     });
+    it('names the default owner truthfully and says when existing contacts are reassigned', async () => {
+        const { http: h } = renderPage(<ImportDrawer onClose={vi.fn()} />, { http: http() });
+        const dialog = screen.getByRole('dialog');
+        await choose(dialog);
+        await within(dialog).findByText('3 rows · 2 columns');
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Next' }));
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Next' }));
+        const owner = await within(dialog).findByLabelText(/owner of new contacts and companies/i);
+        await within(owner).findByRole('option', { name: 'Bob Builder' });
+        // the server makes the importer the owner when none is chosen, so the empty choice says so
+        expect(within(owner).queryByRole('option', { name: 'Unassigned' })).toBeNull();
+        await userEvent.selectOptions(owner, 'u-2');
+        expect(within(dialog).getByText(/existing contacts are reassigned to this owner too/i)).toBeInTheDocument();
+        await userEvent.click(within(dialog).getByLabelText(/overwrite values of existing records/i));
+        expect(within(dialog).getByText(/existing contacts keep their owner; turn on/i)).toBeInTheDocument();
+        await userEvent.selectOptions(owner, 'Me (the importer)');
+        expect(within(dialog).getByText(/existing contacts and companies keep their owner/i)).toBeInTheDocument();
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Next' }));
+        await within(dialog).findByText("Invalid email 'x'");
+        const dry = h.requests.find(r => r.path.endsWith('/dry-run'));
+        expect(dry.body.options).toMatchObject({ owner_id: null, update_existing: false });
+    });
 });

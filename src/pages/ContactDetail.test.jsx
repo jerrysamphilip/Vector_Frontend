@@ -1,11 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ContactDetail from './ContactDetail';
-import { FAIL_REQUEST_ID, fail, pending, renderPage } from '../test/renderPage';
+import { FAIL_REQUEST_ID, fail, pending, renderPage, reply } from '../test/renderPage';
 import { expectLoadError, expectLoading } from '../test/pageAssertions';
 import { contact, contactMeta, owners } from '../test/fixtures/crm';
 import { leadsMeta } from '../test/fixtures/sales';
+import { formatDateTime } from '../lib/dates';
 
 const detail = (extra) => contact('c-1', {
     full_name: 'Carol Contact', account: null, companies: [], lists: [], campaigns: [], persona: null,
@@ -91,5 +92,47 @@ describe('ContactDetail page', () => {
         await user.click(screen.getByRole('button', { name: 'Save' }));
         await waitFor(() => expect(patches()).toHaveLength(2));
         expect(patches()[1].body.timezone).toBe('Europe/London');
+    });
+    describe('data rights', () => {
+        beforeEach(() => {
+            URL.createObjectURL = vi.fn(() => 'blob:x');
+            URL.revokeObjectURL = vi.fn();
+        });
+        afterEach(() => { delete URL.createObjectURL; delete URL.revokeObjectURL; });
+
+        it('an admin downloads the personal data export', async () => {
+            const { http: h } = renderPage(<ContactDetail />, opts({
+                'GET /contacts/:id/data-export': reply(200, new Blob(['{}']), { 'content-disposition': 'attachment; filename="contact-data-c-1.json"' }),
+            }, 'ADMIN'));
+            await screen.findByRole('heading', { level: 1, name: 'Carol Contact' });
+            await userEvent.click(screen.getByRole('button', { name: /export personal data/i }));
+            await waitFor(() => expect(h.requests.some(r => r.method === 'GET' && r.path === '/contacts/c-1/data-export')).toBe(true));
+            expect(URL.createObjectURL).toHaveBeenCalled();
+        });
+
+        it.each(['MANAGER', 'AGENT'])('%s: no personal data export', async (role) => {
+            renderPage(<ContactDetail />, opts({}, role));
+            await screen.findByRole('heading', { level: 1, name: 'Carol Contact' });
+            expect(screen.queryByRole('button', { name: /export personal data/i })).toBeNull();
+        });
+
+        it('says until when an unsubscribe blocks new campaigns, in the viewer\'s zone', async () => {
+            const until = '2026-12-06T10:00:00Z';
+            renderPage(<ContactDetail />, opts({ 'GET /contacts/:id': () => detail({
+                consent_status: 'UNSUBSCRIBED', suppression_expires_at: until,
+                suppression: { active: true, expires_at: until, reason: 'Unsubscribed', since: '2026-11-06T10:00:00Z' },
+            }) }));
+            const note = await screen.findByTestId('suppression-note');
+            expect(note).toHaveTextContent(`Blocked from new campaigns until ${formatDateTime(until, { locale: 'en' })}`);
+            expect(note).toHaveTextContent(/email does not restart then/i);
+        });
+
+        it('says an ended block does not restart email while unsubscribed', async () => {
+            renderPage(<ContactDetail />, opts({ 'GET /contacts/:id': () => detail({
+                consent_status: 'UNSUBSCRIBED',
+                suppression: { active: false, expires_at: '2026-10-01T10:00:00Z', reason: 'Unsubscribed', since: '2026-09-01T10:00:00Z' },
+            }) }));
+            expect(await screen.findByTestId('suppression-note')).toHaveTextContent(/ended .* but they stay unsubscribed/i);
+        });
     });
 });
