@@ -32,6 +32,20 @@ describe('PermissionsModal', () => {
         expect(onSave).toHaveBeenCalledWith(expect.arrayContaining(['view_analytics', 'export_contacts']));
     });
 
+    it('the Market Research preset gives an agent campaigns and prospect management', async () => {
+        const onSave = vi.fn();
+        render(<PermissionsModal user={member('AGENT', ['manage_campaigns', 'view_analytics'])} onClose={() => {}} onSave={onSave} onReset={() => {}} />);
+        await userEvent.click(screen.getByRole('button', { name: 'Market Research' }));
+        await userEvent.click(screen.getByRole('button', { name: /Save Permissions/ }));
+        expect(onSave).toHaveBeenCalledTimes(1);
+        expect([...onSave.mock.calls[0][0]].sort()).toEqual(['manage_campaigns', 'manage_prospects']);
+    });
+
+    it('offers the Market Research preset to agents only', () => {
+        render(<PermissionsModal user={member('MANAGER', ['view_analytics'])} onClose={() => {}} onSave={() => {}} onReset={() => {}} />);
+        expect(screen.queryByRole('button', { name: 'Market Research' })).not.toBeInTheDocument();
+    });
+
     it('permissionsForRole filters by role', () => {
         expect(permissionsForRole('ADMIN')).toHaveLength(PERMISSION_LIST.length);
         expect(permissionsForRole('AGENT').map(p => p.key)).not.toContain('export_contacts');
