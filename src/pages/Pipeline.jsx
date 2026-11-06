@@ -5,14 +5,16 @@ import { useApiQuery } from '../lib/useApiQuery';
 import { dealsApi, money, moneyShort, proposalsApi } from '../api/sales';
 import { relativeDate } from '../components/contacts/shared';
 import { ApprovalBadge, ApprovalsList } from '../components/sales/QuoteApproval';
-import { ClientTypeBadge, ClientTypeFilter, HBar, OwnerFilter, PageHeader, Seg, StatTile, card, cardShadow } from '../components/sales/shared';
+import { ClientTypeBadge, ClientTypeFilter, HBar, OwnerFilter, PageHeader, Seg, StatTile, card, cardShadow, selectSm } from '../components/sales/shared';
 
 const PROPOSAL_TONE = { DRAFT: 'border-slate-300', SENT: 'border-sky-400', UNDER_REVIEW: 'border-amber-400', ACCEPTED: 'border-emerald-500', REJECTED: 'border-red-400' };
 
 /** Revenue pipeline by stage, weighted and unweighted (BR-SP-03/04). */
-function Revenue({ owner, clientType }) {
+function Revenue({ owner, clientType, closeFrom, closeTo }) {
     const navigate = useNavigate();
-    const { data, error, isLoading, refetch } = useApiQuery(['deals', 'revenue', owner, clientType], () => dealsApi.revenue({ owner, client_type: clientType }));
+    const { data, error, isLoading, refetch } = useApiQuery(['deals', 'revenue', owner, clientType, closeFrom, closeTo],
+        () => dealsApi.revenue({ owner, client_type: clientType, close_from: closeFrom || undefined, close_to: closeTo || undefined }));
+    const dates = `${closeFrom ? `&close_from=${closeFrom}` : ''}${closeTo ? `&close_to=${closeTo}` : ''}`;
     if (isLoading) return <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>;
     if (error || !data) return <LoadError error={error} onRetry={refetch} title="Couldn't load the revenue pipeline" />;
     const t = data.totals;
@@ -31,7 +33,7 @@ function Revenue({ owner, clientType }) {
                 <p className="text-xs text-slate-500 mb-3">Bar length is the unweighted amount. Click a stage to see its deals.</p>
                 {open.map(s => (
                     <HBar key={s.stage_id} label={`${s.name} (${s.probability}%)`} value={s.amount} max={max} display={moneyShort(s.amount)}
-                        sub={`weighted ${moneyShort(s.weighted)} · ${s.count} deals`} onClick={() => navigate(`/app/deals?mode=list&status=OPEN`)} />
+                        sub={`weighted ${moneyShort(s.weighted)} · ${s.count} deals`} onClick={() => navigate(`/app/deals?mode=list&status=OPEN${dates}`)} />
                 ))}
             </div>
             <div className={`${card} overflow-hidden`} style={cardShadow}>
@@ -100,6 +102,9 @@ export default function Pipeline() {
     const tab = params.get('tab') || 'revenue';
     const owner = params.get('owner') || '';
     const clientType = params.get('client_type') || '';
+    const closeFrom = params.get('close_from') || '';
+    const closeTo = params.get('close_to') || '';
+    const badRange = closeFrom && closeTo && closeFrom > closeTo;
     const update = (patch) => setParams(p => { const n = new URLSearchParams(p); Object.entries(patch).forEach(([k, v]) => (v ? n.set(k, v) : n.delete(k))); return n; });
     return (
         <div className="w-full space-y-6">
@@ -108,8 +113,20 @@ export default function Pipeline() {
                 <Seg options={[['revenue', 'Revenue pipeline'], ['proposals', 'Proposal pipeline'], ['approvals', 'Discount approvals']]} value={tab} onChange={v => update({ tab: v })} />
                 {tab !== 'approvals' && <OwnerFilter value={owner} onChange={v => update({ owner: v })} />}
                 {tab !== 'approvals' && <ClientTypeFilter value={clientType} onChange={v => update({ client_type: v })} />}
+                {tab === 'revenue' && (
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <span>Expected close</span>
+                        <input type="date" className={selectSm} value={closeFrom} max={closeTo || undefined} aria-label="Expected close from"
+                            onChange={e => update({ close_from: e.target.value })} />
+                        <span>to</span>
+                        <input type="date" className={selectSm} value={closeTo} min={closeFrom || undefined} aria-label="Expected close to"
+                            onChange={e => update({ close_to: e.target.value })} />
+                        {(closeFrom || closeTo) && <button type="button" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800" onClick={() => update({ close_from: '', close_to: '' })}>Clear dates</button>}
+                    </div>
+                )}
             </div>
-            {tab === 'revenue' ? <Revenue owner={owner} clientType={clientType} /> : tab === 'approvals' ? <ApprovalsList /> : <Proposals owner={owner} clientType={clientType} />}
+            {tab === 'revenue' && badRange ? <p className="text-sm text-red-600">The start date is after the end date.</p>
+                : tab === 'revenue' ? <Revenue owner={owner} clientType={clientType} closeFrom={closeFrom} closeTo={closeTo} /> : tab === 'approvals' ? <ApprovalsList /> : <Proposals owner={owner} clientType={clientType} />}
         </div>
     );
 }

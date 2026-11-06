@@ -72,15 +72,26 @@ function LeadsTab({ member, period }) {
 
 function PipelineTab({ member }) {
     const [clientType, setClientType] = useState('');
-    const { data, error, refetch } = useApiQuery(['rep-pipeline', member, clientType], () => salesReportsApi.pipeline({ member, client_type: clientType }));
+    const [closedIn, setClosedIn] = useState('all');
+    const range = closedIn === 'all' ? {} : periodRange(closedIn);
+    const { data, error, refetch } = useApiQuery(['rep-pipeline', member, clientType, closedIn], () => salesReportsApi.pipeline({ member, client_type: clientType, ...range }));
     if (error) return <ReportError error={error} onRetry={refetch} />;
     if (!data) return <Spinner />;
     const max = Math.max(...data.by_close_month.map(m => m.amount), 0);
     return (
         <div className="space-y-5">
-            <ClientTypeFilter value={clientType} onChange={setClientType} />
+            <div className="flex items-center gap-3 flex-wrap">
+                <ClientTypeFilter value={clientType} onChange={setClientType} />
+                <select className={selectSm} value={closedIn} onChange={e => setClosedIn(e.target.value)} aria-label="Won and lost period">
+                    <option value="all">Won / lost: all time</option>
+                    {Object.entries(PERIODS).map(([k, v]) => <option key={k} value={k}>Won / lost: {v.toLowerCase()}</option>)}
+                </select>
+            </div>
             <div className={`${card} overflow-hidden`} style={cardShadow}>
-                <h2 className="text-sm font-bold text-slate-800 px-5 pt-5 pb-3">By owner</h2>
+                <div className="px-5 pt-5 pb-3">
+                    <h2 className="text-sm font-bold text-slate-800">By owner</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Open deals and amounts are as of now. Won, lost and win rate count deals closed {closedIn === 'all' ? 'at any time' : PERIODS[closedIn].toLowerCase()}.</p>
+                </div>
                 <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase">
                     <th className="pl-5 py-2.5">Owner</th><th className={th}>Open deals</th><th className={th}>Open amount</th><th className={th}>Weighted</th><th className={th}>Won</th><th className={th}>Lost</th><th className={`${th} pr-5`}>Win rate</th></tr></thead>
                     <tbody className="divide-y divide-slate-50">{data.by_owner.map(o => (
@@ -191,8 +202,8 @@ function TeamTab({ member, period }) {
     if (error) return <ReportError error={error} onRetry={refetch} />;
     if (!data) return <Spinner />;
     const t = data.totals;
-    const cols = [['activities', 'Activities'], ['calls', 'Calls'], ['meetings', 'Meetings'], ['emails_sent', 'Emails'], ['leads', 'Leads'], ['sqls', 'SQLs'],
-        ['opportunities', 'Opps'], ['won_count', 'Won']];
+    const cols = [['activities', 'Activities'], ['calls', 'Calls'], ['meetings', 'Meetings'], ['tasks_done', 'Tasks'], ['emails_sent', 'Emails'], ['leads', 'Leads'], ['sqls', 'SQLs'],
+        ['opportunities', 'Opps'], ['won_count', 'Won'], ['lost_count', 'Lost']];
     return (
         <div className={`${card} overflow-hidden`} style={cardShadow}>
             <div className="overflow-x-auto"><table className="w-full text-sm">
@@ -211,7 +222,7 @@ function TeamTab({ member, period }) {
                         <td className={td}>{moneyShort(t.won_amount)}</td><td className={td}>{pct(t.lead_to_sql)}</td><td className={td}>{pct(t.sql_to_opportunity)}</td><td className={`${td} pr-5`}>{pct(t.win_rate)}</td></tr>
                 </tbody>
             </table></div>
-            <p className="text-xs text-slate-400 px-5 py-3">Activities are logged notes, calls, meetings and emails plus completed tasks. Conversion is within the period.</p>
+            <p className="text-xs text-slate-400 px-5 py-3">Activities are logged notes, calls, meetings and emails plus completed tasks (Tasks). Won and Lost are deals closed in the period. Conversion is within the period.</p>
         </div>
     );
 }
@@ -233,7 +244,8 @@ function TargetsTab({ member, period }) {
     const [fy, setFy] = useState('');
     const { data, error, refetch } = useApiQuery(['rep-targets', member, fy, quarter], () => salesReportsApi.targets({ member, fy, quarter }));
     const range = periodRange(period);
-    const { data: board } = useApiQuery(['rep-leaderboard', member, period], () => salesReportsApi.leaderboard({ ...range, member }));
+    const [rankBy, setRankBy] = useState('revenue');
+    const { data: board } = useApiQuery(['rep-leaderboard', member, period, rankBy], () => salesReportsApi.leaderboard({ ...range, member, sort: rankBy }));
     if (error) return <ReportError error={error} onRetry={refetch} />;
     if (!data) return <Spinner />;
     const max = Math.max(...data.rows.map(r => Math.max(r.target || 0, r.commit || 0, r.won || 0)), 0);
@@ -278,17 +290,22 @@ function TargetsTab({ member, period }) {
                 </table></div>
             </div>
             <div className={`${card} overflow-hidden`} style={cardShadow}>
-                <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap px-5 pt-5 pb-3">
                     <h2 className="text-sm font-bold text-slate-800">Leaderboard</h2>
-                    <span className="text-xs text-slate-500">Revenue won, {PERIODS[period].toLowerCase()} (period picker above)</span>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-xs text-slate-500">{rankBy === 'attainment' ? '% of target' : 'Revenue won'}, {PERIODS[period].toLowerCase()} (period picker above)</span>
+                        <Seg value={rankBy} onChange={setRankBy} options={[['revenue', 'By revenue'], ['attainment', 'By % of target']]} />
+                    </div>
                 </div>
                 {!board ? <Spinner /> : (
                     <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50/80 text-xs font-semibold text-left text-slate-400 uppercase">
-                        <th className="pl-5 py-2.5 w-10">#</th><th className="py-2.5">Rep</th><th className={th}>Won amount</th><th className={th}>Deals won</th><th className={th}>SQLs</th><th className={th}>Activities</th><th className={`${th} pr-5`}>Win rate</th></tr></thead>
+                        <th className="pl-5 py-2.5 w-10">#</th><th className="py-2.5">Rep</th><th className={th}>Won amount</th><th className={th}>Target</th><th className={th}>Attained</th><th className={th}>Deals won</th><th className={th}>SQLs</th><th className={th}>Activities</th><th className={`${th} pr-5`}>Win rate</th></tr></thead>
                         <tbody className="divide-y divide-slate-50">{board.rows.map(r => (
                             <tr key={r.user_id}><td className="pl-5 py-2.5 font-semibold text-slate-500 tabular-nums">{r.rank}</td><td className="py-2.5 font-medium text-slate-800">{r.name}</td>
-                                <td className={`${td} font-semibold`}>{money(r.won_amount)}</td><td className={td}>{r.won_count}</td><td className={td}>{r.sqls}</td><td className={td}>{r.activities}</td><td className={`${td} pr-5`}>{pct(r.win_rate)}</td></tr>
-                        ))}</tbody></table></div>
+                                <td className={`${td} font-semibold`}>{money(r.won_amount)}</td><td className={td}>{r.target ? money(r.target) : '—'}</td><td className={td}>{pct(r.attainment)}</td>
+                                <td className={td}>{r.won_count}</td><td className={td}>{r.sqls}</td><td className={td}>{r.activities}</td><td className={`${td} pr-5`}>{pct(r.win_rate)}</td></tr>
+                        ))}</tbody></table>
+                        <p className="text-xs text-slate-400 px-5 py-3">Target is each rep's quarterly target pro-rated to the days of the period.</p></div>
                 )}
             </div>
         </div>

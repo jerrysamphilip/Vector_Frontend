@@ -192,6 +192,7 @@ export default function Leads() {
     const stage = params.get('stage') || '';
     const owner = params.get('owner') || '';
     const source = params.get('source') || '';
+    const showClosed = params.get('closed') === '1';
     const [search, setSearch] = useState('');
     const [q, setQ] = useState('');
     const [page, setPage] = useState(1);
@@ -202,7 +203,8 @@ export default function Leads() {
     const filters = { owner, source, q };
     const list = useApiQuery(['leads', 'list', filters, stage, page], () => leadsApi.list({ ...filters, stage, page, page_size: 50 }),
         { enabled: mode === 'list', placeholderData: keepPreviousData });
-    const board = useApiQuery(['leads', 'board', filters], () => leadsApi.board(filters), { enabled: mode === 'board' });
+    const board = useApiQuery(['leads', 'board', filters, showClosed],
+        () => leadsApi.board(showClosed ? { ...filters, include_closed: true } : filters), { enabled: mode === 'board' });
 
     return (
         <div className="w-full space-y-5">
@@ -226,6 +228,13 @@ export default function Leads() {
                         {(meta?.stages || []).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                     </select>
                 )}
+                {mode === 'board' && (
+                    <label className="flex items-center gap-1.5 text-sm text-slate-600">
+                        <input type="checkbox" className="accent-indigo-600" checked={showClosed}
+                            onChange={e => update({ closed: e.target.checked ? '1' : '' })} />
+                        Show closed
+                    </label>
+                )}
                 <OwnerFilter value={owner} onChange={v => update({ owner: v })} />
                 {(list.data?.sources || []).length > 0 && (
                     <select className={selectSm} value={source} onChange={e => update({ source: e.target.value })} aria-label="Source">
@@ -240,7 +249,7 @@ export default function Leads() {
             ) : mode === 'board' ? (
                 board.isLoading ? <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
                 : board.error ? <LoadError error={board.error} onRetry={board.refetch} title="Couldn't load the lead board" /> : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div className={`grid grid-cols-1 md:grid-cols-2 ${showClosed ? 'xl:grid-cols-3 2xl:grid-cols-6' : 'xl:grid-cols-4'} gap-4`}>
                         {(board.data?.columns || []).map(col => (
                             <div key={col.stage} className="bg-slate-50/80 rounded-2xl p-3 min-h-[200px]">
                                 <div className="flex items-center justify-between px-1 mb-2">
