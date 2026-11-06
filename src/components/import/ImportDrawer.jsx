@@ -136,6 +136,13 @@ function MapStep({ preview, mapping, setMapping, setOptions }) {
     );
 }
 
+// What the chosen owner does to contacts that already exist (import_rows.save_contact_row)
+function ownerHint({ owner_id: ownerId, update_existing: overwrite }) {
+    if (!ownerId) return 'Existing contacts and companies keep their owner.';
+    if (overwrite) return 'Existing contacts are reassigned to this owner too (Overwrite values is on); existing companies keep theirs.';
+    return 'Existing contacts keep their owner; turn on “Overwrite values” to reassign them to this owner.';
+}
+
 function OptionsStep({ options, setOptions, hasEmail, fileName }) {
     const { data: owners = [] } = useQuery({ queryKey: ['contact-owners'], queryFn: contactsApi.owners });
     const { data: lists } = useQuery({ queryKey: ['lists', 'STATIC'], queryFn: () => listsApi.list({ list_type: 'STATIC' }) });
@@ -152,8 +159,10 @@ function OptionsStep({ options, setOptions, hasEmail, fileName }) {
                     {Object.entries(DATE_ORDERS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
             </Field>
-            <Field label="Owner of new contacts" hint="Used when the file has no Owner column">
-                <OwnerSelect owners={owners} value={options.owner_id} onChange={set('owner_id')} />
+            {/* The server gives new records to the importer when no owner is chosen (BR-CM-30): never "Unassigned" */}
+            <Field label="Owner of new contacts and companies"
+                hint={`Used for rows with an empty Owner cell. ${ownerHint(options)}`}>
+                <OwnerSelect owners={owners} value={options.owner_id} onChange={set('owner_id')} emptyLabel="Me (the importer)" />
             </Field>
             <Field label="Lead source for new contacts" hint="Used when the row has none">
                 <input className={inputClass} value={options.default_source} maxLength={100} placeholder="e.g. Trade show"

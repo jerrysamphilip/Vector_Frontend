@@ -207,7 +207,7 @@ const CRM = [
             { steps: [
                 'Choose the **File**.',
                 '**Map columns**: for each column in the file, pick the Contact, Company or custom property it fills, or **Don\'t import**.',
-                'Set **Options**: the **Owner of new contacts** (used when the file has no Owner column) and whether to **Add imported contacts to a list** (a new list or an existing one).',
+                'Set **Options**: the **Owner of new contacts and companies** (used for rows with an empty Owner cell; with **Me (the importer)** they are yours; it reassigns existing contacts only when **Overwrite values** is on) and whether to **Add imported contacts to a list** (a new list or an existing one).',
                 'Import. Existing contacts with the same email are updated rather than duplicated.',
             ] },
             { p: 'The result shows how many were **Created**, **Updated** and how many had **Errors**. **Rows that were not imported** can be downloaded with the reason for each, fixed and imported again.' },
