@@ -95,6 +95,36 @@ describe('CampaignEdit page', () => {
         ]);
     });
 
+    it('fills a step email from the template library, after confirming the overwrite', async () => {
+        const library = { items: [{ template_id: 'lib-1', name: 'Check-in', category: 'Follow-up', subject: 'Checking in, {{first_name}}', body: 'Hi {{first_name}},\nAny news?' }] };
+        const { http: h } = renderPage(<CampaignEdit />, opts({ 'GET /template-library': library }));
+        await screen.findByLabelText('Step 2 email 1 subject');
+        await userEvent.click(screen.getByTitle('Fill step 2 email 1 from a library template'));
+        await userEvent.click(await screen.findByRole('button', { name: /Check-in/ }));
+        // The email has content: nothing changes until the replacement is confirmed
+        const dialog = await screen.findByRole('dialog');
+        expect(dialog).toHaveTextContent('Replace this email?');
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Replace' }));
+        await waitFor(() => expect(screen.getByLabelText('Step 2 email 1 subject')).toHaveValue('Checking in, {{first_name}}'));
+        await waitFor(() => expect([...document.querySelectorAll('.ProseMirror')].some(el => el.textContent.includes('Any news?'))).toBe(true));
+        await userEvent.click(screen.getByRole('button', { name: /Review and save/ }));
+        await userEvent.click(await screen.findByRole('button', { name: /Save changes/ }));
+        await waitFor(() => expect(h.requests.some(r => r.method === 'POST' && r.path === '/campaigns/c-1/edits')).toBe(true));
+        const body = h.requests.find(r => r.path === '/campaigns/c-1/edits').body;
+        expect(body.steps[1].templates).toEqual([{ template_id: 't-2', designation: null, subject: 'Checking in, {{first_name}}',
+            body: '<p>Hi {{first_name}},</p><p>Any news?</p>' }]);
+    });
+
+    it('keeps the step email when the library overwrite is cancelled', async () => {
+        const library = { items: [{ template_id: 'lib-1', name: 'Check-in', subject: 'Checking in', body: 'Any news?' }] };
+        renderPage(<CampaignEdit />, opts({ 'GET /template-library': library }));
+        await screen.findByLabelText('Step 2 email 1 subject');
+        await userEvent.click(screen.getByTitle('Fill step 2 email 1 from a library template'));
+        await userEvent.click(await screen.findByRole('button', { name: /Check-in/ }));
+        await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+        expect(screen.getByLabelText('Step 2 email 1 subject')).toHaveValue('Follow up');
+    });
+
     it('offers a reload when someone else changed the campaign (409)', async () => {
         renderPage(<CampaignEdit />, opts({
             'POST /campaigns/:id/edits/checks': reply(409, { detail: { code: 'STALE_VERSION', current_version: 5, message: 'changed' } }),

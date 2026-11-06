@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '../../ui/Toast';
+import { useConfirm } from '../../ui/ConfirmDialog';
+import { hasStepContent, libraryTemplateToStep, OVERWRITE_CONFIRM } from '../libraryTemplate';
 import { campaignWizardApi } from '../../../api/campaignWizard';
 import {
     formatEmailBodyForPreview, hasHtmlTags, hasSingleBraceTags, plainTextToHtml, substituteProspectData,
@@ -37,6 +39,7 @@ export function useTemplateEditor({
     processingResult, setProcessingResult, selectedPersona, formData, customInstruction, creativeEmail, setErrors,
 }) {
     const toast = useToast();
+    const confirm = useConfirm();
     const [showPreview, setShowPreview] = useState(false);
     const [selectedEmailStep, setSelectedEmailStep] = useState(1); // 1, 2, 3, or 4
     const [regenerating, setRegenerating] = useState(null); // 'subject' or 'body' or null
@@ -139,6 +142,26 @@ export function useTemplateEditor({
         }
     };
 
+    // "Insert from library": the library template's subject and body replace the selected email's (saved to
+    // the backend like an edit), after a confirmation when the email already has content.
+    const handleInsertFromLibrary = async (template) => {
+        const email = getSelectedEmailFromSequence();
+        if (!email?.template_id) return;
+        if (hasStepContent(email.subject, email.body) && !(await confirm(OVERWRITE_CONFIRM))) return;
+        const { subject, body } = libraryTemplateToStep(template);
+        try {
+            await campaignWizardApi.updateTemplate(email.template_id, 'subject', subject);
+            await campaignWizardApi.updateTemplate(email.template_id, 'body', body);
+            setProcessingResult(prev => withEmailField(
+                withEmailField(prev, selectedPersona, selectedEmailStep, 'subject', subject),
+                selectedPersona, selectedEmailStep, 'body', body));
+            setEditing(null);
+            setEditValue('');
+        } catch (error) {
+            setErrors({ editTemplate: error.response?.data?.detail || 'Failed to insert the template' });
+        }
+    };
+
     // Cancel editing
     const handleCancelEdit = () => {
         setEditing(null);
@@ -152,7 +175,7 @@ export function useTemplateEditor({
         editing, setEditing,
         editValue, setEditValue,
         getSelectedTemplate, getSelectedEmailFromSequence, getSampleProspects,
-        handleRegenerate, handleEdit, handleSaveEdit, handleCancelEdit,
+        handleRegenerate, handleEdit, handleSaveEdit, handleCancelEdit, handleInsertFromLibrary,
         // Preview helpers bound to the current sender details
         substituteProspectData: (text, prospect) => substituteProspectData(text, prospect, formData),
         formatEmailBodyForPreview: (body, prospect = null) => formatEmailBodyForPreview(body, prospect, formData),

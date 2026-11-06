@@ -4,8 +4,12 @@ import { templatesApi } from '../../../../api/sales';
 import { stripHtml } from './inboxShared';
 import { useApiQuery } from '../../../../lib/useApiQuery';
 
-/** Pick a library template; it is filled in for this contact and dropped into the reply (BR-SF-10). */
-export default function TemplatePicker({ prospectId, onPick }) {
+/**
+ * Pick a library template (BR-SF-10). In a reply (onPick) it is filled in for this contact and dropped in
+ * as text; in the campaign editors (onPickTemplate) the template itself (subject, body with its merge
+ * fields) is handed over. dropUp opens the list above the button (the reply box sits at the bottom).
+ */
+export default function TemplatePicker({ prospectId, onPick, onPickTemplate, label = 'Templates', title = 'Insert a template', dropUp = true }) {
     const [open, setOpen] = useState(false);
     const [q, setQ] = useState('');
     const [busy, setBusy] = useState(null);
@@ -13,6 +17,11 @@ export default function TemplatePicker({ prospectId, onPick }) {
     const templates = useApiQuery(['sales-templates', 'picker'], () => templatesApi.list(), { enabled: open, retry: false });
     const items = templates.error ? [] : (templates.data ? templates.data.items || [] : null);
     const pick = async (t) => {
+        if (onPickTemplate) {
+            setOpen(false);
+            onPickTemplate(t);
+            return;
+        }
         setBusy(t.template_id);
         try {
             const r = await templatesApi.render(t.template_id, prospectId, true);
@@ -23,12 +32,12 @@ export default function TemplatePicker({ prospectId, onPick }) {
     const shown = (items || []).filter(t => !q || `${t.name} ${t.subject}`.toLowerCase().includes(q.toLowerCase()));
     return (
         <div className="relative">
-            <button type="button" onClick={() => setOpen(o => !o)} title="Insert a template"
+            <button type="button" onClick={() => setOpen(o => !o)} title={title} aria-expanded={open}
                 className="flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors">
-                <FileText className="w-4 h-4" /> Templates
+                <FileText className="w-4 h-4" /> {label}
             </button>
             {open && (
-                <div className="absolute bottom-10 left-0 w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-20 p-2">
+                <div className={`absolute ${dropUp ? 'bottom-10 left-0' : 'top-9 right-0'} w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-20 p-2`}>
                     <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search templates…"
                         className="w-full h-8 px-2.5 mb-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400" />
                     <div className="max-h-64 overflow-y-auto">

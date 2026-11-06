@@ -2,6 +2,7 @@ import { Button } from '../../ui/Button';
 import RichTextEditor from '../../common/RichTextEditor';
 import AttachmentManager from '../../common/AttachmentManager';
 import BodyLinksNotice from '../BodyLinksNotice';
+import TemplatePicker from '../tabs/inbox/TemplatePicker';
 import { sanitizeHtml } from '../../../lib/sanitizeHtml';
 import { Eye, Loader2 } from 'lucide-react';
 
@@ -10,7 +11,7 @@ import { Eye, Loader2 } from 'lucide-react';
 export default function EmailTemplatePreview({ wizard }) {
     const {
         editValue, editing, formData, formatEmailBodyForPreview, getSampleProspects, getSelectedEmailFromSequence,
-        getSelectedTemplate, handleEdit, handleRegenerate, handleSaveEdit, previewProspect, regenerating,
+        getSelectedTemplate, handleEdit, handleInsertFromLibrary, handleRegenerate, handleSaveEdit, previewProspect, regenerating,
         selectedEmailStep, selectedPersona, setEditValue, setEditing, setPreviewProspect, setSelectedEmailStep,
         setShowPreview, showPreview, substituteProspectData
     } = wizard;
@@ -21,15 +22,19 @@ export default function EmailTemplatePreview({ wizard }) {
                     <p className="font-bold text-gray-900 text-base">{getSelectedTemplate()?.persona_label || selectedPersona} Sequence</p>
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{getSelectedTemplate()?.sequence_count || 1} Emails</p>
                 </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPreview(!showPreview)}
-                    className="gap-2 font-bold border-2"
-                >
-                    <Eye className="w-4 h-4" />
-                    {showPreview ? 'Static Code' : 'Live Preview'}
-                </Button>
+                <div className="flex items-center gap-2">
+                    <TemplatePicker onPickTemplate={handleInsertFromLibrary} label="Insert from library"
+                        title="Fill this email's subject and body from a library template" dropUp={false} />
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowPreview(!showPreview)}
+                        className="gap-2 font-bold border-2"
+                    >
+                        <Eye className="w-4 h-4" />
+                        {showPreview ? 'Static Code' : 'Live Preview'}
+                    </Button>
+                </div>
             </div>
 
             {/* Email Step Tabs */}
