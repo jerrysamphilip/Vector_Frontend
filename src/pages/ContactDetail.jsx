@@ -4,7 +4,7 @@ import LoadError from '../components/ui/LoadError';
 import { isNotFound } from '../lib/apiErrors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    ArrowLeft, Mail, Phone, Smartphone, Building2, Linkedin, MapPin, Pencil, Trash2, Loader2, StickyNote, PhoneCall, CalendarDays, Send, Inbox, Eye, MousePointerClick, AlertOctagon, MailX, Megaphone, ListPlus, Check, Globe2, History, CheckSquare, Square, AlertTriangle, ListTodo,
+    ArrowLeft, Download, Mail, Phone, Smartphone, Building2, Linkedin, MapPin, Pencil, Trash2, Loader2, StickyNote, PhoneCall, CalendarDays, Send, Inbox, Eye, MousePointerClick, AlertOctagon, MailX, Megaphone, ListPlus, Check, Globe2, History, CheckSquare, Square, AlertTriangle, ListTodo,
 } from 'lucide-react';
 import { contactsApi, tasksApi, errorMessage } from '../api/contacts';
 import { withVersion } from '../lib/staleVersion';
@@ -24,6 +24,9 @@ import ContactCompaniesCard from '../components/contacts/ContactCompaniesCard';
 import ContactScoreCard from '../components/contacts/ContactScoreCard';
 import ContactIdentityCard from '../components/contacts/merge/ContactIdentityCard';
 import { useConfirm } from '../components/ui/ConfirmDialog';
+import RecordId from '../components/ui/RecordId';
+import { useAuth } from '../auth/AuthProvider';
+import { TIMEZONE_OPTIONS } from '../components/campaigns/wizard/timezones';
 
 const CALL_OUTCOMES = ['Connected', 'Left voicemail', 'No answer', 'Wrong number', 'Busy'];
 
@@ -255,6 +258,23 @@ function TimelineItem({ item, onChanged }) {
     );
 }
 
+/**
+ * How long an unsubscribe, complaint or bounce keeps the contact out of new campaigns (DEC-14), in the viewer's
+ * zone. The end of the block does not restart email: an unsubscribed contact stays unsubscribed until resubscribed.
+ */
+export function SuppressionNote({ contact }) {
+    const s = contact.suppression;
+    if (!s) return null;
+    const unsub = contact.consent_status === 'UNSUBSCRIBED';
+    const stays = unsub ? ' Email does not restart then: they stay unsubscribed until someone resubscribes them with their consent.' : '';
+    let text;
+    if (s.active && s.expires_at) text = `Blocked from new campaigns until ${formatDateTime(s.expires_at)}.${stays}`;
+    else if (s.active) text = 'Blocked from new campaigns with no end date.';
+    else if (unsub) text = `The block on new campaigns ended ${formatDateTime(s.expires_at)}, but they stay unsubscribed until someone resubscribes them with their consent.`;
+    else return null;
+    return <p className="mt-1 text-xs text-slate-500" data-testid="suppression-note">{text}</p>;
+}
+
 // ── Left column: CRM properties + details ───────────────────────
 function CrmCard({ contact, meta, onUpdate, error }) {
     const confirm = useConfirm();
@@ -288,6 +308,7 @@ function CrmCard({ contact, meta, onUpdate, error }) {
                         }}
                             className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">{unsub ? 'Resubscribe' : 'Unsubscribe'}</button>
                     </div>
+                    <SuppressionNote contact={contact} />
                 </div>
                 <Field label="Legal basis for processing">
                     <select className={inputClass} value={contact.legal_basis || ''} onChange={e => onUpdate({ legal_basis: e.target.value || null })}>
@@ -298,6 +319,18 @@ function CrmCard({ contact, meta, onUpdate, error }) {
                 <ErrorNote message={error} />
             </div>
         </div>
+    );
+}
+
+/** The contact's time zone (CM-01): "Automatic" (derived from country + state) or any IANA zone. */
+function TimezoneSelect({ value, onChange }) {
+    const known = TIMEZONE_OPTIONS.some(tz => tz.value === value);
+    return (
+        <select className={inputClass} aria-label="Time zone" value={value || ''} onChange={e => onChange(e.target.value)}>
+            <option value="">Automatic (from country / state)</option>
+            {value && !known && <option value={value}>{value}</option>}
+            {TIMEZONE_OPTIONS.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+        </select>
     );
 }
 
@@ -315,7 +348,7 @@ function DetailsCard({ contact, fields, onSaved }) {
             phone: contact.phone || '', mobile_phone: contact.mobile_phone || '', designation: contact.designation || '',
             company_name: contact.company_name || '', industry: contact.industry || '', linkedin_url: contact.linkedin_url || '',
             poc_city: contact.poc_city || '', poc_state: contact.poc_state || '', poc_country: contact.poc_country || '',
-            lead_source: contact.lead_source || '',
+            lead_source: contact.lead_source || '', timezone: contact.timezone || '',
             custom_fields: Object.fromEntries(fields.map(f => [f.field_key, contact.custom_fields?.[f.field_key] ?? (f.field_type === 'MULTI_CHECKBOX' ? [] : '')])),
         });
         setError(null);
@@ -328,6 +361,8 @@ function DetailsCard({ contact, fields, onSaved }) {
             const payload = checks.normalized();
             if (payload.company_name === (contact.company_name || '')) delete payload.company_name;
             if (!payload.email) delete payload.email;
+            // CM-01: send the time zone only when it was changed, so an untouched zone keeps following the location
+            if (payload.timezone === (contact.timezone || '')) delete payload.timezone;
             return contactsApi.update(contact.prospect_id, withVersion(payload, version));
         },
         onSuccess: (data) => { setEditing(false); onSaved(data); },
@@ -386,6 +421,9 @@ function DetailsCard({ contact, fields, onSaved }) {
                         <Field label="State" error={checks.errors.poc_state}><input className={inputClass} {...checks.bind('poc_state')} /></Field>
                         <Field label="Country" error={checks.errors.poc_country}><input className={inputClass} {...checks.bind('poc_country')} list="country-names" /></Field><CountryOptions />
                     </div>
+                    <Field label="Time zone" hint="Automatic follows the country and state; a zone you pick is kept">
+                        <TimezoneSelect value={form.timezone} onChange={v => setForm(f => ({ ...f, timezone: v }))} />
+                    </Field>
                     <Field label="LinkedIn" error={checks.errors.linkedin_url}><input type="url" className={inputClass} {...checks.bind('linkedin_url')} /></Field>
                     {Object.entries(groups).map(([group, gf]) => (
                         <div key={group} className="space-y-3 pt-1">
@@ -520,6 +558,7 @@ export default function ContactDetail() {
     const confirm = useConfirm();
     const { id } = useParams();
     const navigate = useNavigate();
+    const { isAdmin, canExportContacts } = useAuth();
     const queryClient = useQueryClient();
     const { meta, stageLabel, statusLabel } = useCrmMeta();
     const [timelineFilter, setTimelineFilter] = useState('');
@@ -559,6 +598,8 @@ export default function ContactDetail() {
         onSuccess: data => { setQuickError(null); onSaved(data); },
         onError: err => setQuickError(errorMessage(err)),
     });
+    // Data-access request (backend: admins holding export_contacts; each export is in the export log)
+    const exportData = useMutation({ mutationFn: () => contactsApi.exportPersonalData(id) });
     const remove = useMutation({
         mutationFn: () => contactsApi.remove(id),
         onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contacts'] }); navigate('/app/contacts'); },
@@ -605,6 +646,7 @@ export default function ContactDetail() {
                                 ? <Link to={`/app/accounts/${contact.account.account_id}`} className="font-semibold text-indigo-600 hover:text-indigo-800">{contact.account.name}</Link>
                                 : contact.company_name}
                         </p>
+                        <RecordId id={contact.prospect_id} label="Contact ID" />
                         <div className="flex items-center gap-4 mt-3 text-sm flex-wrap">
                             <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 text-slate-600 hover:text-indigo-600"><Mail className="w-4 h-4" />{contact.email}</a>
                             {contact.phone && <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 text-slate-600 hover:text-indigo-600"><Phone className="w-4 h-4" />{contact.phone}</a>}
@@ -626,6 +668,16 @@ export default function ContactDetail() {
                                 ? <OwnerSelect owners={owners} value={contact.owner_id} ariaLabel="Owner" onChange={owner_id => quickUpdate.mutate({ owner_id })} />
                                 : <p className="text-sm font-medium text-slate-800">{contact.owner_name || 'Unassigned'}</p>}
                         </div>
+                        {isAdmin && canExportContacts && (
+                            <div>
+                                <button onClick={() => exportData.mutate()} disabled={exportData.isPending}
+                                    title="Download everything held about this person (data-access request). The export is logged."
+                                    className="w-full h-9 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center justify-center gap-1.5 border border-slate-200">
+                                    {exportData.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Export personal data
+                                </button>
+                                <ErrorNote message={exportData.error && errorMessage(exportData.error, 'Could not export the data.')} />
+                            </div>
+                        )}
                         {contact.can_delete && (
                             <button onClick={async () => { if (await confirm({ title: `Delete ${contact.full_name}?`, message: 'You can restore them from Recently deleted for 90 days.', confirmLabel: 'Delete', danger: true })) remove.mutate(); }}
                                 className="h-9 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center gap-1.5 border border-red-100">

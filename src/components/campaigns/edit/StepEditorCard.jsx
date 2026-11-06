@@ -1,6 +1,11 @@
+import { useState } from 'react';
 import { ArrowDown, ArrowUp, Eye, Loader2, Plus, Sparkles, Trash2, Users } from 'lucide-react';
 import RichTextEditor from '../../common/RichTextEditor';
+import { useConfirm } from '../../ui/ConfirmDialog';
 import BodyLinksNotice from '../BodyLinksNotice';
+import MergeFieldsNotice from '../MergeFieldsNotice';
+import { hasStepContent, libraryTemplateToStep, OVERWRITE_CONFIRM } from '../libraryTemplate';
+import TemplatePicker from '../tabs/inbox/TemplatePicker';
 import { canDelete, newVersion } from './campaignEditModel';
 
 const inputClass = 'w-full h-9 px-3 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-400 disabled:bg-slate-50';
@@ -20,6 +25,15 @@ export default function StepEditorCard({
     const setVersion = (vi, patch) => set({ versions: step.versions.map((v, i) => (i === vi ? { ...v, ...patch } : v)) });
     const removeVersion = (vi) => set({ versions: step.versions.filter((_, i) => i !== vi) });
     const isNew = !step.sequence_id;
+    const confirm = useConfirm();
+    // Bumped when a library template replaces a body, so the rich text editor shows the new content
+    const [inserted, setInserted] = useState(0);
+    const insertFromLibrary = async (vi, template) => {
+        const v = step.versions[vi];
+        if (hasStepContent(v.subject, v.body) && !(await confirm(OVERWRITE_CONFIRM))) return;
+        setVersion(vi, libraryTemplateToStep(template));
+        setInserted(n => n + 1);
+    };
 
     return (
         <section aria-label={`Step ${number}`} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -81,6 +95,8 @@ export default function StepEditorCard({
                                 {v.template_id ? (v.recipients === 1 ? '1 contact gets this version' : `${v.recipients} contacts get this version`) : 'New version'}
                             </span>
                             <div className="ml-auto flex items-center gap-2 mt-4">
+                                <TemplatePicker onPickTemplate={t => insertFromLibrary(vi, t)} label="Insert from library"
+                                    title={`Fill step ${number} email ${vi + 1} from a library template`} dropUp={false} />
                                 {v.template_id && (
                                     <button type="button" onClick={() => onRegenerate(v)} disabled={Boolean(regenerating)} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
                                         {regenerating === v.template_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />} Regenerate
@@ -102,7 +118,7 @@ export default function StepEditorCard({
                             Body
                             <div className="mt-1 rounded-lg border border-slate-200">
                                 <RichTextEditor
-                                    key={`${v.key}-${editorRev}`}
+                                    key={`${v.key}-${editorRev}-${inserted}`}
                                     value={v.body}
                                     onChange={html => setVersion(vi, { body: html })}
                                     placeholder="Email body. Use {{first_name}}, {{company_name}}, {{signature_block}}..."
@@ -110,6 +126,7 @@ export default function StepEditorCard({
                                 />
                             </div>
                             <BodyLinksNotice body={v.body} ctaLink={ctaLink} className="mt-2" />
+                            <MergeFieldsNotice subject={v.subject} body={v.body} className="mt-2" />
                         </div>
                     </div>
                 ))}

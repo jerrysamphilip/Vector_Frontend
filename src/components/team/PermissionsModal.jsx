@@ -2,7 +2,7 @@ import { useState, useId } from 'react';
 import { X, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/Button';
 import DialogPanel from '../ui/DialogPanel';
-import { permissionsForRole, RoleBadge, Avatar } from './teamShared';
+import { permissionsForRole, presetsForRole, RoleBadge, Avatar } from './teamShared';
 
 // Per-member permission overrides (super admins): toggle, save or reset to the role defaults.
 
@@ -48,6 +48,20 @@ export default function PermissionsModal({ user, onClose, onSave, onReset, isSav
                         Toggle which features this member can access. Changes override their default role permissions.
                     </p>
                 </div>
+
+                {/* Presets: a ready-made set of toggles, still saved with Save Permissions */}
+                {presetsForRole(user.role).length > 0 && (
+                    <div className="px-6 pt-4 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-slate-500">Presets:</span>
+                        {presetsForRole(user.role).map(preset => (
+                            <button key={preset.key} type="button" title={preset.desc}
+                                onClick={() => setDraft(new Set(preset.permissions))}
+                                className="px-3 py-1 rounded-full border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-800 hover:bg-blue-100">
+                                {preset.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Permission toggles */}
                 <div className="px-6 py-4 space-y-2 max-h-[360px] overflow-y-auto">

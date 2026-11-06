@@ -44,6 +44,21 @@ describe('Leads page', () => {
         expect(within(await screen.findByRole('dialog')).getByPlaceholderText('Search your contacts…')).toBeInTheDocument();
     });
 
+    it('shows the Converted and Disqualified columns on the board when "Show closed" is ticked', async () => {
+        const col = (stage, label) => ({ stage, label, count: 0, items: [] });
+        const board = (req) => ({ columns: [col('NEW', 'New'), col('SQL', 'SQL'),
+            ...(req.query.include_closed === 'true' ? [col('CONVERTED', 'Converted'), col('DISQUALIFIED', 'Disqualified')] : [])] });
+        const { http: calls } = renderPage(<Leads />, { route: '/app/leads', path: '/app/leads?mode=board', http: http({ 'GET /leads/board': board }) });
+        expect(await screen.findByText('New')).toBeInTheDocument();
+        expect(screen.queryByText('Converted')).not.toBeInTheDocument();
+        await userEvent.click(screen.getByRole('checkbox', { name: /show closed/i }));
+        expect(await screen.findByText('Converted')).toBeInTheDocument();
+        expect(screen.getByText('Disqualified')).toBeInTheDocument();
+        const boardCalls = calls.requests.filter(r => r.path === '/leads/board');
+        expect(boardCalls[0].query.include_closed).toBeUndefined();
+        expect(boardCalls.at(-1).query.include_closed).toBe('true');
+    });
+
     it('reports a failed load instead of "No leads here"', async () => {
         renderPage(<Leads />, opts({ 'GET /leads': fail(500) }));
         await expectLoadError({ emptyText: /no leads here/i });

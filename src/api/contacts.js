@@ -37,6 +37,8 @@ export const contactsApi = {
     update: (id, payload) => patch(`/contacts/${id}`, payload),
     remove: (id) => del(`/contacts/${id}`),
     exportFile: (params) => downloadFile('/contacts/export', params, `contacts.${params?.format || 'csv'}`),
+    // Data-access request: everything held about one person, as a JSON file (admins with export_contacts)
+    exportPersonalData: (id) => downloadFile(`/contacts/${id}/data-export`, null, `contact-data-${id}.json`),
 
     timeline: (id, params) => get(`/contacts/${id}/timeline`, params),
     history: (id, field) => get(`/contacts/${id}/history`, { field }),

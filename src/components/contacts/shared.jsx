@@ -148,10 +148,10 @@ export function CountryOptions({ id = 'country-names' }) {
     return <datalist id={id}>{COUNTRIES.map(c => <option key={c.code} value={c.name} />)}</datalist>;
 }
 
-export function OwnerSelect({ owners = [], value, onChange, allowUnassigned = true, className = inputClass, disabled, ariaLabel }) {
+export function OwnerSelect({ owners = [], value, onChange, allowUnassigned = true, emptyLabel = 'Unassigned', className = inputClass, disabled, ariaLabel }) {
     return (
         <select value={value || ''} onChange={e => onChange(e.target.value || null)} className={className} disabled={disabled} aria-label={ariaLabel}>
-            {allowUnassigned && <option value="">Unassigned</option>}
+            {allowUnassigned && <option value="">{emptyLabel}</option>}
             {owners.map(o => <option key={o.user_id} value={o.user_id}>{o.name}</option>)}
         </select>
     );

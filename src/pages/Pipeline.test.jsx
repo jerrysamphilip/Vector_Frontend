@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Pipeline from './Pipeline';
 import { fail, pending, renderPage } from '../test/renderPage';
@@ -33,6 +33,21 @@ describe('Pipeline page', () => {
         await screen.findByText('Open pipeline by stage');
         await userEvent.click(screen.getByRole('button', { name: 'Proposal pipeline' }));
         expect(await screen.findByText('Website rebuild')).toBeInTheDocument();
+    });
+
+    it('filters the revenue pipeline by expected close date', async () => {
+        const { http: calls } = renderPage(<Pipeline />, { route: '/app/pipeline', http: http() });
+        await screen.findByText('Open pipeline by stage');
+        expect(calls.requests.find(r => r.path === '/pipeline/revenue').query.close_from).toBeUndefined();
+        fireEvent.change(screen.getByLabelText('Expected close from'), { target: { value: '2026-04-01' } });
+        fireEvent.change(screen.getByLabelText('Expected close to'), { target: { value: '2026-06-30' } });
+        await waitFor(() => {
+            const last = calls.requests.filter(r => r.path === '/pipeline/revenue').at(-1);
+            expect(last.query).toMatchObject({ close_from: '2026-04-01', close_to: '2026-06-30' });
+        });
+        expect(await screen.findByText('Open pipeline by stage')).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Clear dates' }));
+        expect(screen.getByLabelText('Expected close from')).toHaveValue('');
     });
 
     it('reports a failed revenue load', async () => {

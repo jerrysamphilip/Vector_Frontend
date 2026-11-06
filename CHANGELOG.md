@@ -10,6 +10,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions follow [SemVer
 Release candidate for BRD v2.0 Phase 1 (R1.0) and Phase 2 (R2.1), released together with backend 1.1.0.
 
 ### Added
+- UAT findings (testers' review, Nov 2026): bulk "Change owner" for companies; contact time zone dropdown;
+  Record ID with copy on contact and company pages; "Export personal data" for admins; "Blocked from new
+  campaigns until …" on unsubscribed contacts; "Insert from library" in the campaign editors with a warning
+  for merge fields a campaign can't fill; "Show closed" on the leads board; Tasks and Lost on the team
+  scorecard; expected-close dates on the Revenue pipeline and a won/lost period on the Pipeline report;
+  leaderboard "By % of target"; a "Market Research" permission preset; the forecast's undated deals link.
 - Custom property safety (C-17): contact and company property settings list deactivated properties
   (`?include_inactive=true`) marked "Inactive" with Reactivate; Delete is now "Deactivate" (saved values are kept and
   still exported) and is not offered for system properties; properties can be edited (label, group, required,
@@ -59,6 +65,11 @@ Release candidate for BRD v2.0 Phase 1 (R1.0) and Phase 2 (R2.1), released toget
 - Removed the unused legacy UI copy (`src - ExistUI`).
 
 ### Fixed
+- UAT findings (Nov 2026): campaign launch retry after a failed launch; the Schedule tab shows cancelled and
+  failed follow-ups apart from queued ones; an Unsubscribed badge on replied contacts who later unsubscribed;
+  rates over delivered and unique-opens labels; "won + all open (upside)" vs Best case; funnel captions;
+  custom reports refuse reversed dates; the import owner choice is labelled "Me (the importer)"; browser
+  storage is namespaced so the app can share an origin with another app.
 - UAT time zones: API times without a zone were read as the browser's local time, so a bounce at 17:54 UTC
   showed as 05:54 PM in every zone. `src/lib/dates.js` (`parseApiDate`, `formatDateTime`, `formatTime`,
   `formatDate`) reads them as UTC and shows the viewer's zone with its abbreviation (1:54 PM EDT); about 20

@@ -155,6 +155,10 @@ export function useWizardMutations(ctx) {
             let enrolled = 0;
             const rejected = [];
             const seen = new Set();
+            // Contacts the campaign already holds (an earlier launch attempt enrolled them, then the launch
+            // itself failed): they count as enrolled, so a retry goes on to launch instead of stopping here.
+            const alreadyEnrolled = new Set();
+            const laterAlreadyEnrolled = new Set();
             for (const [index, listId] of selectedLists.entries()) {
                 const result = await campaignWizardApi.enrollProspects(
                     campaignId,
@@ -167,13 +171,20 @@ export function useWizardMutations(ctx) {
                 );
                 enrolled += result.enrolled_count || 0;
                 for (const r of result.rejected || []) {
-                    // A contact on several selected lists is enrolled once; don't report the repeats
-                    if (index > 0 && r.reason_code === 'already_enrolled') continue;
+                    if (r.reason_code === 'already_enrolled') {
+                        // On the first list it was enrolled before this attempt; on a later one it may also be
+                        // a contact on several selected lists that this attempt just enrolled
+                        (index === 0 ? alreadyEnrolled : laterAlreadyEnrolled).add(r.prospect_id);
+                        continue;
+                    }
                     if (seen.has(r.prospect_id)) continue;
                     seen.add(r.prospect_id);
                     rejected.push(r);
                 }
             }
+            // Nobody new enrolled this attempt, so every already-enrolled contact predates it
+            const before = enrolled === 0 ? new Set([...alreadyEnrolled, ...laterAlreadyEnrolled]) : alreadyEnrolled;
+            enrolled += before.size;
             if (enrolled === 0) {
                 const error = new Error('No contacts could be enrolled, so the campaign was not launched.');
                 error.report = { enrolled, rejected, launched: false };

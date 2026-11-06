@@ -47,6 +47,19 @@ export const PERMISSION_LIST = [
     { key: 'manage_team',       label: 'Manage Team',       desc: 'Invite and manage team members',         icon: '🛡️' },
 ];
 
+// One-click permission sets for common jobs (custom permissions the API already accepts; visibility is unchanged).
+// Market Research: an agent who imports, bulk-edits and reassigns contacts (manage_prospects) and runs campaigns.
+export const PERMISSION_PRESETS = [
+    { key: 'market_research', label: 'Market Research', roles: ['AGENT'],
+      permissions: ['manage_campaigns', 'manage_prospects'],
+      desc: 'Run campaigns, import contacts, bulk-edit and reassign them' },
+];
+
+/** The presets offered for a member with this role. */
+export function presetsForRole(role) {
+    return PERMISSION_PRESETS.filter(p => !p.roles || p.roles.includes(role));
+}
+
 /** The permissions that can be granted to a member with this role. */
 export function permissionsForRole(role) {
     return PERMISSION_LIST.filter(p => !p.roles || p.roles.includes(role));
