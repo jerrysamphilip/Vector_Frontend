@@ -4,7 +4,7 @@ import LoadError from '../components/ui/LoadError';
 import { isNotFound } from '../lib/apiErrors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    ArrowLeft, Mail, Phone, Smartphone, Building2, Linkedin, MapPin, Pencil, Trash2, Loader2, StickyNote, PhoneCall, CalendarDays, Send, Inbox, Eye, MousePointerClick, AlertOctagon, MailX, Megaphone, ListPlus, Check, Globe2, History, CheckSquare, Square, AlertTriangle, ListTodo,
+    ArrowLeft, Download, Mail, Phone, Smartphone, Building2, Linkedin, MapPin, Pencil, Trash2, Loader2, StickyNote, PhoneCall, CalendarDays, Send, Inbox, Eye, MousePointerClick, AlertOctagon, MailX, Megaphone, ListPlus, Check, Globe2, History, CheckSquare, Square, AlertTriangle, ListTodo,
 } from 'lucide-react';
 import { contactsApi, tasksApi, errorMessage } from '../api/contacts';
 import { withVersion } from '../lib/staleVersion';
@@ -25,6 +25,7 @@ import ContactScoreCard from '../components/contacts/ContactScoreCard';
 import ContactIdentityCard from '../components/contacts/merge/ContactIdentityCard';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import RecordId from '../components/ui/RecordId';
+import { useAuth } from '../auth/AuthProvider';
 import { TIMEZONE_OPTIONS } from '../components/campaigns/wizard/timezones';
 
 const CALL_OUTCOMES = ['Connected', 'Left voicemail', 'No answer', 'Wrong number', 'Busy'];
@@ -257,6 +258,23 @@ function TimelineItem({ item, onChanged }) {
     );
 }
 
+/**
+ * How long an unsubscribe, complaint or bounce keeps the contact out of new campaigns (DEC-14), in the viewer's
+ * zone. The end of the block does not restart email: an unsubscribed contact stays unsubscribed until resubscribed.
+ */
+export function SuppressionNote({ contact }) {
+    const s = contact.suppression;
+    if (!s) return null;
+    const unsub = contact.consent_status === 'UNSUBSCRIBED';
+    const stays = unsub ? ' Email does not restart then: they stay unsubscribed until someone resubscribes them with their consent.' : '';
+    let text;
+    if (s.active && s.expires_at) text = `Blocked from new campaigns until ${formatDateTime(s.expires_at)}.${stays}`;
+    else if (s.active) text = 'Blocked from new campaigns with no end date.';
+    else if (unsub) text = `The block on new campaigns ended ${formatDateTime(s.expires_at)}, but they stay unsubscribed until someone resubscribes them with their consent.`;
+    else return null;
+    return <p className="mt-1 text-xs text-slate-500" data-testid="suppression-note">{text}</p>;
+}
+
 // ── Left column: CRM properties + details ───────────────────────
 function CrmCard({ contact, meta, onUpdate, error }) {
     const confirm = useConfirm();
@@ -290,6 +308,7 @@ function CrmCard({ contact, meta, onUpdate, error }) {
                         }}
                             className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">{unsub ? 'Resubscribe' : 'Unsubscribe'}</button>
                     </div>
+                    <SuppressionNote contact={contact} />
                 </div>
                 <Field label="Legal basis for processing">
                     <select className={inputClass} value={contact.legal_basis || ''} onChange={e => onUpdate({ legal_basis: e.target.value || null })}>
@@ -539,6 +558,7 @@ export default function ContactDetail() {
     const confirm = useConfirm();
     const { id } = useParams();
     const navigate = useNavigate();
+    const { isAdmin, canExportContacts } = useAuth();
     const queryClient = useQueryClient();
     const { meta, stageLabel, statusLabel } = useCrmMeta();
     const [timelineFilter, setTimelineFilter] = useState('');
@@ -578,6 +598,8 @@ export default function ContactDetail() {
         onSuccess: data => { setQuickError(null); onSaved(data); },
         onError: err => setQuickError(errorMessage(err)),
     });
+    // Data-access request (backend: admins holding export_contacts; each export is in the export log)
+    const exportData = useMutation({ mutationFn: () => contactsApi.exportPersonalData(id) });
     const remove = useMutation({
         mutationFn: () => contactsApi.remove(id),
         onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contacts'] }); navigate('/app/contacts'); },
@@ -646,6 +668,16 @@ export default function ContactDetail() {
                                 ? <OwnerSelect owners={owners} value={contact.owner_id} ariaLabel="Owner" onChange={owner_id => quickUpdate.mutate({ owner_id })} />
                                 : <p className="text-sm font-medium text-slate-800">{contact.owner_name || 'Unassigned'}</p>}
                         </div>
+                        {isAdmin && canExportContacts && (
+                            <div>
+                                <button onClick={() => exportData.mutate()} disabled={exportData.isPending}
+                                    title="Download everything held about this person (data-access request). The export is logged."
+                                    className="w-full h-9 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center justify-center gap-1.5 border border-slate-200">
+                                    {exportData.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Export personal data
+                                </button>
+                                <ErrorNote message={exportData.error && errorMessage(exportData.error, 'Could not export the data.')} />
+                            </div>
+                        )}
                         {contact.can_delete && (
                             <button onClick={async () => { if (await confirm({ title: `Delete ${contact.full_name}?`, message: 'You can restore them from Recently deleted for 90 days.', confirmLabel: 'Delete', danger: true })) remove.mutate(); }}
                                 className="h-9 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center gap-1.5 border border-red-100">
