@@ -97,7 +97,7 @@ describe('Funnel meaning (S4)', () => {
         renderPage(<SalesReports />, { route: '/app/sales-reports', http: reportsHttp });
         await screen.findByText('Leads created');
         expect(screen.getByTestId('funnel-caption')).toHaveTextContent(
-            'Each step counts records created in the period; steps are not a cohort, so a step can exceed the one before.');
+            'Each step counts what happened in the period (emailed, replied, created, qualified or won), not the same group of leads moving through, so a step can be larger than the one before.');
         const step = label => screen.getByText(label, { selector: 'span.truncate' }).parentElement;
         expect(step('SQLs').getAttribute('title')).toMatch(/became sales-qualified \(SQL\) in the period/);
         expect(step('Opportunities').getAttribute('title')).toMatch(/deals created in the period/);

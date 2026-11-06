@@ -25,7 +25,7 @@ export const FUNNEL_STEP_HELP = {
     opportunity: 'Opportunities: deals created in the period, including deals not converted from a lead',
     won: 'Won: deals closed as won in the period, whenever they were created',
 };
-export const FUNNEL_CAPTION = 'Each step counts records created in the period; steps are not a cohort, so a step can exceed the one before.';
+export const FUNNEL_CAPTION = 'Each step counts what happened in the period (emailed, replied, created, qualified or won), not the same group of leads moving through, so a step can be larger than the one before.';
 
 /** Period volumes per step, not one cohort: a ratio over 100% is never shown (the API leaves it out). */
 export function Funnel({ stages }) {
