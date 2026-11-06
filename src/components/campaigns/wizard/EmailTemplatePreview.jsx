@@ -2,6 +2,7 @@ import { Button } from '../../ui/Button';
 import RichTextEditor from '../../common/RichTextEditor';
 import AttachmentManager from '../../common/AttachmentManager';
 import BodyLinksNotice from '../BodyLinksNotice';
+import MergeFieldsNotice from '../MergeFieldsNotice';
 import TemplatePicker from '../tabs/inbox/TemplatePicker';
 import { sanitizeHtml } from '../../../lib/sanitizeHtml';
 import { Eye, Loader2 } from 'lucide-react';
@@ -152,6 +153,11 @@ export default function EmailTemplatePreview({ wizard }) {
                     <BodyLinksNotice
                         body={editing === 'body' ? editValue : getSelectedEmailFromSequence()?.body}
                         ctaLink={formData?.cta_link}
+                        className="mt-3"
+                    />
+                    <MergeFieldsNotice
+                        subject={editing === 'subject' ? editValue : getSelectedEmailFromSequence()?.subject}
+                        body={editing === 'body' ? editValue : getSelectedEmailFromSequence()?.body}
                         className="mt-3"
                     />
 

@@ -125,6 +125,15 @@ describe('CampaignEdit page', () => {
         expect(screen.getByLabelText('Step 2 email 1 subject')).toHaveValue('Follow up');
     });
 
+    it('warns about a merge field the campaign cannot fill', async () => {
+        renderPage(<CampaignEdit />, opts());
+        const subject = await screen.findByLabelText('Step 2 email 1 subject');
+        expect(screen.queryByTestId('merge-fields-notice')).toBeNull();
+        await userEvent.clear(subject);
+        await userEvent.type(subject, 'Hi {{{{nickname}}');
+        expect(await screen.findByTestId('merge-fields-notice')).toHaveTextContent('{{nickname}} is not a merge field a campaign can fill');
+    });
+
     it('offers a reload when someone else changed the campaign (409)', async () => {
         renderPage(<CampaignEdit />, opts({
             'POST /campaigns/:id/edits/checks': reply(409, { detail: { code: 'STALE_VERSION', current_version: 5, message: 'changed' } }),

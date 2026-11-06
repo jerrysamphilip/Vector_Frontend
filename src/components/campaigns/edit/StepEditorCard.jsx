@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Eye, Loader2, Plus, Sparkles, Trash2, Users } from 
 import RichTextEditor from '../../common/RichTextEditor';
 import { useConfirm } from '../../ui/ConfirmDialog';
 import BodyLinksNotice from '../BodyLinksNotice';
+import MergeFieldsNotice from '../MergeFieldsNotice';
 import { hasStepContent, libraryTemplateToStep, OVERWRITE_CONFIRM } from '../libraryTemplate';
 import TemplatePicker from '../tabs/inbox/TemplatePicker';
 import { canDelete, newVersion } from './campaignEditModel';
@@ -125,6 +126,7 @@ export default function StepEditorCard({
                                 />
                             </div>
                             <BodyLinksNotice body={v.body} ctaLink={ctaLink} className="mt-2" />
+                            <MergeFieldsNotice subject={v.subject} body={v.body} className="mt-2" />
                         </div>
                     </div>
                 ))}

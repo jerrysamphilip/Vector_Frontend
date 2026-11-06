@@ -62,6 +62,20 @@ describe('wizard "Insert from library"', () => {
     });
 });
 
+describe('wizard merge-field warning', () => {
+    it('warns when the inserted template has a field the campaign cannot fill', async () => {
+        templatesApi.list.mockResolvedValue({ items: [{ template_id: 'lib-2', name: 'Phone', subject: 'Hi', body: 'Call {{phone}}' }] });
+        campaignWizardApi.updateTemplate.mockResolvedValue({});
+        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        renderHarness();
+        expect(screen.queryByTestId('merge-fields-notice')).toBeNull();
+        await userEvent.click(screen.getByTitle("Fill this email's subject and body from a library template"));
+        await userEvent.click(await screen.findByRole('button', { name: /Phone/ }));
+        expect(await screen.findByTestId('merge-fields-notice')).toHaveTextContent('{{phone}} is not a merge field');
+        vi.restoreAllMocks();
+    });
+});
+
 describe('libraryTemplate helpers', () => {
     it('keeps an HTML body, wraps a plain one, and sees an empty editor body as empty', () => {
         expect(libraryTemplateToStep({ subject: 'S', body: '<p>x</p>' })).toEqual({ subject: 'S', body: '<p>x</p>' });
