@@ -117,6 +117,7 @@ function ForecastTab({ member }) {
     const max = Math.max(...data.quarters.map(q => q.forecast), 0);
     const maxY = Math.max(...data.years.map(y => y.forecast), 0);
     const link = b => `/app/deals?mode=list&close_from=${b.close_from}&close_to=${b.close_to}${clientType ? `&client_type=${clientType}` : ''}`;
+    const undatedLink = `/app/deals?mode=list&status=OPEN&no_close_date=1${clientType ? `&client_type=${clientType}` : ''}`;
     return (
         <div className="space-y-5">
             <div className="flex items-center gap-3 flex-wrap">
@@ -132,12 +133,15 @@ function ForecastTab({ member }) {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatTile label={`${data.label} forecast`} value={moneyShort(data.total.forecast)} sub="Won + weighted open" />
                 <StatTile label="Won" value={moneyShort(data.total.won)} sub={`${data.total.won_count} deals`} tone="text-emerald-600" />
-                <StatTile label="Open pipeline" value={moneyShort(data.total.pipeline)} sub={`${data.total.open_count} deals · best case ${moneyShort(data.total.best_case)}`} />
-                <StatTile label="Open, no close date" value={moneyShort(data.open_without_close_date.amount)} sub={`${data.open_without_close_date.count} deals not in the forecast`} />
+                <StatTile label="Open pipeline" value={moneyShort(data.total.pipeline)} sub={`${data.total.open_count} deals · won + all open (upside) ${moneyShort(data.total.best_case)}`}
+                    title={`Won + all open (upside) = won ${money(data.total.won)} + every open deal ${money(data.total.pipeline)}, whatever its forecast category. The "Best case" tile is different: commit + deals reps marked best case.`} />
+                <StatTile label="Open, no close date" value={moneyShort(data.open_without_close_date.amount)} sub={`${data.open_without_close_date.count} deals not in the forecast · view`} to={undatedLink}
+                    title="Open deals without an expected close date: they fall in no quarter. Open the list to set their close dates." />
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatTile label="Commit" value={moneyShort(data.total.commit)} sub="Won + deals reps committed" tone="text-indigo-700" />
-                <StatTile label="Best case" value={moneyShort(data.total.best_case_category)} sub="Commit + best-case deals" />
+                <StatTile label="Best case" value={moneyShort(data.total.best_case_category)} sub="Commit + best-case deals"
+                    title="Forecast categories: won + deals in Commit + deals in Best case. Pipeline and Omitted deals are left out (unlike won + all open)." />
                 <StatTile label="Target" value={data.total.target ? moneyShort(data.total.target) : '—'} sub={data.total.target ? `${pct(data.total.attainment)} attained` : 'No targets set for this year'} />
                 <StatTile label="Gap to target" value={data.total.target ? moneyShort(Math.max(data.total.target - data.total.won, 0)) : '—'} sub={data.total.target ? `commit covers ${pct(Math.round((data.total.commit / data.total.target) * 100))}` : ''} />
             </div>

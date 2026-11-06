@@ -16,14 +16,32 @@ const VIEW_TITLE = {
 };
 
 /** Sent -> replied -> lead -> SQL -> opportunity -> won (BR-DR-03). One hue; values as text. */
+/** What each funnel step counts (backend reports_sales_service._funnel_steps). */
+export const FUNNEL_STEP_HELP = {
+    sent: 'Contacts emailed: distinct contacts sent at least one email in the period',
+    replied: 'Replied: distinct contacts who replied to an email in the period',
+    lead: 'Leads: leads created in the period',
+    sql: 'SQLs: leads that became sales-qualified (SQL) in the period, whenever they were created',
+    opportunity: 'Opportunities: deals created in the period, including deals not converted from a lead',
+    won: 'Won: deals closed as won in the period, whenever they were created',
+};
+export const FUNNEL_CAPTION = 'Each step counts records created in the period; steps are not a cohort, so a step can exceed the one before.';
+
+/** Period volumes per step, not one cohort: a ratio over 100% is never shown (the API leaves it out). */
 export function Funnel({ stages }) {
     const max = Math.max(...stages.map(s => s.count), 0);
     return (
         <div>
-            {stages.map((s, i) => (
-                <HBar key={s.key} label={s.label} value={s.count} max={max} display={s.count.toLocaleString()}
-                    sub={i ? (s.from_previous != null ? `${s.from_previous}% of previous` : '—') : null} />
-            ))}
+            {stages.map((s, i) => {
+                const ratio = s.from_previous != null && s.from_previous <= 100 ? s.from_previous : null;
+                const sub = i ? (ratio != null ? `${ratio}% of previous` : '—') : null;
+                const help = FUNNEL_STEP_HELP[s.key];
+                return (
+                    <HBar key={s.key} label={s.label} value={s.count} max={max} display={s.count.toLocaleString()} sub={sub}
+                        title={help ? `${help}: ${s.count.toLocaleString()}${sub ? ` · ${sub}` : ''}` : undefined} />
+                );
+            })}
+            <p className="text-xs text-slate-500 mt-2" data-testid="funnel-caption">{FUNNEL_CAPTION}</p>
         </div>
     );
 }

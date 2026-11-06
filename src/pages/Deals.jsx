@@ -129,7 +129,8 @@ export default function Deals() {
     const queryClient = useQueryClient();
     const { isAdmin } = useAuth();
     const [params, setParams] = useSearchParams();
-    const mode = params.get('mode') || (params.get('close_from') ? 'list' : 'board');
+    const noCloseDate = params.get('no_close_date') === '1';
+    const mode = params.get('mode') || (params.get('close_from') || noCloseDate ? 'list' : 'board');
     const owner = params.get('owner') || '';
     const clientType = params.get('client_type') || '';
     const status = params.get('status') || (mode === 'list' ? '' : 'OPEN');
@@ -146,8 +147,8 @@ export default function Deals() {
 
     const filters = { owner, client_type: clientType };
     const board = useApiQuery(['deals', 'board', filters], () => dealsApi.board(filters), { enabled: mode === 'board' });
-    const list = useApiQuery(['deals', 'list', filters, status, closeFrom, closeTo, staleOnly],
-        () => dealsApi.list({ ...filters, status, close_from: closeFrom, close_to: closeTo, stale: staleOnly || undefined, page_size: 500 }),
+    const list = useApiQuery(['deals', 'list', filters, status, closeFrom, closeTo, staleOnly, noCloseDate],
+        () => dealsApi.list({ ...filters, status, close_from: closeFrom, close_to: closeTo, stale: staleOnly || undefined, no_close_date: noCloseDate || undefined, page_size: 500 }),
         { enabled: mode === 'list', placeholderData: keepPreviousData });
     const move = useMutation({
         mutationFn: ({ deal, stage_id, closed_reason }) => dealsApi.update(deal.opportunity_id, withVersion(closed_reason ? { stage_id, closed_reason } : { stage_id }, deal)),
@@ -188,6 +189,11 @@ export default function Deals() {
                 {(closeFrom || closeTo) && (
                     <span className="h-8 px-3 flex items-center gap-1.5 text-sm rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200">
                         Closing {closeFrom || '…'} to {closeTo || '…'}<button onClick={() => update({ close_from: '', close_to: '' })} aria-label="Clear dates"><X className="w-3.5 h-3.5" /></button>
+                    </span>
+                )}
+                {noCloseDate && (
+                    <span className="h-8 px-3 flex items-center gap-1.5 text-sm rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        No close date<button onClick={() => update({ no_close_date: '' })} aria-label="Clear no close date filter"><X className="w-3.5 h-3.5" /></button>
                     </span>
                 )}
                 {mode === 'list' && list.data && <span className="ml-auto text-sm text-slate-500">{list.data.total} deals · {money(list.data.total_amount)}</span>}
