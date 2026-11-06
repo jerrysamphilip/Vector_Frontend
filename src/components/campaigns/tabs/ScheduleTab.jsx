@@ -8,6 +8,21 @@ import { containerVariants, itemVariants } from '../../layout/PageTransition';
 import Loading from '../../common/Loading';
 import KpiTile from '../../ui/KpiTile';
 
+// Badge text and colours for each schedule bucket state the API returns (SENT, QUEUED,
+// PAUSED_BY_CAMPAIGN, CANCELLED, FAILED). Cancelled follow-ups were stopped by a reply, an
+// unsubscribe or a bounce: they are not pending, so they never show as queued.
+export const SCHEDULE_STATES = {
+    SENT: { label: '✓ Sent', card: 'bg-emerald-50 border-emerald-100', icon: 'bg-emerald-100', iconText: 'text-emerald-600', badge: 'bg-emerald-200 text-emerald-700' },
+    QUEUED: { label: '⏳ Queued', card: 'bg-blue-50 border-blue-100', icon: 'bg-blue-100', iconText: 'text-blue-600', badge: 'bg-blue-200 text-blue-700' },
+    PAUSED_BY_CAMPAIGN: { label: '⏸ Paused', card: 'bg-amber-50 border-amber-100', icon: 'bg-amber-100', iconText: 'text-amber-600', badge: 'bg-amber-200 text-amber-700' },
+    CANCELLED: { label: 'Cancelled (replied/unsubscribed/bounced)', card: 'bg-slate-50 border-slate-200', icon: 'bg-slate-100', iconText: 'text-slate-500', badge: 'bg-slate-200 text-slate-600' },
+    FAILED: { label: 'Failed', card: 'bg-rose-50 border-rose-100', icon: 'bg-rose-100', iconText: 'text-rose-600', badge: 'bg-rose-200 text-rose-700' },
+};
+
+export function scheduleState(status) {
+    return SCHEDULE_STATES[status] || SCHEDULE_STATES.QUEUED;
+}
+
 // ── Stat Card with sparkline ──────────────────────────────────────────────────
 function StatCard(props) {
     return <KpiTile {...props} />;
@@ -105,6 +120,7 @@ export default function ScheduleTab({ campaignId }) {
     const schedule = data?.schedule || [];
     const totalSent = data?.total_sent || 0;
     const totalScheduled = data?.total_scheduled || 0;
+    const totalCancelled = data?.total_cancelled || 0;
 
     // ── Render guards ─────────────────────────────────────────────────────────
     if (isLoading) return <Loading text="Loading schedule..." size="md" />;
@@ -160,7 +176,7 @@ export default function ScheduleTab({ campaignId }) {
         <motion.div variants={containerVariants} initial="initial" animate="animate" className="space-y-4">
 
             {/* ── Gradient Stat Cards ── */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <StatCard
                     variants={itemVariants}
                     label="Emails Sent"
@@ -175,6 +191,15 @@ export default function ScheduleTab({ campaignId }) {
                     value={totalScheduled}
                     sub="awaiting their send window"
                     from="#F5F1DC" to="#e8e3c0"
+                    dark
+                    chart="wave"
+                />
+                <StatCard
+                    variants={itemVariants}
+                    label="Cancelled"
+                    value={totalCancelled}
+                    sub="replied, unsubscribed or bounced"
+                    from="#e2e8f0" to="#cbd5e1"
                     dark
                     chart="wave"
                 />
@@ -293,7 +318,7 @@ export default function ScheduleTab({ campaignId }) {
 
                                         {/* Date/time picker — shown while editing this date */}
                                         {editingKey && editingKey.startsWith(date) && (() => {
-                                            const firstQueued = dateItems.find(i => i.status !== 'SENT');
+                                            const firstQueued = dateItems.find(i => ['QUEUED', 'SCHEDULED', 'PAUSED_BY_CAMPAIGN'].includes(i.status));
                                             const stepNum = firstQueued?.step_number ?? 1;
                                             return (
                                                 <div className="mb-3 flex flex-wrap items-center gap-2 p-3 bg-blue-50 rounded-xl border border-blue-200 shadow-sm">
@@ -340,26 +365,17 @@ export default function ScheduleTab({ campaignId }) {
                                         {/* Email step items for this date */}
                                         <div className="space-y-3">
                                             {dateItems.map((item, idx) => {
-                                                const isSent = item.status === 'SENT';
-                                                const isPaused = item.status === 'PAUSED_BY_CAMPAIGN';
+                                                const state = scheduleState(item.status);
 
                                                 return (
                                                     <div
                                                         key={idx}
-                                                        className={`
-                                                        rounded-lg border p-4 transition-all hover:shadow-md
-                                                        ${isSent
-                                                                ? 'bg-emerald-50 border-emerald-100'
-                                                                : isPaused
-                                                                    ? 'bg-amber-50 border-amber-100'
-                                                                    : 'bg-blue-50 border-blue-100'
-                                                            }
-                                                    `}
+                                                        className={`rounded-lg border p-4 transition-all hover:shadow-md ${state.card}`}
                                                     >
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-3">
-                                                                <div className={`p-2 rounded-lg ${isSent ? 'bg-emerald-100' : isPaused ? 'bg-amber-100' : 'bg-blue-100'}`}>
-                                                                    <Mail className={`w-4 h-4 ${isSent ? 'text-emerald-600' : isPaused ? 'text-amber-600' : 'text-blue-600'}`} />
+                                                                <div className={`p-2 rounded-lg ${state.icon}`}>
+                                                                    <Mail className={`w-4 h-4 ${state.iconText}`} />
                                                                 </div>
                                                                 <div>
                                                                     <span className="font-medium text-slate-800">Step {item.step_number} Email</span>
@@ -372,16 +388,8 @@ export default function ScheduleTab({ campaignId }) {
                                                                 </div>
                                                             </div>
 
-                                                            <span className={`
-                                                            px-3 py-1 rounded-full text-xs font-medium
-                                                            ${isSent
-                                                                    ? 'bg-emerald-200 text-emerald-700'
-                                                                    : isPaused
-                                                                        ? 'bg-amber-200 text-amber-700'
-                                                                        : 'bg-blue-200 text-blue-700'
-                                                                }
-                                                        `}>
-                                                                {isSent ? '✓ Sent' : isPaused ? '⏸ Paused' : '⏳ Queued'}
+                                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${state.badge}`}>
+                                                                {state.label}
                                                             </span>
                                                         </div>
 
@@ -403,8 +411,8 @@ export default function ScheduleTab({ campaignId }) {
                                                                                     </span>
                                                                                 )}
                                                                                 {timeLabel && (
-                                                                                    <span className="text-slate-400" title={p.sent_at ? 'Actually sent at' : 'Scheduled for'}>
-                                                                                        · {p.sent_at ? '✓' : '⏳'} {timeLabel}
+                                                                                    <span className="text-slate-400" title={p.sent_at ? 'Actually sent at' : item.status === 'CANCELLED' ? 'Was scheduled for' : 'Scheduled for'}>
+                                                                                        · {p.sent_at ? '✓' : item.status === 'CANCELLED' ? '✕' : '⏳'} {timeLabel}
                                                                                     </span>
                                                                                 )}
                                                                             </span>
