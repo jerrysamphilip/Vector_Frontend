@@ -60,6 +60,41 @@ describe('create-campaign wizard optimistic concurrency (T-3)', () => {
         await waitFor(() => expect(ref.current).toBe(5));
     });
 
+    it('a retry after a failed launch launches with the contacts the first attempt enrolled', async () => {
+        const already = [{ prospect_id: 'p1', reason_code: 'already_enrolled' },
+            { prospect_id: 'p2', reason_code: 'already_enrolled' }];
+        campaignWizardApi.enrollProspects
+            .mockResolvedValueOnce({ enrolled_count: 2, rejected: [] })
+            .mockResolvedValueOnce({ enrolled_count: 0, rejected: already });
+        campaignApi.launch
+            .mockRejectedValueOnce(new Error('launch failed'))
+            .mockResolvedValueOnce({ campaign_id: 'c1', new_status: 'ACTIVE', row_version: 2 });
+        const { result } = setup({ current: 1 });
+        await expect(act(() => result.current.launchMutation.mutateAsync())).rejects.toThrow('launch failed');
+        let report;
+        await act(async () => { report = await result.current.launchMutation.mutateAsync(); });
+        expect(campaignApi.launch).toHaveBeenCalledTimes(2);
+        expect(report).toEqual({ enrolled: 2, rejected: [], launched: true });
+    });
+
+    it('does not double-count a contact on two lists, and still refuses when nobody is enrolled', async () => {
+        campaignWizardApi.enrollProspects
+            .mockResolvedValueOnce({ enrolled_count: 1, rejected: [] })
+            .mockResolvedValueOnce({ enrolled_count: 0, rejected: [{ prospect_id: 'p1', reason_code: 'already_enrolled' }] });
+        campaignApi.launch.mockResolvedValue({ campaign_id: 'c1', row_version: 2 });
+        const { result, ctx } = setup({ current: 1 });
+        ctx.selectedLists.push('l2');
+        let report;
+        await act(async () => { report = await result.current.launchMutation.mutateAsync(); });
+        expect(report.enrolled).toBe(1);
+
+        campaignApi.launch.mockClear();
+        campaignWizardApi.enrollProspects.mockResolvedValue(
+            { enrolled_count: 0, rejected: [{ prospect_id: 'p9', reason_code: 'unsubscribed' }] });
+        await expect(act(() => result.current.launchMutation.mutateAsync())).rejects.toThrow('No contacts could be enrolled');
+        expect(campaignApi.launch).not.toHaveBeenCalled();
+    });
+
     it('starts a prospect edit with the row_version it was loaded with', async () => {
         const wizard = {
             editProspectValues: {}, editingProspectId: null, excludedProspectIds: [], setDeleteConfirmProspectId: vi.fn(),
