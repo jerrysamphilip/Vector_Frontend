@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Building2, ChevronLeft, ChevronRight, Loader2, Wand2, X, Columns3, Filter, Download, SlidersHorizontal, RotateCcw } from 'lucide-react';
-import { errorMessage } from '../api/contacts';
+import { contactsApi, errorMessage } from '../api/contacts';
 import { companiesApi } from '../api/accounts';
 import { useAuth } from '../auth/AuthProvider';
 import LoadError from '../components/ui/LoadError';
@@ -11,7 +11,7 @@ import { COMPANY_FIELDS } from '../lib/fieldValidation';
 import { activeFields, customFieldErrors } from '../lib/customProperties';
 import { useFieldErrors } from '../lib/useFieldErrors';
 import {
-    Modal, Field, inputClass, ErrorNote, CountryOptions, PrimaryButton, SecondaryButton, BRAND_GRADIENT, CustomFieldInput, useCrmMeta,
+    Modal, Field, inputClass, ErrorNote, CountryOptions, PrimaryButton, SecondaryButton, BRAND_GRADIENT, CustomFieldInput, OwnerSelect, useCrmMeta,
 } from '../components/contacts/shared';
 import CompanyCell, { formatRevenue } from '../components/accounts/CompanyCell';
 import ColumnChooser from '../components/accounts/ColumnChooser';
@@ -117,6 +117,24 @@ function useDebounced(value, delay = 300) {
     return debounced;
 }
 
+/** Bulk actions on the selected companies (CM-36): change the owner. */
+function CompanyBulkBar({ count, owners, busy, onAssign, onClear }) {
+    const [owner, setOwner] = useState('');
+    return (
+        <div className="px-5 py-3 flex items-center gap-2 flex-wrap bg-indigo-50 border-t border-indigo-100" role="region" aria-label="Bulk actions">
+            <span className="text-sm font-semibold text-indigo-800 mr-2">{count} selected</span>
+            <span className="text-sm text-slate-600">Change owner to</span>
+            <OwnerSelect owners={owners} value={owner} onChange={v => setOwner(v || '')} allowUnassigned={false} ariaLabel="New owner"
+                className="h-8 px-2 bg-white border border-slate-200 rounded-lg text-sm" />
+            <button type="button" disabled={!owner || busy} onClick={() => onAssign(owner)}
+                className="h-8 px-3 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1.5">
+                {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Change owner
+            </button>
+            <button type="button" onClick={onClear} className="ml-auto text-sm font-medium text-slate-500 hover:text-slate-700">Clear selection</button>
+        </div>
+    );
+}
+
 const toolButton = 'h-9 px-3 flex items-center gap-1.5 text-sm font-medium rounded-xl border border-slate-200 text-slate-600 bg-white';
 const headerButton = 'flex items-center gap-2 h-9 px-3.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 whitespace-nowrap disabled:opacity-60';
 
@@ -138,6 +156,8 @@ export default function Accounts() {
     const [panel, setPanel] = useState(null); // 'filters' | 'columns' | 'export'
     const [dialog, setDialog] = useState(null); // 'new' | 'backfill' | 'properties' | 'save-view'
     const [notice, setNotice] = useState(null);
+    const [selected, setSelected] = useState([]);
+    const [bulkError, setBulkError] = useState(null);
 
     useEffect(() => { setPage(1); }, [q]);
     const setColumns = (cols) => { setColumnsState(cols); storeColumns(cols); };
@@ -160,6 +180,18 @@ export default function Accounts() {
         onSuccess: () => { setNotice('Company restored.'); queryClient.invalidateQueries({ queryKey: ['accounts'] }); },
         onError: err => setNotice(errorMessage(err)),
     });
+    const { data: owners = [] } = useQuery({ queryKey: ['contact-owners'], queryFn: contactsApi.owners, enabled: canManage });
+    const bulk = useMutation({
+        mutationFn: owner_id => companiesApi.bulk({ account_ids: selected, action: 'assign_owner', owner_id }),
+        onSuccess: (res) => {
+            setSelected([]); setBulkError(null);
+            setNotice(res.skipped?.length
+                ? `Owner changed on ${res.updated}; ${res.skipped.length} skipped: ${res.skipped[0].reason}`
+                : `Owner changed on ${res.updated} compan${res.updated === 1 ? 'y' : 'ies'}.`);
+            queryClient.invalidateQueries({ queryKey: ['accounts'] });
+        },
+        onError: err => setBulkError(errorMessage(err)),
+    });
     const refreshAll = () => {
         queryClient.invalidateQueries({ queryKey: ['accounts'] });
         queryClient.invalidateQueries({ queryKey: ['contacts'] });
@@ -181,6 +213,9 @@ export default function Accounts() {
     const items = data?.items || [];
     const total = data?.total || 0;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    const selectable = canManage && !archived;
+    const allSelected = items.length > 0 && items.every(a => selected.includes(a.account_id));
+    const toggle = id => setSelected(s => (s.includes(id) ? s.filter(x => x !== id) : [...s, id]));
     const sortHeader = (col) => (
         col.sort ? (
             <button onClick={() => setSort(s => ({ by: col.sort, order: s.by === col.sort && s.order === 'asc' ? 'desc' : 'asc' }))}
@@ -250,7 +285,7 @@ export default function Accounts() {
                     {canManage && (
                         <div className="flex bg-white rounded-xl border border-slate-200 p-0.5" role="group" aria-label="Status">
                             {[['active', 'Active'], ['archived', 'Archived']].map(([value, label]) => (
-                                <button key={value} onClick={() => { setStatus(value); setPage(1); }} aria-pressed={status === value}
+                                <button key={value} onClick={() => { setStatus(value); setPage(1); setSelected([]); }} aria-pressed={status === value}
                                     className={`px-3 h-8 text-sm font-medium rounded-lg ${status === value ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>{label}</button>
                             ))}
                         </div>
@@ -278,6 +313,12 @@ export default function Accounts() {
                     </div>
                 )}
 
+                {selectable && selected.length > 0 && (
+                    <CompanyBulkBar count={selected.length} owners={owners} busy={bulk.isPending}
+                        onAssign={owner => bulk.mutate(owner)} onClear={() => setSelected([])} />
+                )}
+                {bulkError && <div className="px-5 py-2 text-sm text-red-600 bg-red-50" role="alert">{bulkError}</div>}
+
                 {isLoading ? (
                     <div className="py-20 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
                 ) : loadError && !data ? (
@@ -297,16 +338,28 @@ export default function Accounts() {
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-slate-50/80 border-b border-slate-100 text-xs font-semibold text-left">
-                                    {shown.map((col, i) => <th key={col.key} className={`${i === 0 ? 'pl-5 pr-3' : 'px-3'} py-3`}>{sortHeader(col)}</th>)}
+                                    {selectable && (
+                                        <th className="pl-5 pr-2 py-3 w-10">
+                                            <input type="checkbox" className="accent-indigo-600" checked={allSelected} aria-label="Select all on page"
+                                                onChange={() => setSelected(allSelected ? [] : items.map(a => a.account_id))} />
+                                        </th>
+                                    )}
+                                    {shown.map((col, i) => <th key={col.key} className={`${i === 0 && !selectable ? 'pl-5 pr-3' : 'px-3'} py-3`}>{sortHeader(col)}</th>)}
                                     {archived && <th className="px-3 pr-5 py-3 text-slate-400 uppercase tracking-wide">Deleted</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {items.map(a => (
                                     <tr key={a.account_id} onClick={archived ? undefined : () => navigate(`/app/accounts/${a.account_id}`)}
-                                        className={archived ? '' : 'cursor-pointer hover:bg-slate-50/70'}>
+                                        className={archived ? '' : `cursor-pointer hover:bg-slate-50/70 ${selected.includes(a.account_id) ? 'bg-indigo-50/40' : ''}`}>
+                                        {selectable && (
+                                            <td className="pl-5 pr-2 py-3" onClick={e => e.stopPropagation()}>
+                                                <input type="checkbox" className="accent-indigo-600" checked={selected.includes(a.account_id)}
+                                                    aria-label={`Select ${a.name}`} onChange={() => toggle(a.account_id)} />
+                                            </td>
+                                        )}
                                         {shown.map((col, i) => (
-                                            <td key={col.key} className={`${i === 0 ? 'pl-5 pr-3' : 'px-3'} py-3 text-sm text-slate-600`}>
+                                            <td key={col.key} className={`${i === 0 && !selectable ? 'pl-5 pr-3' : 'px-3'} py-3 text-sm text-slate-600`}>
                                                 <CompanyCell column={col} account={a} stageLabel={stageLabel} />
                                             </td>
                                         ))}

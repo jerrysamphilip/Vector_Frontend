@@ -24,6 +24,8 @@ import ContactCompaniesCard from '../components/contacts/ContactCompaniesCard';
 import ContactScoreCard from '../components/contacts/ContactScoreCard';
 import ContactIdentityCard from '../components/contacts/merge/ContactIdentityCard';
 import { useConfirm } from '../components/ui/ConfirmDialog';
+import RecordId from '../components/ui/RecordId';
+import { TIMEZONE_OPTIONS } from '../components/campaigns/wizard/timezones';
 
 const CALL_OUTCOMES = ['Connected', 'Left voicemail', 'No answer', 'Wrong number', 'Busy'];
 
@@ -301,6 +303,18 @@ function CrmCard({ contact, meta, onUpdate, error }) {
     );
 }
 
+/** The contact's time zone (CM-01): "Automatic" (derived from country + state) or any IANA zone. */
+function TimezoneSelect({ value, onChange }) {
+    const known = TIMEZONE_OPTIONS.some(tz => tz.value === value);
+    return (
+        <select className={inputClass} aria-label="Time zone" value={value || ''} onChange={e => onChange(e.target.value)}>
+            <option value="">Automatic (from country / state)</option>
+            {value && !known && <option value={value}>{value}</option>}
+            {TIMEZONE_OPTIONS.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+        </select>
+    );
+}
+
 function DetailsCard({ contact, fields, onSaved }) {
     const [editing, setEditing] = useState(false);
     const [form, setForm] = useState({});
@@ -315,7 +329,7 @@ function DetailsCard({ contact, fields, onSaved }) {
             phone: contact.phone || '', mobile_phone: contact.mobile_phone || '', designation: contact.designation || '',
             company_name: contact.company_name || '', industry: contact.industry || '', linkedin_url: contact.linkedin_url || '',
             poc_city: contact.poc_city || '', poc_state: contact.poc_state || '', poc_country: contact.poc_country || '',
-            lead_source: contact.lead_source || '',
+            lead_source: contact.lead_source || '', timezone: contact.timezone || '',
             custom_fields: Object.fromEntries(fields.map(f => [f.field_key, contact.custom_fields?.[f.field_key] ?? (f.field_type === 'MULTI_CHECKBOX' ? [] : '')])),
         });
         setError(null);
@@ -328,6 +342,8 @@ function DetailsCard({ contact, fields, onSaved }) {
             const payload = checks.normalized();
             if (payload.company_name === (contact.company_name || '')) delete payload.company_name;
             if (!payload.email) delete payload.email;
+            // CM-01: send the time zone only when it was changed, so an untouched zone keeps following the location
+            if (payload.timezone === (contact.timezone || '')) delete payload.timezone;
             return contactsApi.update(contact.prospect_id, withVersion(payload, version));
         },
         onSuccess: (data) => { setEditing(false); onSaved(data); },
@@ -386,6 +402,9 @@ function DetailsCard({ contact, fields, onSaved }) {
                         <Field label="State" error={checks.errors.poc_state}><input className={inputClass} {...checks.bind('poc_state')} /></Field>
                         <Field label="Country" error={checks.errors.poc_country}><input className={inputClass} {...checks.bind('poc_country')} list="country-names" /></Field><CountryOptions />
                     </div>
+                    <Field label="Time zone" hint="Automatic follows the country and state; a zone you pick is kept">
+                        <TimezoneSelect value={form.timezone} onChange={v => setForm(f => ({ ...f, timezone: v }))} />
+                    </Field>
                     <Field label="LinkedIn" error={checks.errors.linkedin_url}><input type="url" className={inputClass} {...checks.bind('linkedin_url')} /></Field>
                     {Object.entries(groups).map(([group, gf]) => (
                         <div key={group} className="space-y-3 pt-1">
@@ -605,6 +624,7 @@ export default function ContactDetail() {
                                 ? <Link to={`/app/accounts/${contact.account.account_id}`} className="font-semibold text-indigo-600 hover:text-indigo-800">{contact.account.name}</Link>
                                 : contact.company_name}
                         </p>
+                        <RecordId id={contact.prospect_id} label="Contact ID" />
                         <div className="flex items-center gap-4 mt-3 text-sm flex-wrap">
                             <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 text-slate-600 hover:text-indigo-600"><Mail className="w-4 h-4" />{contact.email}</a>
                             {contact.phone && <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 text-slate-600 hover:text-indigo-600"><Phone className="w-4 h-4" />{contact.phone}</a>}

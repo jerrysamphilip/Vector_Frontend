@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import ContactDetail from './ContactDetail';
 import { FAIL_REQUEST_ID, fail, pending, renderPage } from '../test/renderPage';
 import { expectLoadError, expectLoading } from '../test/pageAssertions';
@@ -58,5 +59,37 @@ describe('ContactDetail page', () => {
         await screen.findByRole('heading', { level: 1, name: 'Carol Contact' });
         expect(screen.queryByLabelText('Owner')).toBeNull();
         expect(screen.queryByRole('button', { name: /delete/i })).toBeNull();
+    });
+
+    it('shows the contact ID read-only with a copy button (CM-02)', async () => {
+        const user = userEvent.setup();
+        renderPage(<ContactDetail />, opts());
+        await screen.findByRole('heading', { level: 1, name: 'Carol Contact' });
+        expect(screen.getByTestId('record-id')).toHaveTextContent('Contact ID:c-1');
+        await user.click(screen.getByRole('button', { name: 'Copy contact id' }));
+        expect(await navigator.clipboard.readText()).toBe('c-1');
+    });
+
+    it('edits the time zone, sending it only when changed (CM-01)', async () => {
+        const user = userEvent.setup();
+        const { http: h } = renderPage(<ContactDetail />, opts({
+            'GET /contacts/:id': () => detail({ last_name: 'Contact' }),
+            'PATCH /contacts/:id': req => detail({ last_name: 'Contact', timezone: req.body.timezone || 'Europe/Paris' }),
+        }));
+        await screen.findByRole('heading', { level: 1, name: 'Carol Contact' });
+        await user.click(screen.getByRole('button', { name: /^edit$/i }));
+        const zone = screen.getByRole('combobox', { name: 'Time zone' });
+        expect(zone).toHaveValue('Europe/Paris');
+        expect(screen.getByRole('option', { name: /automatic/i })).toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Save' }));
+        const patches = () => h.requests.filter(r => r.method.toUpperCase() === 'PATCH');
+        await waitFor(() => expect(patches()).toHaveLength(1));
+        expect(patches()[0].body).not.toHaveProperty('timezone');  // untouched: keeps following the location
+
+        await user.click(await screen.findByRole('button', { name: /^edit$/i }));
+        await user.selectOptions(screen.getByRole('combobox', { name: 'Time zone' }), 'Europe/London');
+        await user.click(screen.getByRole('button', { name: 'Save' }));
+        await waitFor(() => expect(patches()).toHaveLength(2));
+        expect(patches()[1].body.timezone).toBe('Europe/London');
     });
 });

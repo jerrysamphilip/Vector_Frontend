@@ -14,6 +14,7 @@ import ContactFormModal from '../components/contacts/ContactFormModal';
 import AccountDeals from '../components/sales/AccountDeals';
 import CompanyPropertiesCard from '../components/accounts/CompanyPropertiesCard';
 import { Avatar, OwnerSelect, StageBadge, TagChips, formatDateTime, relativeDate, useCrmMeta } from '../components/contacts/shared';
+import RecordId from '../components/ui/RecordId';
 
 export default function AccountDetail() {
     const { id } = useParams();
@@ -68,6 +69,7 @@ export default function AccountDetail() {
                     <div className="flex-1 min-w-0">
                         <h1 className="text-xl font-semibold tracking-tight text-slate-900 flex items-center gap-3 flex-wrap">{account.name}{account.lifecycle_stage && <StageBadge value={account.lifecycle_stage} label={stageLabel[account.lifecycle_stage]} />}</h1>
                         <p className="text-sm text-slate-500 mt-0.5">{[account.industry, account.emp_band && `${account.emp_band} employees`].filter(Boolean).join(' · ') || 'No industry set'}</p>
+                        <RecordId id={account.account_id} label="Company ID" />
                         <div className="flex items-center gap-4 mt-3 text-sm text-slate-600 flex-wrap">
                             {website && <a href={website} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:text-indigo-600"><Globe className="w-4 h-4" />{account.domain || account.website}</a>}
                             {account.phone && <a href={`tel:${account.phone}`} className="flex items-center gap-1.5 hover:text-indigo-600"><Phone className="w-4 h-4" />{account.phone}</a>}
