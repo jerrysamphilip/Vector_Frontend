@@ -48,6 +48,28 @@ function ProspectStatusBadge({ status }) {
     );
 }
 
+// The contact unsubscribed after the campaign stopped for another reason (e.g. replied first): the
+// enrolment status keeps that history, so the contact's consent state is shown next to it.
+export function unsubscribedLater(p) {
+    return (p?.consent_status || '').toUpperCase() === 'UNSUBSCRIBED'
+        && (p?.status || '').toUpperCase() !== 'UNSUBSCRIBED';
+}
+
+function ProspectStatusCell({ prospect }) {
+    return (
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+            <ProspectStatusBadge status={prospect.status} />
+            {unsubscribedLater(prospect) && (
+                <span data-testid="consent-unsubscribed"
+                    className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200"
+                    title="This contact has unsubscribed and will not be emailed again">
+                    Unsubscribed
+                </span>
+            )}
+        </span>
+    );
+}
+
 export default function LeadListTab({ campaignId }) {
     const queryClient = useQueryClient();
     const toast = useToast();
@@ -451,7 +473,7 @@ export default function LeadListTab({ campaignId }) {
                                                     </td>
                                                     {/* Status — read-only */}
                                                     <td className="px-6 py-3">
-                                                        <ProspectStatusBadge status={p.status} />
+                                                        <ProspectStatusCell prospect={p} />
                                                     </td>
                                                     <LeadTimingCells prospect={p} cellClassName="px-6 py-3" />
                                                     {/* Note — editable */}
@@ -559,7 +581,7 @@ export default function LeadListTab({ campaignId }) {
                                                         )}
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <ProspectStatusBadge status={p.status} />
+                                                        <ProspectStatusCell prospect={p} />
                                                         {p.removed && <span className="ml-1.5 text-[11px] font-medium text-slate-400">Removed</span>}
                                                     </td>
                                                     <LeadTimingCells prospect={p} />
