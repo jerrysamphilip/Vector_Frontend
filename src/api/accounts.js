@@ -31,6 +31,8 @@ export const companiesApi = {
     update: (id, payload) => patch(`/accounts/${id}`, payload),
     remove: (id) => del(`/accounts/${id}`),
     restore: (id) => post(`/accounts/${id}/restore`),
+    // Bulk owner change (CM-36): { account_ids, action: 'assign_owner', owner_id }
+    bulk: (payload) => post('/accounts/bulk', payload),
     exportFile: (params) => downloadFile('/accounts/export', { ...params, filters: filterParam(params?.filters) },
         `companies.${params?.format || 'csv'}`),
 

@@ -56,4 +56,14 @@ describe('AccountDetail page', () => {
         await userEvent.click(await screen.findByRole('button', { name: /add contact/i }));
         expect(within(await screen.findByRole('dialog')).getByText(/contact/i, { selector: 'h2,h3' })).toBeInTheDocument();
     });
+
+    it('shows the company ID read-only with a copy button (CM-02)', async () => {
+        const user = userEvent.setup();
+        renderPage(<AccountDetail />, opts());
+        await screen.findByRole('heading', { level: 1, name: /acme corp/i });
+        expect(screen.getByTestId('record-id')).toHaveTextContent('Company ID:a-1');
+        await user.click(screen.getByRole('button', { name: 'Copy company id' }));
+        expect(await navigator.clipboard.readText()).toBe('a-1');
+        expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+    });
 });

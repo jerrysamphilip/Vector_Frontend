@@ -49,4 +49,38 @@ describe('Accounts page', () => {
         expect(screen.getByText('Globex')).toBeInTheDocument();
         expect(h.requests.some(r => r.path === '/accounts' && r.query.q === 'glob')).toBe(true);
     });
+
+    it('changes the owner of the selected companies in bulk (CM-36)', async () => {
+        const { http: h } = renderPage(<Accounts />, opts({
+            'POST /accounts/bulk': req => ({ status: 'ok', action: 'assign_owner', updated: req.body.account_ids.length, skipped: [] }),
+        }));
+        await screen.findByText('Acme Corp');
+        expect(screen.queryByRole('region', { name: /bulk actions/i })).toBeNull();
+        await userEvent.click(screen.getByRole('checkbox', { name: 'Select Acme Corp' }));
+        await userEvent.click(screen.getByRole('checkbox', { name: 'Select Globex' }));
+        expect(screen.getByText('2 selected')).toBeInTheDocument();
+        const change = screen.getByRole('button', { name: /change owner/i });
+        expect(change).toBeDisabled();
+        await userEvent.selectOptions(screen.getByRole('combobox', { name: 'New owner' }), 'u-2');
+        await userEvent.click(change);
+        expect(await screen.findByText('Owner changed on 2 companies.')).toBeInTheDocument();
+        const sent = h.requests.find(r => r.method === 'POST' && r.path === '/accounts/bulk');
+        expect(sent.body).toEqual({ account_ids: ['a-1', 'a-2'], action: 'assign_owner', owner_id: 'u-2' });
+        expect(screen.queryByText('2 selected')).toBeNull();
+    });
+
+    it('shows a refused bulk owner change', async () => {
+        renderPage(<Accounts />, opts({ 'POST /accounts/bulk': fail(403, 'You can only assign records to yourself or your team') }));
+        await screen.findByText('Acme Corp');
+        await userEvent.click(screen.getByRole('checkbox', { name: 'Select all on page' }));
+        await userEvent.selectOptions(screen.getByRole('combobox', { name: 'New owner' }), 'u-1');
+        await userEvent.click(screen.getByRole('button', { name: /change owner/i }));
+        expect(await screen.findByRole('alert')).toHaveTextContent(/only assign records to yourself or your team/i);
+    });
+
+    it('offers no selection to a user who cannot manage companies', async () => {
+        renderPage(<Accounts />, opts({}, 'AGENT'));
+        await screen.findByText('Acme Corp');
+        expect(screen.queryByRole('checkbox', { name: /select/i })).toBeNull();
+    });
 });
