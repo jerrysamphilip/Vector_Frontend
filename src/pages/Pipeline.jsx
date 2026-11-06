@@ -114,7 +114,7 @@ export default function Pipeline() {
                 {tab !== 'approvals' && <OwnerFilter value={owner} onChange={v => update({ owner: v })} />}
                 {tab !== 'approvals' && <ClientTypeFilter value={clientType} onChange={v => update({ client_type: v })} />}
                 {tab === 'revenue' && (
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 min-w-0">
                         <span>Expected close</span>
                         <input type="date" className={selectSm} value={closeFrom} max={closeTo || undefined} aria-label="Expected close from"
                             onChange={e => update({ close_from: e.target.value })} />
